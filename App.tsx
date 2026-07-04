@@ -297,6 +297,14 @@ function ComposeScreen({
                     onPress={() => navigation.goBack()}
                     kind="ghost"
                 />
+                <Btn
+                    label="저장"
+                    onPress={() => {
+                        console.log("저장:", title, body); // ponytail: 실제 저장 로직(서버/스토어) 없음. 학습 목적
+                        navigation.goBack();
+                    }}
+                    disabled={title.trim() === "" || body.trim() === ""}
+                />
             </View>
         </KeyboardAvoidingView>
     );
@@ -427,18 +435,22 @@ function Btn({
     label,
     onPress,
     kind = "primary",
+    disabled = false,
 }: {
     label: string;
     onPress: () => void;
     kind?: "primary" | "ghost" | "danger";
+    disabled?: boolean;
 }) {
     return (
         <Pressable
             onPress={onPress}
+            disabled={disabled}
             style={({ pressed }) => [
                 styles.btn,
                 styles[`btn_${kind}`],
                 pressed && { opacity: 0.7 },
+                disabled && { opacity: 0.5 },
             ]}
         >
             <Text
@@ -494,6 +506,8 @@ const styles = StyleSheet.create({
         padding: 20,
         borderTopWidth: 1,
         borderTopColor: "#232a38",
+        flexDirection: "row",
+        gap: 12,
     },
     input: {
         color: "#fff",
