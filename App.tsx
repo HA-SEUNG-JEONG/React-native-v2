@@ -257,9 +257,15 @@ function ComposeScreen({
             keyboardVerticalOffset={headerHeight as number}
         >
             {/* 내용 = flex:1로 자라서 footer를 바닥으로 밀어냄 (sticky footer 원리) */}
-            <Pressable
-                style={[styles.pad, styles.modal, { flex: 1 }]}
-                onPress={Keyboard.dismiss}
+            <ScrollView
+                contentContainerStyle={[
+                    styles.pad,
+                    styles.modal,
+                    { flexGrow: 1 },
+                ]}
+                style={{ flex: 1 }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
             >
                 <Text style={styles.h1}>새 글 (모달)</Text>
                 <Text style={styles.hint}>
@@ -281,7 +287,7 @@ function ComposeScreen({
                     multiline
                     style={[styles.input, styles.inputMultiline]}
                 />
-            </Pressable>
+            </ScrollView>
             {/* 바닥 바 = 버튼만. inset은 정적 스타일 아니므로 inline으로 덧댐. */}
             <View
                 style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}
