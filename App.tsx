@@ -12,6 +12,8 @@ import {
     StyleSheet,
     ScrollView,
     TextInput,
+    Platform,
+    KeyboardAvoidingView,
 } from "react-native";
 import * as Linking from "expo-linking";
 import {
@@ -28,6 +30,7 @@ import type {
 } from "@react-navigation/native-stack";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 // ============================================================
 // P3 — 네비게이션 (앱 뼈대)
@@ -241,12 +244,17 @@ function TabsScreen() {
 function ComposeScreen({
     navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
+    const headerHeight = useHeaderHeight();
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
     const insets = useSafeAreaInsets();
     return (
         // 바깥 = screen(flex:1, 배경). 화면 꽉 채움.
-        <View style={styles.screen}>
+        <KeyboardAvoidingView
+            style={styles.screen}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={headerHeight as number}
+        >
             {/* 내용 = flex:1로 자라서 footer를 바닥으로 밀어냄 (sticky footer 원리) */}
             <View style={[styles.pad, styles.modal, { flex: 1 }]}>
                 <Text style={styles.h1}>새 글 (모달)</Text>
@@ -280,7 +288,7 @@ function ComposeScreen({
                     kind="ghost"
                 />
             </View>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
