@@ -5,7 +5,14 @@ import {
     useState,
     useCallback,
 } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import {
+    View,
+    Text,
+    Pressable,
+    StyleSheet,
+    ScrollView,
+    TextInput,
+} from "react-native";
 import * as Linking from "expo-linking";
 import {
     NavigationContainer,
@@ -234,6 +241,8 @@ function TabsScreen() {
 function ComposeScreen({
     navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
+    const [title, setTitle] = useState("");
+    const [body, setBody] = useState("");
     const insets = useSafeAreaInsets();
     return (
         // 바깥 = screen(flex:1, 배경). 화면 꽉 채움.
@@ -245,9 +254,26 @@ function ComposeScreen({
                     presentation:'modal' → 카드가 아래서 위로. 스와이프 다운으로
                     닫힘(iOS).
                 </Text>
+                <TextInput
+                    value={title}
+                    onChangeText={setTitle} // ← 웹 onChange 아님. 문자열 바로 옴
+                    placeholder="제목"
+                    placeholderTextColor="#8a92a6" // 다크배경 → 회색 직접 (#8a92a6 등)
+                    style={styles.input}
+                />
+                <TextInput
+                    value={body}
+                    onChangeText={setBody}
+                    placeholder="본문"
+                    placeholderTextColor="#8a92a6"
+                    multiline
+                    style={[styles.input, styles.inputMultiline]}
+                />
             </View>
             {/* 바닥 바 = 버튼만. inset은 정적 스타일 아니므로 inline으로 덧댐. */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+            <View
+                style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}
+            >
                 <Btn
                     label="닫기"
                     onPress={() => navigation.goBack()}
@@ -450,5 +476,21 @@ const styles = StyleSheet.create({
         padding: 20,
         borderTopWidth: 1,
         borderTopColor: "#232a38",
+    },
+    input: {
+        color: "#fff",
+        fontSize: 16,
+        lineHeight: 22,
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#2b3446",
+        backgroundColor: "#181d27",
+        marginBottom: 16,
+    },
+    inputMultiline: {
+        minHeight: 100,
+        maxHeight: 300,
+        textAlignVertical: "top",
     },
 });
