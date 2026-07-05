@@ -4,6 +4,7 @@ import {
     useMemo,
     useState,
     useCallback,
+    useRef,
 } from "react";
 import {
     View,
@@ -245,6 +246,7 @@ function TabsScreen() {
 function ComposeScreen({
     navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
+    const bodyRef = useRef<TextInput>(null);
     const headerHeight = useHeaderHeight();
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
@@ -278,8 +280,12 @@ function ComposeScreen({
                     placeholder="제목"
                     placeholderTextColor="#8a92a6" // 다크배경 → 회색 직접 (#8a92a6 등)
                     style={styles.input}
+                    returnKeyType="next"
+                    onSubmitEditing={() => bodyRef.current?.focus()}
+                    submitBehavior="submit"
                 />
                 <TextInput
+                    ref={bodyRef}
                     value={body}
                     onChangeText={setBody}
                     placeholder="본문"
