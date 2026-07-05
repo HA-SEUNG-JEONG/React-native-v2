@@ -276,6 +276,7 @@ function ComposeScreen({
                 </Text>
                 <TextInput
                     value={title}
+                    autoCorrect
                     onChangeText={setTitle} // ← 웹 onChange 아님. 문자열 바로 옴
                     placeholder="제목"
                     placeholderTextColor="#8a92a6" // 다크배경 → 회색 직접 (#8a92a6 등)
@@ -292,7 +293,10 @@ function ComposeScreen({
                     placeholderTextColor="#8a92a6"
                     multiline
                     style={[styles.input, styles.inputMultiline]}
+                    autoCorrect
+                    maxLength={20}
                 />
+                <Text style={styles.length}>{body.length} / 20</Text>
             </ScrollView>
             {/* 바닥 바 = 버튼만. inset은 정적 스타일 아니므로 inline으로 덧댐. */}
             <View
@@ -530,5 +534,8 @@ const styles = StyleSheet.create({
         minHeight: 100,
         maxHeight: 300,
         textAlignVertical: "top",
+    },
+    length: {
+        color: "#8a92a6",
     },
 });
