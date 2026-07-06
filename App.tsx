@@ -15,10 +15,9 @@ import {
     TextInput,
     Platform,
     KeyboardAvoidingView,
-    Keyboard,
-    Image,
     ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
 import * as Linking from "expo-linking";
 import {
     NavigationContainer,
@@ -246,7 +245,7 @@ function TabsScreen() {
 
 // 모달 화면 (RootStack에서 presentation:'modal'로 등록 → 아래에서 위로 슬라이드)
 
-const AVATAR_SOURCE = { uri: "https://picsum.photos/200", cache: "reload" };
+const AVATAR_SOURCE = { uri: "https://picsum.photos/200" };
 function ComposeScreen({
     navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
@@ -304,15 +303,16 @@ function ComposeScreen({
                 <Text style={styles.length}>{body.length} / 20</Text>
                 <View style={{ width: 200, height: 200 }}>
                     <Image
+                        cachePolicy="disk"
                         source={AVATAR_SOURCE}
                         style={{ width: 200, height: 200 }}
-                        resizeMode="cover"
+                        contentFit="cover"
                         onLoadStart={() => setIsLoading(true)}
                         onLoad={() => setIsLoading(false)}
                         onLoadEnd={() => setIsLoading(false)}
-                        onError={(e) => {
+                        onError={(error) => {
                             setIsLoading(false);
-                            console.log("이미지 에러:", e.nativeEvent.error);
+                            console.error(error.error);
                         }}
                     />
                     {isLoading && (
