@@ -16,6 +16,8 @@ import {
     Platform,
     KeyboardAvoidingView,
     Keyboard,
+    Image,
+    ActivityIndicator,
 } from "react-native";
 import * as Linking from "expo-linking";
 import {
@@ -243,9 +245,12 @@ function TabsScreen() {
 }
 
 // 모달 화면 (RootStack에서 presentation:'modal'로 등록 → 아래에서 위로 슬라이드)
+
+const AVATAR_SOURCE = { uri: "https://picsum.photos/200", cache: "reload" };
 function ComposeScreen({
     navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
+    const [isLoading, setIsLoading] = useState(true);
     const bodyRef = useRef<TextInput>(null);
     const headerHeight = useHeaderHeight();
     const [title, setTitle] = useState("");
@@ -297,6 +302,25 @@ function ComposeScreen({
                     maxLength={20}
                 />
                 <Text style={styles.length}>{body.length} / 20</Text>
+                <View style={{ width: 200, height: 200 }}>
+                    <Image
+                        source={AVATAR_SOURCE}
+                        style={{ width: 200, height: 200 }}
+                        resizeMode="cover"
+                        onLoadStart={() => setIsLoading(true)}
+                        onLoad={() => setIsLoading(false)}
+                        onLoadEnd={() => setIsLoading(false)}
+                        onError={(e) => {
+                            setIsLoading(false);
+                            console.log("이미지 에러:", e.nativeEvent.error);
+                        }}
+                    />
+                    {isLoading && (
+                        <ActivityIndicator
+                            style={{ position: "absolute", top: 90, left: 90 }}
+                        />
+                    )}
+                </View>
             </ScrollView>
             {/* 바닥 바 = 버튼만. inset은 정적 스타일 아니므로 inline으로 덧댐. */}
             <View
