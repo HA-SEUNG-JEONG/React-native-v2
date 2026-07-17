@@ -21,6 +21,12 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import {   
   NavigationContainer,
   useFocusEffect,
@@ -91,35 +97,37 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 // 화면들
 // ============================================================
 
-const FEED = [
-  {
-    id: "1",
-    title: "첫 번째 글",
-    body: "RN 네비게이션은 URL이 아니라 스택이다.",
-  },
-  {
-    id: "2",
-    title: "두 번째 글",
-    body: "navigate로 params를 넘기고 route.params로 받는다.",
-  },
-  {
-    id: "3",
-    title: "세 번째 글",
-    body: "push는 같은 화면도 스택에 쌓고, navigate는 있으면 재사용.",
-  },
-  // TEMP: onEndReached 스크롤 테스트용, 확인 후 제거
-  ...Array.from({ length: 30 }, (_, i) => ({
-    id: String(i + 4),
-    title: `테스트 글 ${i + 4}`,
-    body: "스크롤 테스트용 더미 데이터.",
-  })),
-];
+// ============================================================
+// P4 — TanStack Query 무한스크롤 (실 API)
+//
+// 웹과 다른 핵심: 스크롤 이벤트 직접 안 씀. FlatList onEndReached가 다음 페이지 트리거.
+//  - useInfiniteQuery: data.pages = 페이지별 배열의 배열(2차원). flat()으로 펼쳐 FlatList에 전달.
+//  - getNextPageParam: 다음 페이지 번호 리턴 = 계속, undefined = 끝.
+//  - onEndReached 가드(hasNextPage && !isFetchingNextPage) 없으면 중복 호출 폭탄.
+// ============================================================
+const PAGE_SIZE = 10;
+const API = "https://jsonplaceholder.typicode.com/posts";
+
+type Post = { id: number; title: string; body: string };
+
+async function fetchPosts(page: number): Promise<Post[]> {
+  const res = await fetch(`${API}?_page=${page}&_limit=${PAGE_SIZE}`);
+  if (!res.ok) throw new Error(`목록 불러오기 실패 (${res.status})`);
+  return res.json();
+}
+
+async function fetchPost(id: string): Promise<Post> {
+  const res = await fetch(`${API}/${id}`);
+  if (!res.ok) throw new Error(`글 불러오기 실패 (${res.status})`);
+  return res.json();
+}
+
+const queryClient = new QueryClient();
 
 // 목록: FeedList → 항목 누르면 FeedDetail로 이동 (타입 안전 params)
 function FeedListScreen({
   navigation,
 }: NativeStackScreenProps<HomeStackParamList, "FeedList">) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
   // 탭을 떠났다 돌아올 때마다 로그 (useEffect는 최초 1회만이라 이걸 못 잡음)
   useFocusEffect(
     useCallback(() => {
@@ -128,30 +136,75 @@ function FeedListScreen({
     }, []),
   );
 
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+    isPending,
+    isError,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ["posts"],
+    queryFn: ({ pageParam }) => fetchPosts(pageParam),
+    initialPageParam: 1,
+    // 마지막 페이지가 PAGE_SIZE 미만 = 더 없음 → undefined로 종료
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < PAGE_SIZE ? undefined : allPages.length + 1,
+  });
+
+  // data.pages(2차원) → flat으로 1차원화. FlatList는 평평한 배열만 받음.
+  const posts = data?.pages.flat() ?? [];
+
+  // 4상태 ①최초 로딩 ②에러 (③빈 ④정상은 아래 FlatList가 처리)
+  if (isPending) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator color="#93c5fd" />
+      </View>
+    );
+  }
+  if (isError) {
+    return (
+      <View style={[styles.screen, styles.pad, styles.center]}>
+        <Text style={styles.h1}>에러</Text>
+        <Text style={styles.hint}>{(error as Error).message}</Text>
+        <Btn label="다시 시도" onPress={() => refetch()} />
+      </View>
+    );
+  }
+
   return (
     <FlatList
       style={styles.screen}
       contentContainerStyle={styles.pad}
-      data={FEED}
+      data={posts}
       refreshControl={
         <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={() => {
-            setIsRefreshing(true);
-            setTimeout(() => setIsRefreshing(false), 1000);
-          }}
+          refreshing={isRefetching}
+          onRefresh={refetch}
           tintColor="#93c5fd"
           colors={["#93c5fd"]}
         />
       }
       ListEmptyComponent={<Text style={styles.hint}>글이 없음</Text>}
-      onEndReached={() => console.log("바닥 도달")}
+      // 가드 2개 없으면 스크롤 튐마다 중복 호출
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+      }}
       onEndReachedThreshold={0.5}
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <ActivityIndicator color="#93c5fd" style={{ paddingVertical: 16 }} />
+        ) : null
+      }
       keyExtractor={(item) => String(item.id)}
       ListHeaderComponent={
         <>
           <Text style={styles.hint}>
-            항목 누름 → Detail로 push. params 타입 강제됨.
+            아래로 스크롤 = 다음 페이지 자동 로드. 당겨서 새로고침.
           </Text>
           {/* 모달은 조상 네비게이터(RootStack) 소유. getParent로 올라가 navigate.
                   navigate 액션은 처리 가능한 네비게이터까지 자동으로 버블링됨. */}
@@ -171,7 +224,7 @@ function FeedListScreen({
           // navigate 인자가 HomeStackParamList['FeedDetail'] 모양이 아니면 컴파일 에러
           onPress={() =>
             navigation.navigate("FeedDetail", {
-              id: item.id,
+              id: String(item.id),
               title: item.title,
             })
           }
@@ -184,20 +237,39 @@ function FeedListScreen({
   );
 }
 
-// 상세: route.params에서 id 꺼내 데이터 조회
+// 상세: route.params의 id로 단건 조회. 딥링크(picsel://feed/:id)로 목록 없이 바로
+// 들어와도 자립하도록 목록 캐시가 아닌 자체 useQuery로 가져온다.
 function FeedDetailScreen({
   route,
   navigation,
 }: NativeStackScreenProps<HomeStackParamList, "FeedDetail">) {
-  const { id } = route.params; // 타입: { id: string; title: string }
-  const post = FEED.find((f) => f.id === id);
+  const { id } = route.params;
+  const { data: post, isPending, isError, error, refetch } = useQuery({
+    queryKey: ["post", id],
+    queryFn: () => fetchPost(id),
+  });
+
+  if (isPending) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator color="#93c5fd" />
+      </View>
+    );
+  }
+  if (isError) {
+    return (
+      <View style={[styles.screen, styles.pad, styles.center]}>
+        <Text style={styles.h1}>에러</Text>
+        <Text style={styles.hint}>{(error as Error).message}</Text>
+        <Btn label="다시 시도" onPress={() => refetch()} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.screen, styles.pad]}>
-      <Text style={styles.h1}>{post?.title}</Text>
-      <Text style={{ color: "red" }}>
-        부모 <Text>자식(스타일 없음)</Text>
-      </Text>
-      <Text style={styles.body}>{post?.body}</Text>
+      <Text style={styles.h1}>{post.title}</Text>
+      <Text style={styles.body}>{post.body}</Text>
       <Text style={styles.rowSub}>딥링크: picsel://feed/{id}</Text>
       <Btn
         label="같은 화면 push (스택 쌓기)"
@@ -474,21 +546,24 @@ export default function App() {
     [user],
   );
   return (
-    <AuthContext.Provider value={auth}>
-      {/* NavigationContainer: 트리 최상단 1개. DarkTheme = 배경/텍스트 기본 어둡게.
-          linking = 딥링크 매핑. fallback = 링크 해석 중 잠깐 보일 화면. */}
-      <NavigationContainer
-        theme={DarkTheme}
-        linking={linking}
-        fallback={
-          <View style={[styles.screen, styles.center]}>
-            <Text style={styles.hint}>링크 여는 중…</Text>
-          </View>
-        }
-      >
-        <RootNavigator />
-      </NavigationContainer>
-    </AuthContext.Provider>
+    // QueryClientProvider: 트리 최상단 1개. 하위 어디서든 useQuery/useInfiniteQuery 사용 가능.
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider value={auth}>
+        {/* NavigationContainer: 트리 최상단 1개. DarkTheme = 배경/텍스트 기본 어둡게.
+            linking = 딥링크 매핑. fallback = 링크 해석 중 잠깐 보일 화면. */}
+        <NavigationContainer
+          theme={DarkTheme}
+          linking={linking}
+          fallback={
+            <View style={[styles.screen, styles.center]}>
+              <Text style={styles.hint}>링크 여는 중…</Text>
+            </View>
+          }
+        >
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthContext.Provider>
+    </QueryClientProvider>
   );
 }
 
