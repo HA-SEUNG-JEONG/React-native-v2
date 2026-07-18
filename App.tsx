@@ -18,6 +18,7 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   FlatList,
+  SectionList,
   RefreshControl,
   AppState,
 } from "react-native";
@@ -65,6 +66,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 // undefined = 파라미터 없음. 객체 = 필수 파라미터.
 type HomeStackParamList = {
   FeedList: undefined;
+  FeedSections: undefined; // SectionList 데모 — 같은 목록을 id 구간별로 묶어 보여줌
   // title 옵셔널 — 앱 내 navigate는 넘기지만 딥링크(feed/:id)는 id만 줌. 화면은 id로 조회.
   FeedDetail: { id: string; title?: string };
 };
@@ -151,6 +153,32 @@ focusManager.setEventListener((handleFocus) => {
   return () => sub.remove();
 });
 
+// 무한스크롤 쿼리 옵션 — FeedList와 SectionList 화면이 같은 캐시(["posts"])를 공유.
+// 훅으로 묶어 두 곳 중복 제거. 키가 같아 React Query가 자동 dedupe.
+function usePostsInfinite() {
+  return useInfiniteQuery({
+    queryKey: ["posts"],
+    queryFn: ({ pageParam }) => fetchPosts(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < PAGE_SIZE ? undefined : allPages.length + 1,
+  });
+}
+
+// 평평한 posts → id 10칸 구간별 섹션. SectionList는 {title, data}[] 모양을 먹음.
+function groupByTens(posts: Post[]): { title: string; data: Post[] }[] {
+  const buckets = new Map<number, Post[]>();
+  for (const p of posts) {
+    const start = Math.floor((p.id - 1) / 10) * 10 + 1;
+    const arr = buckets.get(start);
+    if (arr) arr.push(p);
+    else buckets.set(start, [p]);
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([start, data]) => ({ title: `#${start}–${start + 9}`, data }));
+}
+
 // 목록: FeedList → 항목 누르면 FeedDetail로 이동 (타입 안전 params)
 function FeedListScreen({
   navigation,
@@ -174,14 +202,7 @@ function FeedListScreen({
     isPaused,
     isError,
     error,
-  } = useInfiniteQuery({
-    queryKey: ["posts"],
-    queryFn: ({ pageParam }) => fetchPosts(pageParam),
-    initialPageParam: 1,
-    // 마지막 페이지가 PAGE_SIZE 미만 = 더 없음 → undefined로 종료
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < PAGE_SIZE ? undefined : allPages.length + 1,
-  });
+  } = usePostsInfinite();
 
   // data.pages(2차원) → flat으로 1차원화. FlatList는 평평한 배열만 받음.
   const posts = data?.pages.flat() ?? [];
@@ -261,6 +282,11 @@ function FeedListScreen({
                   ?.navigate("Compose")
               }
             />
+            <Btn
+              label="≡ 구간별 보기 (SectionList)"
+              onPress={() => navigation.navigate("FeedSections")}
+              kind="ghost"
+            />
           </>
         }
         renderItem={({ item }) => (
@@ -295,6 +321,83 @@ function FeedListScreen({
         )}
       />
     </View>
+  );
+}
+
+// SectionList 데모: 같은 ["posts"] 캐시를 id 구간별 섹션으로 묶어 표시.
+// FlatList와 차이 = data 대신 sections({title,data}[]), sticky 섹션 헤더 지원.
+function FeedSectionsScreen({
+  navigation,
+}: NativeStackScreenProps<HomeStackParamList, "FeedSections">) {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = usePostsInfinite();
+
+  const sections = useMemo(() => groupByTens(data?.pages.flat() ?? []), [data]);
+
+  if (isPending) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator color="#93c5fd" />
+      </View>
+    );
+  }
+  if (isError) {
+    return (
+      <View style={[styles.screen, styles.pad, styles.center]}>
+        <Text style={styles.h1}>에러</Text>
+        <Text style={styles.hint}>{(error as Error).message}</Text>
+        <Btn label="다시 시도" onPress={() => refetch()} />
+      </View>
+    );
+  }
+
+  return (
+    <SectionList
+      style={styles.screen}
+      contentContainerStyle={styles.pad}
+      sections={sections}
+      keyExtractor={(item) => String(item.id)}
+      stickySectionHeadersEnabled
+      renderSectionHeader={({ section }) => (
+        <Text style={styles.sectionHeader}>{section.title}</Text>
+      )}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+      }}
+      onEndReachedThreshold={0.5}
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <ActivityIndicator color="#93c5fd" style={{ paddingVertical: 16 }} />
+        ) : null
+      }
+      renderItem={({ item }) => (
+        <Pressable
+          style={styles.row}
+          onPress={() =>
+            navigation.navigate("FeedDetail", {
+              id: String(item.id),
+              title: item.title,
+            })
+          }
+        >
+          <Text
+            style={[styles.rowTitle, styles.rowTitleFlex]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </Text>
+          <Text style={styles.rowSub}>#{item.id}</Text>
+        </Pressable>
+      )}
+    />
   );
 }
 
@@ -392,6 +495,11 @@ function HomeStackScreen() {
         name="FeedList"
         component={FeedListScreen}
         options={{ title: "피드" }}
+      />
+      <HomeStack.Screen
+        name="FeedSections"
+        component={FeedSectionsScreen}
+        options={{ title: "구간별" }}
       />
       <HomeStack.Screen
         name="FeedDetail"
@@ -730,6 +838,13 @@ const styles = StyleSheet.create({
   // 고정 크기 = placeholder 대용 배경색. 로드 전 회색 박스로 자리 유지(레이아웃 안 튐).
   thumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#2b3446" },
   rowSub: { color: "#8a92a6", fontSize: 13, fontFamily: "monospace" },
+  sectionHeader: {
+    color: "#93c5fd",
+    fontSize: 13,
+    fontWeight: "700",
+    backgroundColor: "#0f1115", // sticky 시 아래 행이 비쳐 보이지 않게 배경 채움
+    paddingVertical: 8,
+  },
 
   btn: {
     paddingVertical: 13,
