@@ -263,7 +263,22 @@ function FeedListScreen({
               })
             }
           >
-            <Text style={styles.rowTitle}>{item.title}</Text>
+            <Image
+              source={{ uri: `https://picsum.photos/seed/${item.id}/100/100` }}
+              style={styles.thumb}
+              // ★ FlatList가 행 View를 재활용 → recyclingKey 없으면 스크롤 시
+              //   이전 item 썸네일이 잠깐 남아 깜빡임. 키 바뀌면 즉시 리셋.
+              recyclingKey={String(item.id)}
+              cachePolicy="memory-disk" // 메모리+디스크 캐시 → 되돌아가도 재요청 없음
+              transition={200} // 페이드인, 툭 튀는 느낌 제거
+              contentFit="cover"
+            />
+            <Text
+              style={[styles.rowTitle, styles.rowTitleFlex]}
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
             <Text style={styles.rowSub}>#{item.id}</Text>
           </Pressable>
         )}
@@ -661,11 +676,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
     backgroundColor: "#181d27",
     padding: 16,
     borderRadius: 12,
   },
   rowTitle: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  rowTitleFlex: { flex: 1 },
+  // 고정 크기 = placeholder 대용 배경색. 로드 전 회색 박스로 자리 유지(레이아웃 안 튐).
+  thumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#2b3446" },
   rowSub: { color: "#8a92a6", fontSize: 13, fontFamily: "monospace" },
 
   btn: {
