@@ -17,6 +17,7 @@ import { ProfileScreen } from "../screens/ProfileScreen";
 import { ComposeScreen } from "../screens/ComposeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { View, Text } from "react-native";
+import { PhotoScreen } from "../screens/PhotoScreen";
 
 // ---- 네비게이터 인스턴스 (제네릭으로 파라미터 타입 주입) ----
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
@@ -42,6 +43,11 @@ function HomeStackScreen() {
         name="FeedDetail"
         component={FeedDetailScreen}
         options={{ title: "상세" }}
+      />
+      <HomeStack.Screen
+        name="Photo"
+        component={PhotoScreen}
+        options={{ title: "사진" }}
       />
     </HomeStack.Navigator>
   );

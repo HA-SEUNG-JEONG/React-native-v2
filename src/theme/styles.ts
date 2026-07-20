@@ -82,6 +82,14 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   offlineText: { color: "#fff", fontSize: 13, textAlign: "center" },
+  // 선택한 사진 미리보기. 비율 고정 = 로드 전후 레이아웃 안 튐.
+  // (맞춤 방식은 expo-image의 contentFit prop으로 지정)
+  image: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 16,
+    backgroundColor: "#2b3446",
+  },
 });
 
 // 네비게이터 헤더 공통 옵션 (native-stack/auth 스택이 공유)
