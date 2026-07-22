@@ -129,6 +129,11 @@ export function FeedListScreen({
               onPress={() => navigation.navigate("FeedSections")}
               kind="ghost"
             />
+            <Btn
+              label="🖼 사진 선택 (권한 플로우)"
+              onPress={() => navigation.navigate("Photo")}
+              kind="ghost"
+            />
           </>
         }
         renderItem={({ item }) => (
