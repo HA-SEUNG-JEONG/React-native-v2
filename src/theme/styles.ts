@@ -13,7 +13,7 @@ export const styles = StyleSheet.create({
   h1: { color: "#fff", fontSize: 22, fontWeight: "700" },
   body: { color: "#c4c9d4", fontSize: 15, lineHeight: 22 },
   hint: { color: "#8a92a6", fontSize: 13, lineHeight: 19 },
-
+  location: { color: "#ffffff", fontSize: 14, lineHeight: 22 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

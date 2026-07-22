@@ -7,6 +7,7 @@ export type HomeStackParamList = {
   // title 옵셔널 — 앱 내 navigate는 넘기지만 딥링크(feed/:id)는 id만 줌. 화면은 id로 조회.
   FeedDetail: { id: string; title?: string };
   Photo: undefined; // 갤러리에서 사진 선택 (권한 플로우 데모)
+  Location: undefined;
 };
 export type TabParamList = {
   HomeTab: undefined;

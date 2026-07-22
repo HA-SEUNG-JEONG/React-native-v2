@@ -134,6 +134,11 @@ export function FeedListScreen({
               onPress={() => navigation.navigate("Photo")}
               kind="ghost"
             />
+            <Btn
+              label="위치 설정"
+              onPress={() => navigation.navigate("Location")}
+              kind="ghost"
+            />
           </>
         }
         renderItem={({ item }) => (
