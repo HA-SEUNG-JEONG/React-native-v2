@@ -18,6 +18,7 @@ import { ComposeScreen } from "../screens/ComposeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { View, Text } from "react-native";
 import { PhotoScreen } from "../screens/PhotoScreen";
+import { LocationScreen } from "../screens/LocationScreen";
 
 // ---- 네비게이터 인스턴스 (제네릭으로 파라미터 타입 주입) ----
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
@@ -48,6 +49,11 @@ function HomeStackScreen() {
         name="Photo"
         component={PhotoScreen}
         options={{ title: "사진" }}
+      />
+      <HomeStack.Screen
+        name="Location"
+        component={LocationScreen}
+        options={{ title: "위치" }}
       />
     </HomeStack.Navigator>
   );

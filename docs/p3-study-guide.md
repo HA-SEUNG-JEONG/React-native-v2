@@ -169,11 +169,13 @@ navigation.goBack();                           // 뒤로(pop)
 
 ## 복습 체크리스트
 
-- [ ] RN 네비게이션이 웹 URL 라우팅과 다른 근본 5가지는?
-- [ ] 탭이 각자 스택을 가진다(중첩)는 게 무슨 뜻인가?
-- [ ] `ParamList` 타입이 주는 이점은? navigate 인자가 틀리면?
-- [ ] 인증 게이트를 redirect가 아니라 네비게이터 교체로 하면 뭐가 자동으로 안전해지나?
-- [ ] 깊은 화면에서 조상이 소유한 모달을 어떻게 여나?(`getParent`)
-- [ ] 탭을 떠났다 돌아왔을 때 `useEffect`가 안 도는 이유와, 대신 쓰는 것은?
-- [ ] `picsel://feed/2`가 화면까지 도달하려면 `config.screens`가 무엇을 반영해야 하나?
-- [ ] `navigate` vs `push`의 차이는?
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+- [ ] RN 네비게이션이 웹 URL 라우팅과 다른 근본 5가지는? — [React Navigation](https://reactnavigation.org/docs/getting-started)
+- [ ] 탭이 각자 스택을 가진다(중첩)는 게 무슨 뜻인가? — [Nesting navigators](https://reactnavigation.org/docs/nesting-navigators)
+- [ ] `ParamList` 타입이 주는 이점은? navigate 인자가 틀리면? — [Type checking with TypeScript](https://reactnavigation.org/docs/typescript/)
+- [ ] 인증 게이트를 redirect가 아니라 네비게이터 교체로 하면 뭐가 자동으로 안전해지나? — [Authentication flows](https://reactnavigation.org/docs/auth-flow/)
+- [ ] 깊은 화면에서 조상이 소유한 모달을 어떻게 여나?(`getParent`) — [Navigation object](https://reactnavigation.org/docs/navigation-object/)
+- [ ] 탭을 떠났다 돌아왔을 때 `useEffect`가 안 도는 이유와, 대신 쓰는 것은? — [`useFocusEffect`](https://reactnavigation.org/docs/use-focus-effect/)
+- [ ] `picsel://feed/2`가 화면까지 도달하려면 `config.screens`가 무엇을 반영해야 하나? — [Configuring links](https://reactnavigation.org/docs/configuring-links/) · [expo-linking](https://docs.expo.dev/versions/v54.0.0/sdk/linking/)
+- [ ] `navigate` vs `push`의 차이는? — [Moving between screens](https://reactnavigation.org/docs/navigating/)

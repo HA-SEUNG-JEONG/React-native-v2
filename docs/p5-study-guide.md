@@ -311,14 +311,77 @@ app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동
 
 ---
 
+## W12 — 현재 위치 (`LocationScreen`)
+
+W11(카메라)까지는 권한이 **허용/거부 2진**이었다. 위치는 iOS가 세 번째 선택지를 준다: **"한 번만 허용(Allow Once)"**. 이게 W12가 W11과 다른 유일한 새 개념이다.
+
+### 권한 scope — 허용에도 종류가 있다
+
+[`requestForegroundPermissionsAsync()`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationrequestforegroundpermissionsasync) 반환에 `ios.scope`가 붙는다 (문서 verbatim):
+
+```ts
+{ granted, canAskAgain, status, ios?: { scope }, android?: { accuracy } }
+// ios.scope: 'whenInUse' | 'always' | 'none'
+```
+
+- `whenInUse` — 앱 사용 중에만. **"한 번만 허용"도 이걸로 뜬다** (단 이번 세션만 유효)
+- `always` — 백그라운드 포함. `requestBackgroundPermissionsAsync()` 별도 필요
+- `none` — 거부
+
+`ios?`의 `?`는 필수다. Android엔 `ios`가 없고 `android.accuracy`만 있다 — optional chaining 안 하면 안드로이드에서 크래시.
+
+### 함정 — standalone 함수는 훅 `status`를 갱신 안 한다
+
+`useForegroundPermissions()` 훅과 standalone `requestForegroundPermissionsAsync()`는 형태가 같지만 역할이 다르다. **훅의 requester로 요청해야 훅 `status`가 갱신**된다. standalone을 쓰면 거부해도 훅 `status`가 옛 값이라 `blocked` 배너가 안 뜬다.
+
+```ts
+const [status, requestPermission] = useForegroundPermissions();
+const blocked = status?.granted === false && !status.canAskAgain;
+
+const res = await requestPermission();   // ← 훅 requester. standalone 아님
+if (!res.granted) return;                // 게이트는 res.granted 불린 (문자열 비교 X)
+setScope(res.ios?.scope ?? null);
+```
+
+W11 카메라에서 `cameraRequestPermission()`(훅 requester)을 쓴 것과 같은 이유다.
+
+### 함정 — 권한이 있어도 좌표를 못 얻는다 (에러 상태 필수)
+
+관찰된 현상: **"항상 허용" → 좌표 정상**, **"한 번만 허용" → 좌표 안 뜸**. 표시 로직 버그가 아니라 [`getCurrentPositionAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationgetcurrentpositionasyncoptions)가 **throw하는데 try/catch가 없어 조용히 죽는 것**이었다. "항상 허용"은 위치 서비스를 계속 켜둬 좌표가 바로 오지만, 임시권한("한 번만 허용")은 위치 매니저가 덜 데워진 상태라 첫 호출이 `kCLErrorLocationUnknown`으로 실패하기 쉽다.
+
+```ts
+try {
+  const currentLocation = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
+  const { latitude, longitude } = currentLocation.coords;
+  setLocation({ latitude, longitude });
+} catch (e) {
+  setErrorMessage(e instanceof Error ? e.message : "위치를 가져오지 못했습니다.");
+}
+```
+
+이게 P5 졸업 기준의 핵심이다 — 네이티브 기능은 **4상태(정상 / 로딩 / 에러 / 거부)**. "권한 있음 ≠ 데이터 얻음"이 위치에서 특히 흔하다(실내, 임시권한, GPS 미확보). 에러 상태 없이는 실패가 "빈 화면"으로 위장돼 버그처럼 보인다. (다음 단계: `getLastKnownPositionAsync` 폴백, 재시도, 로딩 스피너 — 현재는 에러 표시까지.)
+
+### `accuracy` — 매직넘버 대신 enum
+
+```ts
+import { Accuracy } from "expo-location";
+getCurrentPositionAsync({ accuracy: Accuracy.Balanced })  // 5(Highest) 같은 숫자 대신
+```
+
+`Accuracy.Highest`(6)는 배터리를 많이 쓴다. 기본 `Balanced`(3)면 대부분 충분하다.
+
+---
+
 ## 검증 방법
 
-갤러리는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다.
+갤러리·위치는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다. 위치도 scope 세부("한 번만 허용"이 `whenInUse`로 뜨는 것)는 실기기가 정확하지만 플로우·거부 UX는 시뮬로 검증된다.
 
 1. 피드 → "🖼 사진 선택" → 갤러리 열리고 선택한 사진 표시
 2. **iOS 설정 앱에서 이 앱의 사진 권한을 끄고** 다시 시도 → 배너 노출
 3. 배너의 "설정 열기" → 이 앱 설정 페이지로 이동
 4. (실기기) "카메라로 촬영" → 첫 실행 권한 다이얼로그 → 거부 후 재시도 → `canAskAgain === false`면 배너 노출
+5. 피드 → "위치" → "현재 위치 가져오기" → 권한 다이얼로그(3지선다) → 허용 시 위도/경도 + `권한 범위: whenInUse` 표시. **시뮬은 Features > Location > Apple을 먼저 켜야** 좌표가 온다
+6. 설정 앱에서 위치 권한을 **Never**로 바꾼 뒤 버튼을 **다시 눌러** 훅 `status`를 갱신 → 거부 배너 노출. 권한 리셋은 `xcrun simctl privacy booted reset location`
 
 `canAskAgain === false` 상태는 코드로 만들 수 없고 **설정 앱에서 수동으로 꺼야** 재현된다. 이 경로를 안 밟으면 거부 UX는 테스트되지 않은 코드로 남는다.
 
@@ -328,22 +391,78 @@ app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동
 
 ---
 
+## 복습 체크리스트
+
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+### 권한 뼈대 (W11 코어)
+
+- [ ] 4단계 플로우를 순서대로 말할 수 있다 (상태 확인 → 요청 → 거부 처리 → 기능 실행) — [Expo Permissions 가이드](https://docs.expo.dev/guides/permissions/)
+- [ ] `canAskAgain === false`가 무슨 상태인지, 코드로 만들 수 있는지 없는지 안다 — [`MediaLibraryPermissionResponse`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#medialibrarypermissionresponse)
+- [ ] iOS와 Android가 이 상태에 **도달하는 조건**이 어떻게 다른지 설명한다 (iOS 1회 / Android 2회) — [Android 런타임 권한](https://developer.android.com/training/permissions/requesting) · [`PermissionStatus`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#permissionstatus)
+- [ ] "거부 UX가 P5 졸업 기준"인 이유를 한 문장으로 말한다
+- [ ] 웹 `getUserMedia()` 거부와 모바일 권한 거부의 차이를 안다 — [MDN `getUserMedia()`](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
+
+### 갤러리 vs 카메라
+
+- [ ] `launchImageLibraryAsync`는 왜 권한이 필요 없는지 안다 — [`launchImageLibraryAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#imagepickerlaunchimagelibraryasync)
+- [ ] `pickPhoto`엔 게이트가 없고 `takePhoto`엔 있는 이유를 설명한다 ("형태 같음 ≠ 역할 같음")
+- [ ] `launchCameraAsync`가 실제로 요구하는 권한이 뭔지 안다 — [`launchCameraAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#imagepickerlaunchcameraasync) · [`useCameraPermissions`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#imagepickerusecamerapermissions)
+
+### 함정 4개
+
+- [ ] 함정 1 — `requestPermission()` 직후 `status`가 왜 stale한지, 해법이 왜 반환값인지 (state 스냅샷) — [React — state는 스냅샷](https://react.dev/learn/state-as-a-snapshot)
+- [ ] 함정 2 — `status`가 처음에 `null`이라 `?.`가 필수인 이유 — [`useMediaLibraryPermissions`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#usemedialibrarypermissions)
+- [ ] 함정 3 — 거부 안내를 `Linking.openSettings()` 즉시 호출/`Alert`/화면 배너 중 왜 배너인지 — [`Linking.openSettings()`](https://reactnative.dev/docs/linking#opensettings) · [`Alert`](https://reactnative.dev/docs/alert)
+- [ ] 함정 4 — `canceled`와 거부가 다른 사건인 이유, `canceled`가 왜 **널 가드**이기도 한지 — [`ImagePickerResult`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#imagepickerresult)
+
+### 세부 API
+
+- [ ] `accessPrivileges`의 `'all' / 'limited' / 'none'` 차이, `granted === true`인데 `limited`인 상태 — [`MediaLibraryPermissionResponse`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#medialibrarypermissionresponse) · [`expo-media-library`](https://docs.expo.dev/versions/v54.0.0/sdk/media-library/)
+- [ ] `mediaTypes`가 SDK 54에서 왜 배열 권장이고 `MediaTypeOptions`가 deprecated인지 — [`MediaType`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#mediatype) · [`MediaTypeOptions` (deprecated)](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#mediatypeoptions)
+- [ ] `contentFit`이 style이 아니라 prop인 것, `expo-image`에서 `source={uri}`가 되는 이유 — [`contentFit`](https://docs.expo.dev/versions/v54.0.0/sdk/image/#contentfit) · [`source`](https://docs.expo.dev/versions/v54.0.0/sdk/image/#source)
+- [ ] `cameraPermission` 생략해도 동작하는 이유 (기본 문구 자동 생성) — [Configuration in app config](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#configuration-in-app-config)
+
+### 네비게이션
+
+- [ ] `types.ts`에 라우트 타입만 추가하면 왜 화면이 안 생기는지 (type erasure) — [React Navigation — TypeScript](https://reactnavigation.org/docs/typescript/) · [TS Handbook — 정적 타입 검사](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#static-type-checking)
+- [ ] 라우트 이름과 컴포넌트 이름이 별개인 이유 — [Native Stack Navigator](https://reactnavigation.org/docs/native-stack-navigator/)
+
+### 위치 (W12)
+
+- [ ] iOS "한 번만 허용"이 `ios.scope`의 어떤 값으로 뜨는지, `whenInUse`/`always`/`none` 차이 — [`requestForegroundPermissionsAsync()`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationrequestforegroundpermissionsasync)
+- [ ] `ios?.scope`의 `?`가 왜 필수인지 (Android 크래시)
+- [ ] 훅 requester vs standalone `requestForegroundPermissionsAsync()` — 왜 훅 것을 써야 `status`가 갱신되는지 — [`useForegroundPermissions`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationuseforegroundpermissions)
+- [ ] "권한 있음 ≠ 데이터 얻음" — `getCurrentPositionAsync`가 throw하는데 try/catch 없으면 어떻게 되는지 — [`getCurrentPositionAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationgetcurrentpositionasyncoptions)
+- [ ] 네이티브 기능의 4상태(정상/로딩/에러/거부)를 말할 수 있다
+- [ ] `Accuracy` enum을 쓰는 이유, `Highest`와 `Balanced`의 트레이드오프 — [`Accuracy`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#accuracy)
+
+### 검증 (손으로 밟아봤나)
+
+- [ ] 설정 앱에서 사진 권한 끄고 배너 노출 → "설정 열기"로 앱 설정 페이지 이동 — [`Linking.openSettings()`](https://reactnative.dev/docs/linking#opensettings)
+- [ ] 시뮬 `Features > Location > Apple` 켜고 좌표 수신
+- [ ] 위치 권한 Never로 바꾸고 **버튼 다시 눌러** 훅 `status` 갱신 → 거부 배너 — [`useFocusEffect`](https://reactnavigation.org/docs/use-focus-effect/) (설정 복귀 재조회 조합)
+- [ ] `xcrun simctl privacy booted reset location`로 권한 리셋할 줄 안다
+
+---
+
 ## 관련 파일
 
 | 파일 | 변경 |
 |---|---|
 | `src/screens/PhotoScreen.tsx` | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영 |
+| `src/screens/LocationScreen.tsx` | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 |
 | `app.json` | expo-image-picker config plugin (`photosPermission`) |
-| `src/navigation/types.ts` | `Photo: undefined` 라우트 타입 |
-| `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo">` 등록 |
-| `src/screens/FeedListScreen.tsx` | 사진 화면 이동 버튼 |
-| `src/theme/styles.ts` | `image` 스타일 (비율 고정 미리보기) |
+| `src/navigation/types.ts` | `Photo: undefined`, `Location: undefined` 라우트 타입 |
+| `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo" / "Location">` 등록 |
+| `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
+| `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트 스타일 |
 
 ---
 
 ## 남은 작업
 
 - **W11 카메라** — 완료. `launchCameraAsync` + 카메라 권한 게이트. 배너가 실제로 작동(실기기 검증 필요). `cameraPermission` 커스텀 문구는 출시 시 폴리시.
-- **W12** 위치/지도 — [`expo-location`](https://docs.expo.dev/versions/v54.0.0/sdk/location/). 같은 권한 플로우 + "사용 중에만 허용" 같은 부분 권한 개념 추가.
+- **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장. 지도/실시간 추적(`watchPositionAsync`)·주소 변환(`reverseGeocodeAsync`)은 확장 여지.
 - **W13** 저장/보안 — [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/), [`AsyncStorage`](https://docs.expo.dev/versions/v54.0.0/sdk/async-storage/). 권한은 없지만 저장 실패 처리가 관건.
 - **W14** 알림/공유 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/). 권한 + 백그라운드 동작.

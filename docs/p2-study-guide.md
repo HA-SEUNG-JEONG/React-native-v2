@@ -129,10 +129,12 @@ style={({ pressed }) => [
 
 ## 복습 체크리스트
 
-- [ ] RN에서 `flexDirection` 기본값과, 웹 flex 기본값의 차이는?
-- [ ] column일 때 `justifyContent`/`alignItems`는 각각 어느 축인가?
-- [ ] `flex: 1`로 sticky footer를 어떻게 만드는가?
-- [ ] RN 숫자 단위는 무엇이고 반응형은 어떻게 하나?
-- [ ] SafeArea 인셋을 StyleSheet가 아니라 inline으로 주는 이유는?
-- [ ] KeyboardAvoidingView의 `behavior`를 왜 Platform으로 분기하나?
-- [ ] cascade가 없는데 상태별 스타일을 어떻게 표현하나?
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+- [ ] RN에서 `flexDirection` 기본값과, 웹 flex 기본값의 차이는? — [Flexbox](https://reactnative.dev/docs/flexbox)
+- [ ] column일 때 `justifyContent`/`alignItems`는 각각 어느 축인가? — [Flexbox](https://reactnative.dev/docs/flexbox)
+- [ ] `flex: 1`로 sticky footer를 어떻게 만드는가? — [Flexbox](https://reactnative.dev/docs/flexbox)
+- [ ] RN 숫자 단위는 무엇이고 반응형은 어떻게 하나? — [`useWindowDimensions`](https://reactnative.dev/docs/usewindowdimensions)
+- [ ] SafeArea 인셋을 StyleSheet가 아니라 inline으로 주는 이유는? — [safe-area-context](https://docs.expo.dev/versions/v54.0.0/sdk/safe-area-context/)
+- [ ] KeyboardAvoidingView의 `behavior`를 왜 Platform으로 분기하나? — [`KeyboardAvoidingView`](https://reactnative.dev/docs/keyboardavoidingview) · [Platform](https://reactnative.dev/docs/platform-specific-code)
+- [ ] cascade가 없는데 상태별 스타일을 어떻게 표현하나? — [`Pressable`](https://reactnative.dev/docs/pressable)

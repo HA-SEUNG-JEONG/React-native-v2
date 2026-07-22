@@ -111,10 +111,12 @@ tagRow: { flexDirection: "row", flexWrap: "wrap" },  // 넘치면 줄바꿈
 
 ## 복습 체크리스트
 
-- [ ] View에 문자열을 직접 넣으면 왜 에러인가?
-- [ ] 원격 `<Image>`가 안 보인다면 가장 먼저 의심할 것은?
-- [ ] `style` vs `contentContainerStyle`(ScrollView)의 차이는?
-- [ ] StyleSheet가 CSS와 다른 점 4가지(케이스·단위·상속·미디어쿼리)를 말할 수 있나?
-- [ ] 조건부 스타일을 배열로 주는 이유는?
-- [ ] `onClick`이 아니라 무엇을 쓰나?
-- [ ] ScrollView 대신 FlatList가 필요한 순간은?
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+- [ ] View에 문자열을 직접 넣으면 왜 에러인가? — [`Text`](https://reactnative.dev/docs/text)
+- [ ] 원격 `<Image>`가 안 보인다면 가장 먼저 의심할 것은? — [`Image`](https://reactnative.dev/docs/image)
+- [ ] `style` vs `contentContainerStyle`(ScrollView)의 차이는? — [`ScrollView`](https://reactnative.dev/docs/scrollview)
+- [ ] StyleSheet가 CSS와 다른 점 4가지(케이스·단위·상속·미디어쿼리)를 말할 수 있나? — [`StyleSheet`](https://reactnative.dev/docs/stylesheet) · [Style](https://reactnative.dev/docs/style)
+- [ ] 조건부 스타일을 배열로 주는 이유는? — [Style](https://reactnative.dev/docs/style)
+- [ ] `onClick`이 아니라 무엇을 쓰나? — [`Pressable`](https://reactnative.dev/docs/pressable)
+- [ ] ScrollView 대신 FlatList가 필요한 순간은? — [`FlatList`](https://reactnative.dev/docs/flatlist) · [Core Components and APIs](https://reactnative.dev/docs/components-and-apis)
