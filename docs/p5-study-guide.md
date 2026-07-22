@@ -311,14 +311,77 @@ app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동
 
 ---
 
+## W12 — 현재 위치 (`LocationScreen`)
+
+W11(카메라)까지는 권한이 **허용/거부 2진**이었다. 위치는 iOS가 세 번째 선택지를 준다: **"한 번만 허용(Allow Once)"**. 이게 W12가 W11과 다른 유일한 새 개념이다.
+
+### 권한 scope — 허용에도 종류가 있다
+
+[`requestForegroundPermissionsAsync()`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationrequestforegroundpermissionsasync) 반환에 `ios.scope`가 붙는다 (문서 verbatim):
+
+```ts
+{ granted, canAskAgain, status, ios?: { scope }, android?: { accuracy } }
+// ios.scope: 'whenInUse' | 'always' | 'none'
+```
+
+- `whenInUse` — 앱 사용 중에만. **"한 번만 허용"도 이걸로 뜬다** (단 이번 세션만 유효)
+- `always` — 백그라운드 포함. `requestBackgroundPermissionsAsync()` 별도 필요
+- `none` — 거부
+
+`ios?`의 `?`는 필수다. Android엔 `ios`가 없고 `android.accuracy`만 있다 — optional chaining 안 하면 안드로이드에서 크래시.
+
+### 함정 — standalone 함수는 훅 `status`를 갱신 안 한다
+
+`useForegroundPermissions()` 훅과 standalone `requestForegroundPermissionsAsync()`는 형태가 같지만 역할이 다르다. **훅의 requester로 요청해야 훅 `status`가 갱신**된다. standalone을 쓰면 거부해도 훅 `status`가 옛 값이라 `blocked` 배너가 안 뜬다.
+
+```ts
+const [status, requestPermission] = useForegroundPermissions();
+const blocked = status?.granted === false && !status.canAskAgain;
+
+const res = await requestPermission();   // ← 훅 requester. standalone 아님
+if (!res.granted) return;                // 게이트는 res.granted 불린 (문자열 비교 X)
+setScope(res.ios?.scope ?? null);
+```
+
+W11 카메라에서 `cameraRequestPermission()`(훅 requester)을 쓴 것과 같은 이유다.
+
+### 함정 — 권한이 있어도 좌표를 못 얻는다 (에러 상태 필수)
+
+관찰된 현상: **"항상 허용" → 좌표 정상**, **"한 번만 허용" → 좌표 안 뜸**. 표시 로직 버그가 아니라 [`getCurrentPositionAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationgetcurrentpositionasyncoptions)가 **throw하는데 try/catch가 없어 조용히 죽는 것**이었다. "항상 허용"은 위치 서비스를 계속 켜둬 좌표가 바로 오지만, 임시권한("한 번만 허용")은 위치 매니저가 덜 데워진 상태라 첫 호출이 `kCLErrorLocationUnknown`으로 실패하기 쉽다.
+
+```ts
+try {
+  const currentLocation = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
+  const { latitude, longitude } = currentLocation.coords;
+  setLocation({ latitude, longitude });
+} catch (e) {
+  setErrorMessage(e instanceof Error ? e.message : "위치를 가져오지 못했습니다.");
+}
+```
+
+이게 P5 졸업 기준의 핵심이다 — 네이티브 기능은 **4상태(정상 / 로딩 / 에러 / 거부)**. "권한 있음 ≠ 데이터 얻음"이 위치에서 특히 흔하다(실내, 임시권한, GPS 미확보). 에러 상태 없이는 실패가 "빈 화면"으로 위장돼 버그처럼 보인다. (다음 단계: `getLastKnownPositionAsync` 폴백, 재시도, 로딩 스피너 — 현재는 에러 표시까지.)
+
+### `accuracy` — 매직넘버 대신 enum
+
+```ts
+import { Accuracy } from "expo-location";
+getCurrentPositionAsync({ accuracy: Accuracy.Balanced })  // 5(Highest) 같은 숫자 대신
+```
+
+`Accuracy.Highest`(6)는 배터리를 많이 쓴다. 기본 `Balanced`(3)면 대부분 충분하다.
+
+---
+
 ## 검증 방법
 
-갤러리는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다.
+갤러리·위치는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다. 위치도 scope 세부("한 번만 허용"이 `whenInUse`로 뜨는 것)는 실기기가 정확하지만 플로우·거부 UX는 시뮬로 검증된다.
 
 1. 피드 → "🖼 사진 선택" → 갤러리 열리고 선택한 사진 표시
 2. **iOS 설정 앱에서 이 앱의 사진 권한을 끄고** 다시 시도 → 배너 노출
 3. 배너의 "설정 열기" → 이 앱 설정 페이지로 이동
 4. (실기기) "카메라로 촬영" → 첫 실행 권한 다이얼로그 → 거부 후 재시도 → `canAskAgain === false`면 배너 노출
+5. 피드 → "위치" → "현재 위치 가져오기" → 권한 다이얼로그(3지선다) → 허용 시 위도/경도 + `권한 범위: whenInUse` 표시. **시뮬은 Features > Location > Apple을 먼저 켜야** 좌표가 온다
+6. 설정 앱에서 위치 권한을 **Never**로 바꾼 뒤 버튼을 **다시 눌러** 훅 `status`를 갱신 → 거부 배너 노출. 권한 리셋은 `xcrun simctl privacy booted reset location`
 
 `canAskAgain === false` 상태는 코드로 만들 수 없고 **설정 앱에서 수동으로 꺼야** 재현된다. 이 경로를 안 밟으면 거부 UX는 테스트되지 않은 코드로 남는다.
 
@@ -333,17 +396,18 @@ app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동
 | 파일 | 변경 |
 |---|---|
 | `src/screens/PhotoScreen.tsx` | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영 |
+| `src/screens/LocationScreen.tsx` | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 |
 | `app.json` | expo-image-picker config plugin (`photosPermission`) |
-| `src/navigation/types.ts` | `Photo: undefined` 라우트 타입 |
-| `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo">` 등록 |
-| `src/screens/FeedListScreen.tsx` | 사진 화면 이동 버튼 |
-| `src/theme/styles.ts` | `image` 스타일 (비율 고정 미리보기) |
+| `src/navigation/types.ts` | `Photo: undefined`, `Location: undefined` 라우트 타입 |
+| `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo" / "Location">` 등록 |
+| `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
+| `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트 스타일 |
 
 ---
 
 ## 남은 작업
 
 - **W11 카메라** — 완료. `launchCameraAsync` + 카메라 권한 게이트. 배너가 실제로 작동(실기기 검증 필요). `cameraPermission` 커스텀 문구는 출시 시 폴리시.
-- **W12** 위치/지도 — [`expo-location`](https://docs.expo.dev/versions/v54.0.0/sdk/location/). 같은 권한 플로우 + "사용 중에만 허용" 같은 부분 권한 개념 추가.
+- **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장. 지도/실시간 추적(`watchPositionAsync`)·주소 변환(`reverseGeocodeAsync`)은 확장 여지.
 - **W13** 저장/보안 — [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/), [`AsyncStorage`](https://docs.expo.dev/versions/v54.0.0/sdk/async-storage/). 권한은 없지만 저장 실패 처리가 관건.
 - **W14** 알림/공유 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/). 권한 + 백그라운드 동작.
