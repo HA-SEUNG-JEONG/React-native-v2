@@ -76,3 +76,14 @@ RefreshControl은 크로스 플랫폼 API지만 내부는 각 OS의 네이티브
 - [#53987](https://github.com/facebook/react-native/issues/53987) — `tintColor` 무시, 네비게이션 시 스피너 멈춤
 
 대응: JS 로직(`refreshing` 상태, `onRefresh` 핸들러)이 정상이면 코드 문제 아님. 실기기에서 재확인하고, 시뮬레이터 미표시는 무시하고 진행.
+
+## 복습 체크리스트
+
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+- [ ] iOS와 Android의 네이티브 구현이 각각 무엇이고(`UIRefreshControl` / `SwipeRefreshLayout`) 스피너 위치가 어떻게 다른가? — [`RefreshControl`](https://reactnative.dev/docs/refreshcontrol)
+- [ ] `refreshing`이 **controlled prop**이라는 게 무슨 뜻인가? `onRefresh` 안에서 `true`로 안 바꾸면? — [`RefreshControl`](https://reactnative.dev/docs/refreshcontrol)
+- [ ] 두 플랫폼 모두 스피너 색을 지정하려면 어떤 prop을 함께 넘겨야 하나?(`tintColor` / `colors`) — [`RefreshControl`](https://reactnative.dev/docs/refreshcontrol)
+- [ ] 한쪽 전용 prop을 반대 플랫폼에 넘기면 어떻게 되나?
+- [ ] 어두운 배경에서 색 지정이 사실상 필수인 이유는?
+- [ ] iOS 시뮬레이터에서 스피너가 안 뜰 때, 내 코드 버그인지 네이티브 버그인지 어떻게 판단하나? — [RN #56343](https://github.com/facebook/react-native/issues/56343)
