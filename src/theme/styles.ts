@@ -4,6 +4,7 @@ import { StyleSheet } from "react-native";
 // 여기서 직접 스타일을 골라 배열로 합쳐 쓴다.
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0f1115" },
+  map: { width: "100%", height: 240, borderRadius: 12 },
   pad: { padding: 20, gap: 14 },
   center: { justifyContent: "center" },
   modal: { paddingTop: 28 },
