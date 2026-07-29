@@ -9,7 +9,7 @@ import { styles } from "../theme/styles";
 export function ProfileScreen(
   _: BottomTabScreenProps<TabParamList, "ProfileTab">,
 ) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, persistError } = useAuth();
   return (
     <View style={[styles.screen, styles.pad]}>
       <Text style={styles.h1}>{user}</Text>
@@ -17,6 +17,7 @@ export function ProfileScreen(
         로그아웃하면 이 스택 전체가 언마운트 → 뒤로가기로 못 돌아옴.
       </Text>
       <Btn label="로그아웃" onPress={signOut} kind="danger" />
+      {persistError && <Text style={styles.hint}>{persistError}</Text>}
     </View>
   );
 }
