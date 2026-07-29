@@ -446,6 +446,81 @@ showsUserLocation={status?.granted === true}
 
 ---
 
+## W13 — 로그인 영속화 (`AuthContext` + `App.tsx` 확장)
+
+> 출처: [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/)
+> 검증: rn-sandbox-app `App.tsx`, iOS 시뮬레이터 실측 (RN 0.81 / Expo SDK 54)
+
+W11~W12는 권한 플로우였다. W13은 다른 문제다 — **권한은 필요 없고, 저장이 실패할 수 있다는 게 관건**이다. 이미 있던 로그인 게이트(`AuthContext`)는 메모리(`useState`)에만 살아서 앱을 껐다 켜면 로그아웃 상태로 돌아갔다. 새 화면을 만들지 않고 **기존 인증 플로우를 저장소로 확장**했다.
+
+### 왜 `AsyncStorage`가 아니라 `expo-secure-store`인가
+
+로그인 여부 자체는 민감정보가 아니지만, 나중에 토큰을 저장할 자리이므로 처음부터 보안 저장소로 통일했다. `expo-secure-store`는 플랫폼별로 다른 네이티브 저장소를 쓴다:
+
+| 플랫폼 | 실제 저장 위치 | 앱 삭제 후 재설치 시 |
+|---|---|---|
+| iOS | Keychain (`kSecClassGenericPassword`) | **남아있음** — "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID." |
+| Android | `SharedPreferences` + Keystore 암호화 | **사라짐** — "Data saved using expo-secure-store will not be preserved upon app uninstallation." |
+
+같은 API인데 두 플랫폼의 삭제 후 동작이 정반대다. iOS는 "로그아웃 안 하고 앱만 지웠다 다시 깔면 로그인 상태 유지"가 실제로 일어난다는 뜻 — 로그아웃 버튼 없이는 세션을 못 끊는 상태가 생길 수 있다.
+
+### 세 메서드 모두 reject할 수 있다
+
+> 문서: [`setItemAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/#securestoresetitemasynckey-value-options) · [`getItemAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/#securestoregetitemasynckey-options) · [`deleteItemAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/#securestoredeleteitemasynckey-options)
+
+문서상 셋 다 실패 가능한 Promise다: `setItemAsync`는 "rejects if value cannot be stored", `getItemAsync`는 "rejects if an error occurs while retrieving the value", `deleteItemAsync`는 "rejects if the value can't be deleted". 실사용 사례: **"Historically, some iOS releases refused values above roughly 2048 bytes."** — Expo가 자체 제한을 두지 않으므로 큰 값을 저장할수록 실패 확률이 올라간다.
+
+즉 이 세 함수는 "거의 항상 성공하는데 예외적으로 실패"가 아니라 **항상 catch가 필요한 API**로 다뤄야 한다.
+
+### 부팅 시 조회 — 로딩 게이트가 없으면 화면이 깜빡인다
+
+```tsx
+const [isReady, setIsReady] = useState(false);
+const [user, setUser] = useState<string | null>(null);
+
+useEffect(() => {
+  SecureStore.getItemAsync(AUTH_KEY)
+    .then(setUser)
+    .catch(() => setUser(null))
+    .finally(() => setIsReady(true));
+}, []);
+
+if (!isReady) return <View style={[styles.screen, styles.center]} />;
+```
+
+`getItemAsync`는 비동기다. 이 조회가 끝나기 전에 `user`는 초기값 `null`이고, 그 상태로 네비게이션을 그려버리면 **로그인 화면이 한 프레임 비쳤다가 실제 값이 오면 프로필로 바뀌는 깜빡임(flash)**이 생긴다. `isReady` 게이트로 조회가 끝날 때까지 렌더 자체를 미룬다 — 앱 부팅 화면(빈 `View`)이 그 자리를 대신한다.
+
+`.catch(() => setUser(null))` — 조회 실패를 "로그아웃 상태"로 취급한다. 저장소 접근이 막혀도 앱이 못 뜨는 것보단 로그인 화면으로 떨어지는 게 낫다.
+
+### 낙관적 쓰기 — 저장 실패가 로그인 자체를 막지 않는다
+
+```tsx
+signIn: (name) => {
+  setUser(name);                                    // 이번 세션은 즉시 로그인
+  SecureStore.setItemAsync(AUTH_KEY, name)
+    .then(() => setPersistError(null))
+    .catch(() => setPersistError("로그인 정보 저장 실패 — 앱을 재시작하면 다시 로그인해야 함"));
+},
+```
+
+저장 성공을 기다렸다가 로그인 처리를 하면, 저장소가 잠깐 느리거나 실패할 때 로그인 버튼이 먹통처럼 보인다. **화면 상태(`user`)와 영속 상태(SecureStore)를 분리**해서, 화면은 즉시 반응하고 영속화 실패만 별도 배너(`persistError`)로 알린다. W11~W12의 "거부 UX를 화면에 상시 노출" 원칙과 같은 결 — 실패를 조용히 삼키지 않고, 그렇다고 기능 전체를 막지도 않는다.
+
+### 검증 — "재시작"을 시뮬레이터에서 흉내내는 법
+
+Expo Go 위에서 도는 앱은 시뮬레이터에서 완전히 종료해도 Expo Go 프로세스 자체는 안 죽는다. **JS 컨텍스트만 초기화(cold reload)**하려면 Metro에 리로드를 요청하면 된다:
+
+```bash
+curl -s -X POST http://localhost:8081/reload
+```
+
+이러면 `App` 컴포넌트가 처음부터 다시 마운트되고 모든 `useState`가 초기값으로 돌아간다 — 진짜 콜드 부팅과 같은 조건. 리로드 직후 스크린샷에서 로그인 화면 없이 바로 프로필 화면(저장된 `user`)이 뜨는 걸로 `getItemAsync` 복원을 확인했다.
+
+### `requireAuthentication`(생체 인증)은 여기서 안 씀
+
+문서: **"The requireAuthentication option is not supported in Expo Go when biometric authentication is available due to a missing NSFaceIDUsageDescription key."** Expo Go로 개발 중인 지금은 이 옵션을 켜면 동작하지 않는다. Dev build로 넘어갈 때(P8 근처) 필요하면 추가할 옵션이지, 지금 빠뜨린 게 아니다.
+
+---
+
 ## 검증 방법
 
 갤러리·위치는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다. 위치도 scope 세부("한 번만 허용"이 `whenInUse`로 뜨는 것)는 실기기가 정확하지만 플로우·거부 UX는 시뮬로 검증된다.
@@ -458,6 +533,9 @@ showsUserLocation={status?.granted === true}
 6. 설정 앱에서 위치 권한을 **Never**로 바꾼 뒤 버튼을 **다시 눌러** 훅 `status`를 갱신 → 거부 배너 노출. 권한 리셋은 `xcrun simctl privacy booted reset location`
 7. 위치 화면 진입 → **서울 기준 지도가 뜨고 마커는 없음**, 권한 팝업도 없음 (버튼이 트리거이므로)
 8. 버튼 → 허용 → 지도가 현재 좌표로 이동 + 마커 1개. 거부 상태면 지도는 서울에 그대로 남고 배너만 노출
+9. "하승으로 로그인" → 배너 없이 바로 프로필 화면
+10. `curl -s -X POST http://localhost:8081/reload`로 JS 재시작 → 로그인 화면 없이 바로 프로필(복원 확인)
+11. 프로필에서 "로그아웃" → 배너 없이 바로 로그인 화면
 
 `canAskAgain === false` 상태는 코드로 만들 수 없고 **설정 앱에서 수동으로 꺼야** 재현된다. 이 경로를 안 밟으면 거부 UX는 테스트되지 않은 코드로 남는다.
 
@@ -531,6 +609,16 @@ showsUserLocation={status?.granted === true}
 - [ ] 위치 권한 Never로 바꾸고 **버튼 다시 눌러** 훅 `status` 갱신 → 거부 배너 — [`useFocusEffect`](https://reactnavigation.org/docs/use-focus-effect/) (설정 복귀 재조회 조합)
 - [ ] `xcrun simctl privacy booted reset location`로 권한 리셋할 줄 안다
 
+### 저장/보안 (W13)
+
+- [ ] `expo-secure-store`가 iOS/Android에서 각각 어떤 네이티브 저장소를 쓰는지 — [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/)
+- [ ] 앱 삭제 후 재설치 시 iOS는 값이 남고 Android는 사라지는 이유
+- [ ] `setItemAsync`/`getItemAsync`/`deleteItemAsync` 셋 다 reject 가능한 이유, 2048바이트 근방 값 크기 제한 이력
+- [ ] `isReady` 로딩 게이트가 없으면 왜 로그인 화면이 잠깐 깜빡이는지 (부팅 시 비동기 조회)
+- [ ] 낙관적 쓰기 — 화면 상태(`user`)와 영속 상태(SecureStore 저장 성패)를 왜 분리했는지
+- [ ] Expo Go에서 Metro `/reload`로 "콜드 부팅"을 흉내내는 방법과 그게 왜 진짜 재시작과 같은 조건인지
+- [ ] `requireAuthentication`이 Expo Go에서 왜 동작하지 않는지
+
 ---
 
 ## 관련 파일
@@ -545,6 +633,10 @@ showsUserLocation={status?.granted === true}
 | `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
 | `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일 |
 | `package.json` | `react-native-maps` 1.20.1 |
+| `src/auth/AuthContext.tsx` | `persistError` 필드 추가 |
+| `App.tsx` | SecureStore 조회/저장/삭제 + `isReady` 부팅 게이트 |
+| `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너 |
+| `app.json` | expo-secure-store config plugin |
 
 ---
 
@@ -553,5 +645,5 @@ showsUserLocation={status?.granted === true}
 - **W11 카메라** — 완료. `launchCameraAsync` + 카메라 권한 게이트. 배너가 실제로 작동(실기기 검증 필요). `cameraPermission` 커스텀 문구는 출시 시 폴리시.
 - **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장.
 - **W12** 지도 — 완료. `react-native-maps` `MapView` + `Marker` + `animateToRegion`. 남은 확장: 실시간 추적(`watchPositionAsync`), 주소 변환(`reverseGeocodeAsync`), 로딩 상태(현재 4상태 중 로딩만 미구현), 마커 다수 시 클러스터링.
-- **W13** 저장/보안 — [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/), [`AsyncStorage`](https://docs.expo.dev/versions/v54.0.0/sdk/async-storage/). 권한은 없지만 저장 실패 처리가 관건.
+- **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제.
 - **W14** 알림/공유 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/). 권한 + 백그라운드 동작.

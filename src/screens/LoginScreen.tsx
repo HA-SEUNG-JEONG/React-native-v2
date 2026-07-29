@@ -9,7 +9,7 @@ import { styles } from "../theme/styles";
 export function LoginScreen(
   _: NativeStackScreenProps<AuthStackParamList, "Login">,
 ) {
-  const { signIn } = useAuth();
+  const { signIn, persistError } = useAuth();
   return (
     <View style={[styles.screen, styles.pad, styles.center]}>
       <Text style={styles.h1}>로그인</Text>
@@ -17,6 +17,7 @@ export function LoginScreen(
         로그인하면 인증 네비게이터 → 앱 네비게이터로 트리가 교체됨.
       </Text>
       <Btn label="하승으로 로그인" onPress={() => signIn("하승")} />
+      {persistError && <Text style={styles.hint}>{persistError}</Text>}
     </View>
   );
 }
