@@ -372,6 +372,80 @@ getCurrentPositionAsync({ accuracy: Accuracy.Balanced })  // 5(Highest) 같은 �
 
 ---
 
+## W12 — 지도 (`LocationScreen` 확장)
+
+좌표를 숫자로 찍는 것까지가 앞 절이다. 여기서는 그 좌표를 지도 위에 올린다. 새 화면을 만들지 않고 `LocationScreen`에 붙였다 — 권한 플로우·에러 상태가 이미 거기 있고, 지도는 그 결과를 표시하는 수단이기 때문이다.
+
+### 라이브러리 선택 — `expo-maps`가 아니라 `react-native-maps`
+
+| | [`expo-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/maps/) | [`react-native-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/) |
+|---|---|---|
+| Expo Go | **불가** — 문서 verbatim "Not available in the Expo Go app" | 포함됨, "No additional setup is required" |
+| 안정성 | **alpha, breaking change 잦음** | 안정 |
+| API | `AppleMaps.View` / `GoogleMaps.View` 플랫폼별 분리 | `MapView` 하나 |
+
+샌드박스는 Expo Go로 돌리므로 `react-native-maps`. `expo-maps`는 dev build를 만들 때(P8 출시 단계) 다시 볼 것.
+
+### 함정 — `MapView`에 크기를 안 주면 아무것도 안 보인다
+
+RN에는 "기본 높이"가 없다. 웹의 `<div>`가 콘텐츠만큼 늘어나는 것과 달리 `MapView`는 자식이 없어 높이 0으로 접힌다. **에러도 경고도 없고 그냥 빈 화면**이라 원인 찾기가 오래 걸린다.
+
+```ts
+// styles.ts
+map: { width: "100%", height: 240, borderRadius: 12 },
+```
+
+공용 `screen` 스타일에 `height`를 주는 것으로 해결하려 하면 안 된다 — 모든 화면이 공유하는 스타일이라 다른 화면이 같이 망가진다. 크기는 지도 전용 스타일로.
+
+### `initialRegion` vs `region` — 비제어 vs 제어
+
+웹 폼의 `defaultValue` vs `value`와 같은 구조다. [문서](https://github.com/react-native-maps/react-native-maps/blob/master/docs/mapview.md) 원문: initialRegion은 "Use this prop instead of `region` only if you don't want to control the viewport of the map besides the initial region."
+
+- `initialRegion` — **마운트 시 1회만** 읽힌다. 이후 유저가 자유롭게 팬/줌.
+- `region` — 매 렌더 state가 진실. state를 안 맞추면 유저가 드래그해도 도로 튕긴다.
+
+여기서 나온 실수: `initialRegion`을 `useState`로 만들고 좌표 도착 시 `setInitialRegion`을 불렀다. **비제어 prop이라 아무 일도 안 일어난다** — 리렌더만 유발하는 죽은 state였다. 지도를 실제로 움직인 건 그 다음 줄의 `animateToRegion`이다.
+
+```ts
+const mapRef = useRef<MapView>(null);
+// ...좌표 수신 직후
+mapRef.current?.animateToRegion({ latitude, longitude, ...DELTA }, 500);
+```
+
+**둘을 동시에 주면 안 된다.** `region`이 이기면서 제어 모드가 되고, 드래그가 튕긴다.
+
+> `animateToRegion(region, duration)`의 `duration`은 문서상 **iOS 미지원**이다. 시뮬(iOS)에서는 500이 무시되고 기본 애니메이션으로 돈다.
+
+### Region은 zoom level이 아니다
+
+```ts
+{ latitude, longitude, latitudeDelta, longitudeDelta }
+```
+
+`delta`는 화면에 보이는 **위경도 범위(span)**다. 0.01 ≈ 동네 한 블록, 0.05 ≈ 도심 전체. 구글맵 URL의 `z=15` 같은 정수 zoom과 다른 모델이라, 확대하려면 숫자를 **키우는 게 아니라 줄인다**.
+
+### `showsUserLocation` — 권한이 먼저
+
+문서 원문: "You need runtime location permissions prior to setting this to true, otherwise it is going to **fail silently**!"
+
+```tsx
+showsUserLocation={status?.granted === true}
+```
+
+`status`는 초기 `null`이라 `?.granted`가 `undefined`다. prop은 boolean을 기대하므로 `=== true`로 좁힌다. 이 화면은 버튼을 눌러야 권한을 요청하므로, 진입 직후에는 파란 점이 없는 게 정상이다.
+
+### `provider` — 안 주는 게 키가 없는 길
+
+문서 원문: `"google"`이면 Google Maps, "otherwise `null` or `undefined` to use the native map framework (`MapKit` in iOS and `GoogleMaps` in android)".
+
+`PROVIDER_GOOGLE`을 iOS에 주면 Google Maps SDK 경로가 되어 dev build/스토어 빌드에 `ios.config.googleMapsApiKey`가 필요해진다. prop을 생략하면 iOS는 MapKit(키 불필요), Android는 Google Maps. **Android 스토어 빌드는 `android.config.googleMaps.apiKey`가 여전히 필요**하다 — Expo Go에서만 Expo의 키로 동작하는 것이니, 출시(P8) 때 발급한다.
+
+### 클러스터링은 내장이 아니다
+
+`react-native-maps`에 클러스터 기능은 없다. 마커 수백 개를 그리면 프레임이 떨어지고, 그때 별도 라이브러리나 직접 그리드 집계가 필요하다. 마커 1개인 지금은 개념만 알고 넘어간다.
+
+---
+
 ## W13 — 로그인 영속화 (`AuthContext` + `App.tsx` 확장)
 
 > 출처: [`expo-secure-store`](https://docs.expo.dev/versions/v54.0.0/sdk/securestore/)
@@ -457,9 +531,11 @@ curl -s -X POST http://localhost:8081/reload
 4. (실기기) "카메라로 촬영" → 첫 실행 권한 다이얼로그 → 거부 후 재시도 → `canAskAgain === false`면 배너 노출
 5. 피드 → "위치" → "현재 위치 가져오기" → 권한 다이얼로그(3지선다) → 허용 시 위도/경도 + `권한 범위: whenInUse` 표시. **시뮬은 Features > Location > Apple을 먼저 켜야** 좌표가 온다
 6. 설정 앱에서 위치 권한을 **Never**로 바꾼 뒤 버튼을 **다시 눌러** 훅 `status`를 갱신 → 거부 배너 노출. 권한 리셋은 `xcrun simctl privacy booted reset location`
-7. "하승으로 로그인" → 배너 없이 바로 프로필 화면
-8. `curl -s -X POST http://localhost:8081/reload`로 JS 재시작 → 로그인 화면 없이 바로 프로필(복원 확인)
-9. 프로필에서 "로그아웃" → 배너 없이 바로 로그인 화면
+7. 위치 화면 진입 → **서울 기준 지도가 뜨고 마커는 없음**, 권한 팝업도 없음 (버튼이 트리거이므로)
+8. 버튼 → 허용 → 지도가 현재 좌표로 이동 + 마커 1개. 거부 상태면 지도는 서울에 그대로 남고 배너만 노출
+9. "하승으로 로그인" → 배너 없이 바로 프로필 화면
+10. `curl -s -X POST http://localhost:8081/reload`로 JS 재시작 → 로그인 화면 없이 바로 프로필(복원 확인)
+11. 프로필에서 "로그아웃" → 배너 없이 바로 로그인 화면
 
 `canAskAgain === false` 상태는 코드로 만들 수 없고 **설정 앱에서 수동으로 꺼야** 재현된다. 이 경로를 안 밟으면 거부 UX는 테스트되지 않은 코드로 남는다.
 
@@ -515,6 +591,17 @@ curl -s -X POST http://localhost:8081/reload
 - [ ] 네이티브 기능의 4상태(정상/로딩/에러/거부)를 말할 수 있다
 - [ ] `Accuracy` enum을 쓰는 이유, `Highest`와 `Balanced`의 트레이드오프 — [`Accuracy`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#accuracy)
 
+### 지도 (W12)
+
+- [ ] `expo-maps`가 아니라 `react-native-maps`를 쓴 이유를 말할 수 있다 (Expo Go / alpha) — [`expo-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/maps/) · [`react-native-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/)
+- [ ] `MapView`에 크기를 안 주면 왜 **에러 없이** 빈 화면인지 안다
+- [ ] `initialRegion`과 `region`의 차이, 둘을 같이 주면 무슨 일이 생기는지 — [MapView props](https://github.com/react-native-maps/react-native-maps/blob/master/docs/mapview.md)
+- [ ] `initialRegion`을 state로 바꿔도 지도가 안 움직이는 이유, 그럼 뭐가 움직였는지 (`animateToRegion`)
+- [ ] `latitudeDelta`가 zoom level과 어떻게 다른지, 확대하려면 값을 키우는지 줄이는지
+- [ ] `showsUserLocation`을 권한 없이 켜면 무슨 일이 일어나는지 (팝업 아님 — **fail silently**)
+- [ ] `provider`를 생략하면 iOS/Android가 각각 무슨 지도를 쓰는지, API 키가 언제 필요해지는지
+- [ ] 클러스터링이 왜 내장이 아닌지, 언제 필요해지는지
+
 ### 검증 (손으로 밟아봤나)
 
 - [ ] 설정 앱에서 사진 권한 끄고 배너 노출 → "설정 열기"로 앱 설정 페이지 이동 — [`Linking.openSettings()`](https://reactnative.dev/docs/linking#opensettings)
@@ -539,12 +626,13 @@ curl -s -X POST http://localhost:8081/reload
 | 파일 | 변경 |
 |---|---|
 | `src/screens/PhotoScreen.tsx` | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영 |
-| `src/screens/LocationScreen.tsx` | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 |
+| `src/screens/LocationScreen.tsx` | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 + 지도/마커 |
 | `app.json` | expo-image-picker config plugin (`photosPermission`) |
 | `src/navigation/types.ts` | `Photo: undefined`, `Location: undefined` 라우트 타입 |
 | `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo" / "Location">` 등록 |
 | `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
-| `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트 스타일 |
+| `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일 |
+| `package.json` | `react-native-maps` 1.20.1 |
 | `src/auth/AuthContext.tsx` | `persistError` 필드 추가 |
 | `App.tsx` | SecureStore 조회/저장/삭제 + `isReady` 부팅 게이트 |
 | `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너 |
@@ -555,6 +643,7 @@ curl -s -X POST http://localhost:8081/reload
 ## 남은 작업
 
 - **W11 카메라** — 완료. `launchCameraAsync` + 카메라 권한 게이트. 배너가 실제로 작동(실기기 검증 필요). `cameraPermission` 커스텀 문구는 출시 시 폴리시.
-- **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장. 지도/실시간 추적(`watchPositionAsync`)·주소 변환(`reverseGeocodeAsync`)은 확장 여지.
+- **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장.
+- **W12** 지도 — 완료. `react-native-maps` `MapView` + `Marker` + `animateToRegion`. 남은 확장: 실시간 추적(`watchPositionAsync`), 주소 변환(`reverseGeocodeAsync`), 로딩 상태(현재 4상태 중 로딩만 미구현), 마커 다수 시 클러스터링.
 - **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제.
 - **W14** 알림/공유 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/). 권한 + 백그라운드 동작.
