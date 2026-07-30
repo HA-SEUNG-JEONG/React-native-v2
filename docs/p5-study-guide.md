@@ -521,6 +521,86 @@ curl -s -X POST http://localhost:8081/reload
 
 ---
 
+## W14 — 알림·공유 (`NotificationScreen`, `PhotoScreen` 확장)
+
+> 출처: [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/) · [`expo-sharing`](https://docs.expo.dev/versions/v54.0.0/sdk/sharing/)
+> 검증: rn-sandbox-app iOS 시뮬레이터 + Android 에뮬레이터(`Pixel_10_Pro`) 실측 (RN 0.81 / Expo SDK 54)
+
+### 훅 권한 API가 없다 — 카메라/위치와 다른 패턴
+
+W11(카메라)·W12(위치)는 `useCameraPermissions`/`useForegroundPermissions` 훅이 상태를 관리해줬다. `expo-notifications`엔 그런 훅이 없어서 `status`를 직접 `useState`로 들고, `getPermissionsAsync()`/`requestPermissionsAsync()`를 수동으로 호출해 갱신한다. 나머지 뼈대(4단계 플로우, `canAskAgain === false` 배너)는 동일하다.
+
+### Android는 채널이 먼저다
+
+```tsx
+if (Platform.OS === "android") {
+  Notifications.setNotificationChannelAsync("default", {
+    name: "기본",
+    importance: Notifications.AndroidImportance.MAX,
+  });
+}
+```
+
+문서: Android 8+(API 26+)는 알림에 채널이 있어야 하고, 채널이 없으면 권한 프롬프트 자체가 의미 있게 뜨지 않는다. iOS엔 채널 개념이 없어서 `Platform.OS === "android"` 가드로 분기한다 — 이 가드를 빼고 iOS에서 호출하면 조용히 무시되긴 하지만, "iOS/Android 공통 코드"라는 착각을 남기지 않으려 명시적으로 나눴다.
+
+### `setNotificationHandler`는 모듈 스코프에서 1회
+
+```ts
+// App.tsx 최상단, 컴포넌트 밖
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
+```
+
+이 설정이 없으면 앱이 **포그라운드**일 때 온 알림은 기본적으로 화면에 안 나타난다(백그라운드/종료 상태는 OS가 알아서 표시하므로 영향 없음). `shouldShowBanner`/`shouldShowList`는 SDK 54 기준 필드명이다 — 예전 `shouldShowAlert`는 deprecated. 컴포넌트 안이 아니라 `App.tsx` 모듈 스코프에 둔 이유: 화면을 오가며 매번 재등록할 이유가 없는 앱 전역 설정이라서.
+
+### `trigger`가 알림의 전부다
+
+```ts
+await Notifications.scheduleNotificationAsync({
+  content: { title: "즉시 알림", body: "..." },
+  trigger: null, // 즉시 표시
+});
+
+await Notifications.scheduleNotificationAsync({
+  content: { title: "5초 후 알림", body: "..." },
+  trigger: {
+    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    seconds: 5,
+    repeats: false,
+  },
+});
+```
+
+`trigger: null`과 `trigger: { type: TIME_INTERVAL, ... }`은 같은 함수의 두 모드다. `content`는 뭘 보여줄지, `trigger`는 언제 보여줄지 — 이 둘의 분리를 모르면 "즉시 알림"과 "예약 알림"이 서로 다른 API처럼 보인다.
+
+### Android + Expo Go — 원격 푸시는 막혀도 로컬은 산다
+
+Expo Go 첫 실행 시 노란 배너로 뜨는 경고: **"expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53."** 이 프로젝트가 쓰는 건 원격 푸시가 아니라 **로컬 알림**(`scheduleNotificationAsync`)이라 이 제약과 무관하게 정상 동작한다 — 배너를 보고 "알림이 아예 안 될 것"이라 오해하지 않아야 한다. 실제 원격 푸시(FCM 토큰 발급 등)가 필요해지면 그때 dev build(P8)로 넘어간다.
+
+### `expo-sharing` — 로컬 파일 URI 전용
+
+```tsx
+const share = async () => {
+  if (!uri) return;
+  if (!(await isAvailableAsync())) return;
+  await shareAsync(uri);
+};
+```
+
+문서: `shareAsync`는 기기에 실제로 존재하는 로컬 파일 경로만 공유할 수 있다 — 원격 URL이나 base64 문자열을 그대로 넘기면 실패한다. `PhotoScreen`에서 갤러리/카메라로 받은 `uri`는 이미 로컬 파일 경로라 조건 없이 바로 쓸 수 있다. `isAvailableAsync()`는 플랫폼이 공유 시트를 지원하는지 확인하는 방어 코드 — 웹 등 미지원 환경에서 `shareAsync`가 던지는 에러를 사전에 막는다.
+
+### 검증 — Android는 시스템 알림까지 확인
+
+iOS는 시뮬레이터의 포그라운드 배너/UI 카운터로 충분하지만, Android는 `adb shell dumpsys notification --noredact | grep "android.title"`로 **JS 상태가 아니라 실제 OS 알림이 등록됐는지** 한 번 더 확인했다. 공유 시트는 신규 Android 에뮬레이터에 사진이 하나도 없어 막혔는데, 하드웨어 카메라로 사진을 찍는 대신 프로젝트 asset(`assets/icon.png`)을 `adb push`로 미디어 저장소에 넣고 `MEDIA_SCANNER_SCAN_FILE` 브로드캐스트로 인덱싱시켜 우회했다 — 실제 기기라면 필요 없는 에뮬레이터 전용 준비 단계다.
+
+---
+
 ## 검증 방법
 
 갤러리·위치는 시뮬레이터에서 확인한다. **카메라는 시뮬레이터에 하드웨어가 없어 실기기가 필요**하다. 위치도 scope 세부("한 번만 허용"이 `whenInUse`로 뜨는 것)는 실기기가 정확하지만 플로우·거부 UX는 시뮬로 검증된다.
@@ -619,6 +699,16 @@ curl -s -X POST http://localhost:8081/reload
 - [ ] Expo Go에서 Metro `/reload`로 "콜드 부팅"을 흉내내는 방법과 그게 왜 진짜 재시작과 같은 조건인지
 - [ ] `requireAuthentication`이 Expo Go에서 왜 동작하지 않는지
 
+### 알림·공유 (W14)
+
+- [ ] `expo-notifications`엔 왜 카메라/위치 같은 권한 훅이 없는지, `status`를 어떻게 대신 관리하는지 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/)
+- [ ] Android가 채널을 먼저 만들어야 하는 이유, iOS엔 왜 그 개념이 없는지 — [`setNotificationChannelAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/#notificationssetnotificationchannelasyncchannelid-channel)
+- [ ] `setNotificationHandler`가 없으면 포그라운드 알림에 무슨 일이 생기는지, 왜 컴포넌트가 아니라 `App.tsx` 모듈 스코프에 두는지
+- [ ] `trigger: null`과 `trigger: { type: TIME_INTERVAL, ... }`이 같은 함수의 두 모드인 이유 — [`scheduleNotificationAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/#notificationsschedulenotificationasynccontent-trigger)
+- [ ] Expo Go의 "Android 원격 푸시 제거" 경고가 이 화면의 로컬 알림과 왜 무관한지
+- [ ] `shareAsync`가 원격 URL이 아니라 로컬 파일 URI만 받는 이유, `isAvailableAsync()`가 막아주는 실패가 뭔지 — [`expo-sharing`](https://docs.expo.dev/versions/v54.0.0/sdk/sharing/)
+- [ ] Android에서 "JS 상태"가 아니라 "실제 OS 알림"을 확인하려면 뭘 봐야 하는지 (`dumpsys notification`)
+
 ---
 
 ## 관련 파일
@@ -631,6 +721,13 @@ curl -s -X POST http://localhost:8081/reload
 | `src/navigation/types.ts` | `Photo: undefined`, `Location: undefined` 라우트 타입 |
 | `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo" / "Location">` 등록 |
 | `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
+| `src/screens/NotificationScreen.tsx` | 신규 — 알림 권한 플로우 + 즉시/5초 지연 로컬 알림 예약 |
+| `App.tsx` | `setNotificationHandler` — 포그라운드 알림 표시 설정 (모듈 스코프) |
+| `src/navigation/types.ts` | `Notification: undefined` 라우트 타입 |
+| `src/navigation/index.tsx` | `<HomeStack.Screen name="Notification">` 등록 |
+| `src/screens/FeedListScreen.tsx` | 알림 화면 이동 버튼 |
+| `src/screens/PhotoScreen.tsx` | `expo-sharing`으로 로컬 사진 공유 버튼 추가 |
+| `package.json` | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8 |
 | `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일 |
 | `package.json` | `react-native-maps` 1.20.1 |
 | `src/auth/AuthContext.tsx` | `persistError` 필드 추가 |
@@ -646,4 +743,4 @@ curl -s -X POST http://localhost:8081/reload
 - **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장.
 - **W12** 지도 — 완료. `react-native-maps` `MapView` + `Marker` + `animateToRegion`. 남은 확장: 실시간 추적(`watchPositionAsync`), 주소 변환(`reverseGeocodeAsync`), 로딩 상태(현재 4상태 중 로딩만 미구현), 마커 다수 시 클러스터링.
 - **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제.
-- **W14** 알림/공유 — [`expo-notifications`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/). 권한 + 백그라운드 동작.
+- **W14 알림/공유** — 완료. `expo-notifications` 수동 권한 관리 + Android 채널 + 포그라운드 핸들러 + 즉시/5초 지연 로컬 알림, `expo-sharing`으로 로컬 사진 공유. iOS 시뮬레이터·Android 에뮬레이터 모두 실측(Android는 `dumpsys notification`으로 시스템 알림까지 확인). 원격 푸시(FCM 토큰)는 Expo Go에서 막혀 있어 dev build 전환 시(P8) 과제로 남음.
