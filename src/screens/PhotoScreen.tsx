@@ -6,6 +6,7 @@ import {
   launchImageLibraryAsync,
   useCameraPermissions,
 } from "expo-image-picker";
+import { isAvailableAsync, shareAsync } from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../navigation/types";
 import { Btn } from "../components/Btn";
@@ -43,6 +44,14 @@ export function PhotoScreen(
     setUri(result.assets[0].uri);
   };
 
+  // expo-sharing은 원격 URL이 아니라 기기 로컬 파일 경로만 공유 가능 — 그래서
+  // 갤러리/카메라로 받은 로컬 uri가 있을 때만 버튼이 의미 있음.
+  const share = async () => {
+    if (!uri) return;
+    if (!(await isAvailableAsync())) return;
+    await shareAsync(uri);
+  };
+
   return (
     <View style={[styles.screen, styles.pad]}>
       {uri ? (
@@ -53,6 +62,7 @@ export function PhotoScreen(
 
       <Btn label="갤러리에서 사진 선택" onPress={pickPhoto} />
       <Btn label="카메라로 촬영" onPress={takePhoto} />
+      {uri && <Btn label="공유하기" onPress={share} kind="ghost" />}
       {blocked && (
         <>
           <Text style={styles.hint}>

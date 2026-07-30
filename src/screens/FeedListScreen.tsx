@@ -139,6 +139,11 @@ export function FeedListScreen({
               onPress={() => navigation.navigate("Location")}
               kind="ghost"
             />
+            <Btn
+              label="🔔 알림 (권한+예약)"
+              onPress={() => navigation.navigate("Notification")}
+              kind="ghost"
+            />
           </>
         }
         renderItem={({ item }) => (

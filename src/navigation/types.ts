@@ -8,6 +8,7 @@ export type HomeStackParamList = {
   FeedDetail: { id: string; title?: string };
   Photo: undefined; // 갤러리에서 사진 선택 (권한 플로우 데모)
   Location: undefined;
+  Notification: undefined; // 로컬 알림 권한 + 예약 데모
 };
 export type TabParamList = {
   HomeTab: undefined;

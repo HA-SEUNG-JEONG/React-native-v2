@@ -3,12 +3,24 @@ import { View } from "react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
+import * as Notifications from "expo-notifications";
 import { queryClient } from "./src/api/posts";
 import { AuthContext, type Auth } from "./src/auth/AuthContext";
 import { RootNavigator, linking, LinkingFallback } from "./src/navigation";
 import { styles } from "./src/theme/styles";
 
 const AUTH_KEY = "auth_user";
+
+// 앱이 포그라운드일 때 알림을 어떻게 보여줄지 — 모듈 스코프에서 1회 설정.
+// 없으면 포그라운드 중 온 알림은 기본적으로 무시됨(배너/리스트 표시 안 함).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 
 // 트리 최상단 배선만 담당:
 //  - QueryClientProvider: 하위 어디서든 useQuery/useInfiniteQuery 사용 가능. 1개.
