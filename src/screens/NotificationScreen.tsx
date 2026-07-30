@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Linking, Text, View, Platform } from "react-native";
+import * as ExpoLinking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../navigation/types";
@@ -24,6 +25,15 @@ export function NotificationScreen(
       });
     }
     Notifications.getPermissionsAsync().then(setStatus);
+
+    // 알림을 탭했을 때(포그라운드/백그라운드 공통) content.data.url을 앱 딥링크로
+    // 열어 기존 navigation/index.tsx의 linking 설정을 그대로 태운다 — 새 네비게이션
+    // 로직을 따로 안 만들고 이미 있는 URL → 화면 매핑을 재사용.
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const url = response.notification.request.content.data?.url;
+      if (typeof url === "string") Linking.openURL(url);
+    });
+    return () => sub.remove();
   }, []);
 
   // 카메라/위치와 같은 패턴: 영구 거부면 요청해도 OS 다이얼로그가 안 뜬다.
@@ -54,8 +64,13 @@ export function NotificationScreen(
       setStatus(res);
       if (!res.granted) return;
     }
+    // data.url: 탭하면 위 리스너가 이 딥링크를 열어 피드 상세로 이동한다.
     await Notifications.scheduleNotificationAsync({
-      content: { title: "5초 후 알림", body: "앱을 백그라운드로 보내도 옴" },
+      content: {
+        title: "5초 후 알림",
+        body: "탭하면 피드 상세로 이동함 (앱을 백그라운드로 보내도 옴)",
+        data: { url: ExpoLinking.createURL("/feed/1") },
+      },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: 5,

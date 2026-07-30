@@ -599,6 +599,34 @@ const share = async () => {
 
 iOS는 시뮬레이터의 포그라운드 배너/UI 카운터로 충분하지만, Android는 `adb shell dumpsys notification --noredact | grep "android.title"`로 **JS 상태가 아니라 실제 OS 알림이 등록됐는지** 한 번 더 확인했다. 공유 시트는 신규 Android 에뮬레이터에 사진이 하나도 없어 막혔는데, 하드웨어 카메라로 사진을 찍는 대신 프로젝트 asset(`assets/icon.png`)을 `adb push`로 미디어 저장소에 넣고 `MEDIA_SCANNER_SCAN_FILE` 브로드캐스트로 인덱싱시켜 우회했다 — 실제 기기라면 필요 없는 에뮬레이터 전용 준비 단계다.
 
+### 링크 — 알림 탭 → 딥링크 네비게이션
+
+> 출처: [`expo-linking`](https://docs.expo.dev/versions/v54.0.0/sdk/linking/) · [`addNotificationResponseReceivedListener`](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/#notificationsaddnotificationresponsereceivedlistenerlistener)
+
+W14 커리큘럼의 세 번째 축인 "링크"는 새 화면을 만들지 않고, **알림을 탭했을 때 이미 있는 딥링크 인프라(`navigation/index.tsx`의 `linking.config`)를 태우는 방식**으로 붙였다.
+
+```tsx
+// NotificationScreen.tsx
+useEffect(() => {
+  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const url = response.notification.request.content.data?.url;
+    if (typeof url === "string") Linking.openURL(url);
+  });
+  return () => sub.remove();
+}, []);
+
+// scheduleDelayed 안:
+content: {
+  title: "5초 후 알림",
+  body: "탭하면 피드 상세로 이동함",
+  data: { url: ExpoLinking.createURL("/feed/1") }, // → picsel://feed/1
+},
+```
+
+`content.data`엔 임의 JSON을 실어 보낼 수 있고, 탭 응답(`response`) 안에 그대로 돌아온다. 새 네비게이션 로직을 만드는 대신 **이미 검증된 `Linking.openURL` → `linking.config.screens` 매핑**을 재사용했다 — W11~W13에서 이미 만들어둔 것을 새 기능이 그대로 가져다 쓴 사례.
+
+> **검증 범위의 한계**: 포그라운드 배너 탭과 잠금화면 알림 탭은 iOS 시뮬레이터에서 자동화 도구로 재현하기 까다로웠다(배너는 수 초 만에 사라지고, 잠금화면은 Face ID 시뮬레이션이 필요해 도구가 못 건드림). 대신 아래를 개별 확인했다: (1) `picsel://feed/1`이 실제로 `FeedDetail`로 연결되는 유효한 라우트라는 것(화면에 노출된 "딥링크:" 텍스트로 직접 확인), (2) 알림이 이 payload와 함께 정상 발송된다는 것, (3) 리스너 코드가 `tsc --noEmit` 통과. 알림 탭 → 앱 오픈 → 리스너 실행까지 이어지는 전체 체인은 실기기에서 손으로 눌러 확인하는 게 더 빠르고 확실하다.
+
 ---
 
 ## 검증 방법
@@ -708,6 +736,7 @@ iOS는 시뮬레이터의 포그라운드 배너/UI 카운터로 충분하지만
 - [ ] Expo Go의 "Android 원격 푸시 제거" 경고가 이 화면의 로컬 알림과 왜 무관한지
 - [ ] `shareAsync`가 원격 URL이 아니라 로컬 파일 URI만 받는 이유, `isAvailableAsync()`가 막아주는 실패가 뭔지 — [`expo-sharing`](https://docs.expo.dev/versions/v54.0.0/sdk/sharing/)
 - [ ] Android에서 "JS 상태"가 아니라 "실제 OS 알림"을 확인하려면 뭘 봐야 하는지 (`dumpsys notification`)
+- [ ] `content.data`에 실은 값이 탭 응답(`response`)의 어디로 돌아오는지, 왜 새 네비게이션 로직 대신 기존 `linking.config`를 재사용했는지 — [`expo-linking`](https://docs.expo.dev/versions/v54.0.0/sdk/linking/)
 
 ---
 
@@ -728,6 +757,7 @@ iOS는 시뮬레이터의 포그라운드 배너/UI 카운터로 충분하지만
 | `src/screens/FeedListScreen.tsx` | 알림 화면 이동 버튼 |
 | `src/screens/PhotoScreen.tsx` | `expo-sharing`으로 로컬 사진 공유 버튼 추가 |
 | `package.json` | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8 |
+| `src/screens/NotificationScreen.tsx` | `addNotificationResponseReceivedListener` — 탭 시 `data.url`을 `Linking.openURL`로 열어 딥링크 이동 |
 | `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일 |
 | `package.json` | `react-native-maps` 1.20.1 |
 | `src/auth/AuthContext.tsx` | `persistError` 필드 추가 |
@@ -743,4 +773,4 @@ iOS는 시뮬레이터의 포그라운드 배너/UI 카운터로 충분하지만
 - **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장.
 - **W12** 지도 — 완료. `react-native-maps` `MapView` + `Marker` + `animateToRegion`. 남은 확장: 실시간 추적(`watchPositionAsync`), 주소 변환(`reverseGeocodeAsync`), 로딩 상태(현재 4상태 중 로딩만 미구현), 마커 다수 시 클러스터링.
 - **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제.
-- **W14 알림/공유** — 완료. `expo-notifications` 수동 권한 관리 + Android 채널 + 포그라운드 핸들러 + 즉시/5초 지연 로컬 알림, `expo-sharing`으로 로컬 사진 공유. iOS 시뮬레이터·Android 에뮬레이터 모두 실측(Android는 `dumpsys notification`으로 시스템 알림까지 확인). 원격 푸시(FCM 토큰)는 Expo Go에서 막혀 있어 dev build 전환 시(P8) 과제로 남음.
+- **W14 알림/공유/링크** — 완료. `expo-notifications` 수동 권한 관리 + Android 채널 + 포그라운드 핸들러 + 즉시/5초 지연 로컬 알림, `expo-sharing`으로 로컬 사진 공유, 알림 탭 시 기존 `linking.config`를 재사용한 딥링크 이동(`addNotificationResponseReceivedListener` + `Linking.openURL`). iOS 시뮬레이터·Android 에뮬레이터 모두 실측(Android는 `dumpsys notification`으로 시스템 알림까지 확인). 원격 푸시(FCM 토큰)는 Expo Go에서 막혀 있어 dev build 전환 시(P8) 과제로 남음. 알림 탭 → 앱 오픈의 OS 레벨 체인(포그라운드 배너/잠금화면)은 시뮬레이터 자동화로 재현이 까다로워 실기기 수동 확인 권장.
