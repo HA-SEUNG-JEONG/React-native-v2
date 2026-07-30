@@ -144,6 +144,11 @@ export function FeedListScreen({
               onPress={() => navigation.navigate("Notification")}
               kind="ghost"
             />
+            <Btn
+              label="🌐 네트워킹 (인터셉터+레이스)"
+              onPress={() => navigation.navigate("Network")}
+              kind="ghost"
+            />
           </>
         }
         renderItem={({ item }) => (

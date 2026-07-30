@@ -9,6 +9,7 @@ export type HomeStackParamList = {
   Photo: undefined; // 갤러리에서 사진 선택 (권한 플로우 데모)
   Location: undefined;
   Notification: undefined; // 로컬 알림 권한 + 예약 데모
+  Network: undefined; // 인터셉터 + 토큰 갱신 레이스 데모
 };
 export type TabParamList = {
   HomeTab: undefined;
