@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import { queryClient } from "./src/api/posts";
+import { asyncStoragePersister } from "./src/api/persist";
 import { AuthContext, type Auth } from "./src/auth/AuthContext";
 import { RootNavigator, linking, LinkingFallback } from "./src/navigation";
 import { styles } from "./src/theme/styles";
@@ -76,7 +77,17 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        maxAge: 1000 * 60 * 60 * 24, // 24시간 지난 캐시는 복원 안 함
+      }}
+      // 캐시 복원이 끝난 뒤에 호출해야 함 — 그 전에 부르면 재생할 뮤테이션이 아직 없음.
+      onSuccess={() => {
+        queryClient.resumePausedMutations();
+      }}
+    >
       <AuthContext.Provider value={auth}>
         <NavigationContainer
           theme={DarkTheme}
@@ -86,6 +97,6 @@ export default function App() {
           <RootNavigator />
         </NavigationContainer>
       </AuthContext.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
