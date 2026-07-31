@@ -1,8 +1,13 @@
 import { View, Text, ActivityIndicator } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useMutationState,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../navigation/types";
-import { fetchPost, toggleLikeApi, type Post } from "../api/posts";
+import { TOGGLE_LIKE_KEY, fetchPost, type Post } from "../api/posts";
 import { Btn } from "../components/Btn";
 import { styles } from "../theme/styles";
 
@@ -27,9 +32,14 @@ export function FeedDetailScreen({
 
   // ★ 낙관적 업데이트: 서버 응답 기다리지 않고 캐시를 먼저 바꿔 화면 즉시 반영.
   //   실패하면 스냅샷으로 롤백. (PR #59 교훈 — invalidate 범위를 ["post", id]로 좁게)
+  //
+  // mutationFn은 여기 없음 — posts.ts의 setMutationDefaults(TOGGLE_LIKE_KEY)에 등록됨.
+  // 오프라인일 때 이 뮤테이션은 paused 상태로 캐시와 함께 영속화되고, 앱을 다시 열어
+  // 온라인이 되면 컴포넌트가 마운트 안 돼 있어도 재생(sync)된다 — 그러려면 mutationFn이
+  // "등록"되어 있어야 하는데, useMutation 안에만 넣으면 재시작 후 유실됨.
   const likeMutation = useMutation({
-    mutationFn: (next: boolean) => toggleLikeApi(next),
-    onMutate: async (next) => {
+    mutationKey: TOGGLE_LIKE_KEY,
+    onMutate: async ({ next }: { id: string; next: boolean }) => {
       // 1) 진행 중 refetch 취소 — 안 그러면 늦게 온 응답이 낙관값을 덮어씀
       await qc.cancelQueries({ queryKey: ["post", id] });
       // 2) 롤백용 스냅샷
@@ -40,13 +50,21 @@ export function FeedDetailScreen({
       );
       return { prev }; // onError로 전달됨
     },
-    onError: (_e, _next, ctx) => {
+    onError: (_e, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(["post", id], ctx.prev); // 원상복구
     },
-    // 실서버라면 onSettled에서 invalidateQueries로 최종 동기화.
-    // 여기 가짜 API는 like를 저장 안 해서 refetch하면 낙관값이 날아감 → 생략.
   });
   const liked = post?.liked ?? false;
+
+  // 이 글의 좋아요가 오프라인이라 큐에 걸려 있는지 — 재연결 시 자동 재생됨을 알림.
+  // status "pending"만 보면 온라인 중 600ms 진행 중인 정상 요청도 잡힘 — isPaused로 좁힘.
+  const pendingSync = useMutationState({
+    filters: { mutationKey: TOGGLE_LIKE_KEY, status: "pending" },
+    select: (m) => ({
+      id: (m.state.variables as { id: string }).id,
+      isPaused: m.state.isPaused,
+    }),
+  }).some((v) => v.id === id && v.isPaused);
 
   if (isPending) {
     return (
@@ -70,14 +88,23 @@ export function FeedDetailScreen({
       <Text style={styles.h1}>{post.title}</Text>
       <Text style={styles.body}>{post.body}</Text>
       <Text style={styles.rowSub}>딥링크: picsel://feed/{id}</Text>
+      {pendingSync && (
+        <View style={styles.offlineBar}>
+          <Text style={styles.offlineText}>
+            오프라인 — 재연결되면 좋아요가 자동으로 동기화됨
+          </Text>
+        </View>
+      )}
       <Btn
         label={liked ? "♥ 좋아요 취소" : "♡ 좋아요"}
         // 낙관적이라 pending에도 비활성화 안 함 — 즉시 반영이 핵심
-        onPress={() => likeMutation.mutate(!liked)}
+        onPress={() => likeMutation.mutate({ id, next: !liked })}
         kind={liked ? "danger" : "primary"}
       />
       {likeMutation.isError && (
-        <Text style={styles.hint}>저장 실패 — 자동 되돌림. 다시 시도.</Text>
+        <Text style={styles.hint}>
+          저장 실패 — 자동 되돌림. 서버와 상태가 어긋났을 수 있음, 다시 시도.
+        </Text>
       )}
       <Btn
         label="같은 화면 push (스택 쌓기)"

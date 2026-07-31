@@ -45,6 +45,22 @@ export async function fetchPost(id: string): Promise<Post> {
 
 export const queryClient = new QueryClient();
 
+// 좋아요 뮤테이션을 오프라인에서도 큐잉했다가 재연결 시 재생(sync)하려면
+// mutationFn을 setMutationDefaults로 등록해둬야 함 — 재시작 후 영속화된 캐시를
+// 복원할 때(PersistQueryClientProvider) React Query가 이 등록을 보고 paused
+// mutation을 재실행할 수 있음(컴포넌트가 마운트 안 돼 있어도 동작).
+export const TOGGLE_LIKE_KEY = ["toggleLike"] as const;
+queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
+  mutationFn: ({ id, next }: { id: string; next: boolean }) => toggleLikeApi(next),
+  // 재생 성공 시 캐시를 최종값으로 동기화. 실패(40% 랜덤)하면 오프라인일 때 낙관적으로
+  // 반영해둔 값과 서버가 어긋난 채 남음 — 전형적인 오프라인 동기화 충돌.
+  onSuccess: (data, { id }) => {
+    queryClient.setQueryData<Post>(["post", id], (old) =>
+      old ? { ...old, liked: data.liked } : old,
+    );
+  },
+});
+
 // onlineManager 연결 — netinfo로 온라인/오프라인을 React Query에 알림 (import 시 1회 등록)
 onlineManager.setEventListener((setOnline) => {
   return NetInfo.addEventListener((state) => {

@@ -116,6 +116,68 @@ export async function fetchProtected(): Promise<string> {
 
 ---
 
+## W17 — 오프라인 우선 (쿼리 영속화, 뮤테이션 큐잉/동기화)
+
+> 출처: [TanStack Query — Persist a Client](https://tanstack.com/query/v5/docs/framework/react/plugins/persistQueryClient) · [Offline mutations](https://tanstack.com/query/v5/docs/framework/react/guides/offline-mutations)
+
+### MMKV 대신 AsyncStorage를 쓴 이유
+
+커리큘럼은 MMKV를 명시하지만, MMKV는 네이티브 모듈이라 **Expo Go에서 못 돈다** — dev client(EAS build)가 필요함. 이 프로젝트는 아직 `expo start`(Expo Go)로 굴러가고, dev client 전환은 스터디 로드맵상 P8 항목이다. 그래서 지금은 `@react-native-async-storage/async-storage`로 같은 "쿼리 캐시 영속화" 개념을 구현했다 — `src/api/persist.ts`의 `createAsyncStoragePersister` 하나만 MMKV 기반 storage로 바꾸면 나머지 코드(뮤테이션 큐잉, 재생 로직)는 그대로 재사용 가능.
+
+```ts
+// src/api/persist.ts
+export const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: "rn-sandbox-query-cache",
+});
+```
+
+### 쿼리 캐시 영속화
+
+`App.tsx`에서 `QueryClientProvider` → `PersistQueryClientProvider`로 교체. 앱을 껐다 켜도 마지막으로 받은 피드 목록/상세가 `AsyncStorage`에서 즉시 복원되어, 네트워크가 붙기 전에도 화면이 빈 상태가 아니다(`FeedListScreen`의 기존 `isPaused` 배너가 이 상태를 알려줌).
+
+### 뮤테이션 큐잉 + 재연결 시 자동 동기화
+
+핵심 문제: 오프라인일 때 "좋아요" 버튼을 누르면 React Query는 뮤테이션을 실행하지 않고 **paused** 상태로 큐에 남긴다. 문제는 그 뮤테이션의 `mutationFn`이 `useMutation` 훅 안에만 있으면 앱 재시작 시 유실된다는 것 — 캐시는 복원돼도 "무엇을 재생해야 하는지"를 잃는다.
+
+해결: `mutationFn`을 컴포넌트가 아니라 `queryClient.setMutationDefaults(key, {...})`로 전역 등록(`src/api/posts.ts`). 그러면 앱 재시작 → 캐시 복원 → `PersistQueryClientProvider`의 `onSuccess`에서 `queryClient.resumePausedMutations()` 호출 → 등록된 `mutationFn`으로 큐에 남은 뮤테이션이 재생된다. `FeedDetailScreen`이 마운트조차 안 돼 있어도 동작한다.
+
+```ts
+// src/api/posts.ts
+export const TOGGLE_LIKE_KEY = ["toggleLike"] as const;
+queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
+  mutationFn: ({ id, next }: { id: string; next: boolean }) => toggleLikeApi(next),
+  onSuccess: (data, { id }) => {
+    queryClient.setQueryData<Post>(["post", id], (old) =>
+      old ? { ...old, liked: data.liked } : old,
+    );
+  },
+});
+```
+
+```tsx
+// App.tsx
+<PersistQueryClientProvider
+  client={queryClient}
+  persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 }}
+  onSuccess={() => queryClient.resumePausedMutations()}
+>
+```
+
+`FeedDetailScreen`의 낙관적 업데이트(W14 이전부터 있던 패턴)는 그대로 유지 — `onMutate`로 즉시 반영, `onError`로 롤백. 다만 이제 `mutate()` 호출부의 변수 모양이 `{ id, next }`로 바뀌었다(전역 `mutationFn`이 `id`를 알아야 어떤 글의 캐시를 갱신할지 알 수 있어서). 오프라인 중엔 `useMutationState`로 이 글의 좋아요가 큐에 걸려 있는지 감지해 배너를 보여준다.
+
+### 동기화·충돌
+
+기존 `toggleLikeApi`의 **40% 랜덤 실패**가 그대로 "충돌" 시뮬레이션 역할을 한다: 오프라인 중 누른 좋아요가 재연결 후 재생되며 실패하면, 화면엔 이미 낙관적으로 반영된 값이 남아 있지만 서버(가짜 API라 실제 저장은 안 하지만)와는 동기화가 안 된 상태 — 로컬 우선(local-first) 오프라인 큐잉의 전형적인 트레이드오프다. 이 프로젝트 스코프에서는 별도 충돌 해결 UI 없이 `likeMutation.isError` 배너로 알리는 선까지만 구현했다(실서버 붙을 때 서버값 재조회로 최종 동기화하는 게 다음 단계).
+
+### 검증 — 오프라인
+
+- [x] `tsc --noEmit` 통과
+- [x] `setMutationDefaults` 등록/`resumePausedMutations` 배선을 코드 레벨로 확인
+- [ ] 실기기/시뮬레이터에서 비행기 모드 → 좋아요 탭(큐잉 배너 확인) → 앱 재시작 → 비행기 모드 해제 → 자동 동기화까지 전체 체인 실측 필요 — 이번 세션 미수행
+
+---
+
 ## 파일
 
 | 파일 | 역할 |
@@ -123,8 +185,10 @@ export async function fetchProtected(): Promise<string> {
 | `src/screens/LoginScreen.tsx` | react-hook-form + zod 로그인 폼, `KeyboardAvoidingView` |
 | `src/screens/NetworkScreen.tsx` | 인터셉터 + 토큰 갱신 레이스 데모 화면 |
 | `src/api/auth.ts` | 메모리 세션 기반 가짜 토큰 발급/검증/갱신 (레이스 방지 포함) |
+| `src/api/persist.ts` | AsyncStorage 기반 쿼리 캐시 persister (MMKV 대체) |
+| `src/screens/FeedDetailScreen.tsx` | 낙관적 좋아요 + 오프라인 큐잉 배너 (W17에서 확장) |
 
 ## 남은 작업
 
 - W16 네트워킹 심화: 재시도/백오프, 업로드 진행률, `WebSocket` 개념
-- W17 오프라인 우선: React Query 영속화(MMKV), 낙관적 업데이트+롤백, 동기화/충돌
+- W17 오프라인 우선 — 완료. 쿼리 캐시 영속화(AsyncStorage, MMKV는 dev client 전환 후 교체 예정) + 뮤테이션 큐잉/재생 + 낙관적 업데이트/롤백. 전체 오프라인→재연결 체인의 실기기 검증은 남음.
