@@ -83,6 +83,14 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   offlineText: { color: "#fff", fontSize: 13, textAlign: "center" },
+  // 업로드 진행률 바. fill의 width(%)는 인라인 스타일로 동적 지정.
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#232a38",
+    overflow: "hidden",
+  },
+  progressFill: { height: 8, backgroundColor: "#2563eb" },
   // 선택한 사진 미리보기. 비율 고정 = 로드 전후 레이아웃 안 튐.
   // (맞춤 방식은 expo-image의 contentFit prop으로 지정)
   image: {
