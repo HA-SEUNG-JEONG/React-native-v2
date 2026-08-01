@@ -16,6 +16,7 @@ const ACCESS_TTL_MS = 4000; // 데모용 — 실서비스는 보통 수분~수�
 
 let session: Tokens | null = null;
 let refreshInFlight: Promise<Tokens> | null = null;
+let loginInFlight: Promise<void> | null = null;
 let refreshCount = 0;
 
 export function getRefreshCount() {
@@ -28,6 +29,7 @@ export function isLoggedIn() {
 
 export function logout() {
   session = null;
+  refreshInFlight = null;
 }
 
 function issueTokens(): Tokens {
@@ -39,10 +41,16 @@ function issueTokens(): Tokens {
 }
 
 export async function login(username: string, password: string): Promise<void> {
-  await new Promise((r) => setTimeout(r, 400));
-  if (password !== "1234")
-    throw new Error("비밀번호가 틀림 (데모 비밀번호: 1234)");
-  session = issueTokens();
+  if (loginInFlight) return loginInFlight;
+  loginInFlight = (async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    if (password !== "1234")
+      throw new Error("비밀번호가 틀림 (데모 비밀번호: 1234)");
+    session = issueTokens();
+  })().finally(() => {
+    loginInFlight = null;
+  });
+  return loginInFlight;
 }
 
 // 서버가 accessToken을 검증한다고 가정 — 여기선 만료 시각만 비교해 401을 흉내.
@@ -82,6 +90,7 @@ export async function fetchProtected(): Promise<string> {
   } catch (e) {
     if ((e as Error & { status?: number }).status !== 401) throw e;
     await refreshAccessToken();
-    return callProtectedApi(session!.accessToken);
+    if (!session) throw new Error("not authenticated");
+    return callProtectedApi(session.accessToken);
   }
 }

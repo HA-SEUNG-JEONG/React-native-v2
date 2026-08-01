@@ -8,6 +8,7 @@ export type Auth = {
   signOut: () => void;
   // SecureStore 저장/삭제 실패 시 채워짐 (로그인 자체는 실패하지 않음 — 이번 세션은 유지, 재시작 시 안 남을 뿐)
   persistError: string | null;
+  clearPersistError: () => void;
 };
 
 export const AuthContext = createContext<Auth>({
@@ -15,6 +16,7 @@ export const AuthContext = createContext<Auth>({
   signIn: () => {},
   signOut: () => {},
   persistError: null,
+  clearPersistError: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);

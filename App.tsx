@@ -71,6 +71,9 @@ export default function App() {
             ),
           );
       },
+      clearPersistError: () => {
+        setPersistError(null);
+      },
     }),
     [user, persistError],
   );
