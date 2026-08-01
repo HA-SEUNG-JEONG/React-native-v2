@@ -44,9 +44,15 @@ export function LoginScreen(
     try {
       // api/auth.ts가 액세스/리프레시 토큰 세션을 발급 — 뒤 네트워킹 화면이 이 세션으로 데모함.
       await login(values.username, values.password);
-      signIn(values.username);
+      try {
+        signIn(values.username);
+      } catch (signInError) {
+        const message = signInError instanceof Error ? signInError.message : String(signInError);
+        setLoginError(message);
+      }
     } catch (e) {
-      setLoginError((e as Error).message);
+      const message = e instanceof Error ? e.message : String(e);
+      setLoginError(message);
     }
   };
 
