@@ -75,24 +75,18 @@ Expo 문서가 양 플랫폼을 묶어 못박는다:
 
 ### 구현
 
+> 위 "먼저 알아야 할 것"대로, 실제 최종 `PhotoScreen.tsx`는 갤러리 경로에 권한 게이트를 두지 않는다 — 불필요하다고 판단해 뺐다. 아래는 그 최종 코드다. 이 화면의 거부 UX 뼈대(`blocked` 배너)는 **진짜 권한이 필요한 카메라 경로**(`useCameraPermissions`, 아래 W11 카메라 절)에만 남아 있다.
+
 ```tsx
 export function PhotoScreen(
   _: NativeStackScreenProps<HomeStackParamList, "Photo">,
 ) {
-  const [status, requestPermission] = useMediaLibraryPermissions();
+  const [cameraStatus, cameraRequestPermission] = useCameraPermissions();
   const [uri, setUri] = useState<string | null>(null);
 
-  // 영구 거부 = 요청해봐야 다이얼로그가 안 뜸
-  const blocked = status?.granted === false && !status.canAskAgain;
-
-  const pick = async () => {
-    if (!status?.granted) {
-      const res = await requestPermission();
-      if (!res.granted) return; // 안내는 화면 배너가 담당
-    }
-
+  const pickPhoto = async () => {
     const result = await launchImageLibraryAsync({ mediaTypes: "images" });
-    if (result.canceled) return;
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
     setUri(result.assets[0].uri);
   };
   // ...

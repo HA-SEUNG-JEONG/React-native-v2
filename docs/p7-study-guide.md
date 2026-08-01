@@ -58,7 +58,7 @@ const pan = Gesture.Pan()
 
 ## 화면 전환 — 가벼운 진입 애니메이션
 
-`FeedDetailScreen`을 `Animated.View`로 감싸 `entering={SlideInRight}`(전체) + `entering={FadeIn.delay(100)}`(제목)을 얹었다. 진짜 shared-element 전환(`react-native-shared-element` 등)은 라이브러리 하나를 더 얹는 무게 대비 이 앱 스코프에서 체감 이득이 작아 제외 — Reanimated 내장 진입 프리셋만으로 "부드럽다"는 인상은 충분히 만들어짐.
+`FeedDetailScreen`을 `Animated.View`로 감싸 `entering={SlideInRight.duration(220)}`(전체) + `entering={FadeIn.duration(400).delay(100)}`(제목)을 얹었다. 진짜 shared-element 전환(`react-native-shared-element` 등)은 라이브러리 하나를 더 얹는 무게 대비 이 앱 스코프에서 체감 이득이 작아 제외 — Reanimated 내장 진입 프리셋만으로 "부드럽다"는 인상은 충분히 만들어짐.
 
 ## 실기기/시뮬레이터 검증 메모
 
