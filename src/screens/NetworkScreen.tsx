@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlatList, Text, TextInput, View } from "react-native";
 import { launchImageLibraryAsync } from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -22,8 +22,9 @@ export function NetworkScreen(
   _: NativeStackScreenProps<HomeStackParamList, "Network">,
 ) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const logIdRef = useRef(0);
   const appendLog = (text: string) =>
-    setLogs((prev) => [{ id: prev.length, text }, ...prev]);
+    setLogs((prev) => [{ id: logIdRef.current++, text }, ...prev]);
 
   // ---- W15: 인터셉터 + 토큰 갱신 레이스 ----
   const callOnce = async () => {
@@ -83,7 +84,7 @@ export function NetworkScreen(
     setUploadRatio(0);
     try {
       const result = await uploadWithProgress(picked.assets[0].uri, (p) =>
-        setUploadRatio(p.ratio),
+        setUploadRatio(Math.min(1, Math.max(0, p.ratio))),
       );
       appendLog(`[업로드] 완료 — status ${result.status}`);
     } catch (e) {
@@ -97,8 +98,20 @@ export function NetworkScreen(
   // wsRef: 현재 연결. manualCloseRef: 사용자가 직접 끊었는지 — 아닐 때만 자동 재연결.
   const wsRef = useRef<WebSocket | null>(null);
   const manualCloseRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsMessage, setWsMessage] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const openSocket = (reconnectAttempt = 0) => {
     manualCloseRef.current = false;
@@ -126,7 +139,7 @@ export function NetworkScreen(
         appendLog(
           `[WS] 연결 끊김 — ${delayMs}ms 후 재연결 시도 (${reconnectAttempt + 1}회차)`,
         );
-        setTimeout(() => openSocket(reconnectAttempt + 1), delayMs);
+        timeoutRef.current = setTimeout(() => openSocket(reconnectAttempt + 1), delayMs);
       },
       onError: (message) => appendLog(`[WS] 오류: ${message}`),
     });
