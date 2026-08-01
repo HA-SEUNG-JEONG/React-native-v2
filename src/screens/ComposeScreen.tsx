@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { Image } from "expo-image";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -20,21 +21,41 @@ import { styles } from "../theme/styles";
 // 모달 화면 (RootStack에서 presentation:'modal'로 등록 → 아래에서 위로 슬라이드)
 const AVATAR_SOURCE = { uri: "https://picsum.photos/200" };
 
+const spinnerStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 90,
+    left: 90,
+  },
+});
+
 export function ComposeScreen({
   navigation,
 }: NativeStackScreenProps<RootStackParamList, "Compose">) {
   const [isLoading, setIsLoading] = useState(true);
   const bodyRef = useRef<TextInput>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const headerHeight = useHeaderHeight();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const insets = useSafeAreaInsets();
+
+  // Set a timeout fallback to clear loading spinner if image doesn't load
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      setIsLoading(false);
+    }, 10000); // 10 second timeout
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
   return (
     // 바깥 = screen(flex:1, 배경). 화면 꽉 채움.
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={headerHeight as number}
+      keyboardVerticalOffset={headerHeight ?? 0}
     >
       {/* 내용 = flex:1로 자라서 footer를 바닥으로 밀어냄 (sticky footer 원리) */}
       <ScrollView
@@ -79,16 +100,19 @@ export function ComposeScreen({
             style={{ width: 200, height: 200 }}
             contentFit="cover"
             onLoadStart={() => setIsLoading(true)}
-            onLoad={() => setIsLoading(false)}
-            onLoadEnd={() => setIsLoading(false)}
+            onLoad={() => {
+              if (timeoutRef.current) clearTimeout(timeoutRef.current);
+              setIsLoading(false);
+            }}
             onError={(error) => {
+              if (timeoutRef.current) clearTimeout(timeoutRef.current);
               setIsLoading(false);
               console.error(error.error);
             }}
           />
           {isLoading && (
             <ActivityIndicator
-              style={{ position: "absolute", top: 90, left: 90 }}
+              style={spinnerStyles.overlay}
             />
           )}
         </View>
