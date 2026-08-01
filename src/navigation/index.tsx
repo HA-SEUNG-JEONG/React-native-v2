@@ -28,6 +28,15 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
+// Tab 네비게이터 공통 옵션
+const tabsScreenOptions = {
+  headerStyle: styles.header,
+  headerTintColor: "#fff",
+  tabBarStyle: styles.tabBar,
+  tabBarActiveTintColor: "#93c5fd",
+  tabBarInactiveTintColor: "#8a92a6",
+};
+
 // Home 탭 내부 스택: List ↔ Detail. (탭 하나가 자체 네비게이션 히스토리를 가짐 = 중첩)
 function HomeStackScreen() {
   return (
@@ -74,15 +83,7 @@ function HomeStackScreen() {
 // 탭 네비게이터 (Home 스택 + Profile)
 function TabsScreen() {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerStyle: styles.header,
-        headerTintColor: "#fff",
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: "#93c5fd",
-        tabBarInactiveTintColor: "#8a92a6",
-      }}
-    >
+    <Tab.Navigator screenOptions={tabsScreenOptions}>
       <Tab.Screen
         name="HomeTab"
         component={HomeStackScreen}
@@ -161,6 +162,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
           HomeTab: {
             screens: {
               FeedList: "feed",
+              FeedSections: "feed/sections",
               FeedDetail: "feed/:id",
             },
           },
