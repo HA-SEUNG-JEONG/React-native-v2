@@ -27,8 +27,12 @@ export async function withRetryBackoff<T>(
     try {
       return await fn();
     } catch (e) {
-      if (attempt >= maxRetries) throw e;
-      const delayMs = baseDelayMs * 2 ** attempt + Math.random() * baseDelayMs;
+      if (attempt >= maxRetries) {
+        const err = e as Error;
+        throw new Error(`Request failed after ${attempt + 1} attempts: ${err.message}`);
+      }
+      const baseBackoff = baseDelayMs * 2 ** attempt;
+      const delayMs = baseBackoff * (1 + Math.random() * 0.5);
       onAttempt?.({ attempt: attempt + 1, delayMs });
       await new Promise((r) => setTimeout(r, delayMs));
     }
