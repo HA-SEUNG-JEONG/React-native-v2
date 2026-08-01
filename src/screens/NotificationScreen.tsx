@@ -16,6 +16,7 @@ export function NotificationScreen(
   const [status, setStatus] =
     useState<Notifications.NotificationPermissionsStatus | null>(null);
   const [scheduled, setScheduled] = useState(0);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -24,7 +25,10 @@ export function NotificationScreen(
         importance: Notifications.AndroidImportance.MAX,
       });
     }
-    Notifications.getPermissionsAsync().then(setStatus);
+    Notifications.getPermissionsAsync().then(setStatus).catch((e) => {
+      const message = e instanceof Error ? e.message : String(e);
+      setPermissionError(message);
+    });
 
     // 알림을 탭했을 때(포그라운드/백그라운드 공통) content.data.url을 앱 딥링크로
     // 열어 기존 navigation/index.tsx의 linking 설정을 그대로 태운다 — 새 네비게이션
@@ -46,12 +50,17 @@ export function NotificationScreen(
     setStatus(res);
   };
 
-  const scheduleNow = async () => {
+  const requestAndSetPermission = async () => {
     if (!status?.granted) {
       const res = await Notifications.requestPermissionsAsync();
       setStatus(res);
-      if (!res.granted) return;
+      if (!res.granted) return false;
     }
+    return true;
+  };
+
+  const scheduleNow = async () => {
+    if (!(await requestAndSetPermission())) return;
     // trigger: null = 즉시 표시
     await Notifications.scheduleNotificationAsync({
       content: { title: "즉시 알림", body: `${scheduled + 1}번째 테스트` },
@@ -61,11 +70,7 @@ export function NotificationScreen(
   };
 
   const scheduleDelayed = async () => {
-    if (!status?.granted) {
-      const res = await Notifications.requestPermissionsAsync();
-      setStatus(res);
-      if (!res.granted) return;
-    }
+    if (!(await requestAndSetPermission())) return;
     // data.url: 탭하면 위 리스너가 이 딥링크를 열어 피드 상세로 이동한다.
     await Notifications.scheduleNotificationAsync({
       content: {
