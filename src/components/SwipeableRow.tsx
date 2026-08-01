@@ -59,6 +59,7 @@ export function SwipeableRow({
       <View style={styles.swipeDeleteBg}>
         <Text style={styles.swipeDeleteText}>삭제</Text>
       </View>
+      {/* Race: pan과 longPress는 상호배타적 — 먼저 조건을 만족한 것만 처리되고 나머지는 취소됨 */}
       <GestureDetector gesture={Gesture.Race(pan, longPress)}>
         <Animated.View style={rowStyle}>{children}</Animated.View>
       </GestureDetector>
