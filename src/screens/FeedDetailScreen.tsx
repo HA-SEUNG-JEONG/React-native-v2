@@ -1,4 +1,5 @@
 import { View, Text, ActivityIndicator } from "react-native";
+import Animated, { FadeIn, SlideInRight } from "react-native-reanimated";
 import {
   useQuery,
   useMutation,
@@ -84,8 +85,15 @@ export function FeedDetailScreen({
   }
 
   return (
-    <View style={[styles.screen, styles.pad]}>
-      <Text style={styles.h1}>{post.title}</Text>
+    // P7 — 목록에서 밀고 들어오는 느낌 + 내용 페이드인. 진짜 shared-element 없이도
+    // "부드러운 전환" 체감은 충분 — 무거운 라이브러리 없이 Reanimated 내장 프리셋만.
+    <Animated.View
+      entering={SlideInRight.duration(220)}
+      style={[styles.screen, styles.pad]}
+    >
+      <Animated.View entering={FadeIn.duration(400).delay(100)}>
+        <Text style={styles.h1}>{post.title}</Text>
+      </Animated.View>
       <Text style={styles.body}>{post.body}</Text>
       <Text style={styles.rowSub}>딥링크: picsel://feed/{id}</Text>
       {pendingSync && (
@@ -115,6 +123,6 @@ export function FeedDetailScreen({
         onPress={() => navigation.goBack()}
         kind="ghost"
       />
-    </View>
+    </Animated.View>
   );
 }

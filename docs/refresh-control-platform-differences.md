@@ -16,28 +16,28 @@ RefreshControl은 크로스 플랫폼 API지만 내부는 각 OS의 네이티브
 
 ### 공통
 
-| Prop | 타입 | 설명 |
-|------|------|------|
-| `refreshing` (필수) | boolean | 새로고침 중 여부. **controlled prop** — `onRefresh` 안에서 `true`로 안 바꾸면 스피너 즉시 멈춤 |
-| `onRefresh` | function | 당겨서 새로고침 시작 시 호출 |
-| `progressViewOffset` | number | 스피너 상단 오프셋 (기본 0) |
+| Prop                 | 타입     | 설명                                                                                           |
+| -------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `refreshing` (필수)  | boolean  | 새로고침 중 여부. **controlled prop** — `onRefresh` 안에서 `true`로 안 바꾸면 스피너 즉시 멈춤 |
+| `onRefresh`          | function | 당겨서 새로고침 시작 시 호출                                                                   |
+| `progressViewOffset` | number   | 스피너 상단 오프셋 (기본 0)                                                                    |
 
 ### iOS 전용
 
-| Prop | 타입 | 설명 |
-|------|------|------|
-| `tintColor` | color | 스피너 색 |
-| `title` | string | 스피너 아래 표시되는 텍스트 |
-| `titleColor` | color | title 색 |
+| Prop         | 타입   | 설명                        |
+| ------------ | ------ | --------------------------- |
+| `tintColor`  | color  | 스피너 색                   |
+| `title`      | string | 스피너 아래 표시되는 텍스트 |
+| `titleColor` | color  | title 색                    |
 
 ### Android 전용
 
-| Prop | 타입 | 설명 |
-|------|------|------|
-| `colors` | color 배열 | 스피너 색 (여러 개면 순환) |
-| `progressBackgroundColor` | color | 스피너 원판 배경색 |
-| `size` | `'default'` \| `'large'` | 스피너 크기 |
-| `enabled` | boolean | 당겨서 새로고침 활성화 여부 (기본 true) |
+| Prop                      | 타입                     | 설명                                    |
+| ------------------------- | ------------------------ | --------------------------------------- |
+| `colors`                  | color 배열               | 스피너 색 (여러 개면 순환)              |
+| `progressBackgroundColor` | color                    | 스피너 원판 배경색                      |
+| `size`                    | `'default'` \| `'large'` | 스피너 크기                             |
+| `enabled`                 | boolean                  | 당겨서 새로고침 활성화 여부 (기본 true) |
 
 ## 실전 패턴
 
@@ -47,8 +47,8 @@ RefreshControl은 크로스 플랫폼 API지만 내부는 각 OS의 네이티브
 <RefreshControl
   refreshing={isRefreshing}
   onRefresh={handleRefresh}
-  tintColor="#93c5fd"      // iOS
-  colors={["#93c5fd"]}     // Android
+  tintColor="#93c5fd" // iOS
+  colors={["#93c5fd"]} // Android
 />
 ```
 
@@ -56,14 +56,14 @@ RefreshControl은 크로스 플랫폼 API지만 내부는 각 OS의 네이티브
 
 ## 동작 차이 요약
 
-| 항목 | iOS | Android |
-|------|-----|---------|
-| 네이티브 구현 | `UIRefreshControl` | `SwipeRefreshLayout` |
-| 스피너 위치 | 리스트가 밀려 내려간 여백 안 | 리스트 위에 오버레이로 내려옴 |
-| 색 지정 | `tintColor` | `colors` (배열) |
-| 텍스트 표시 | `title` 지원 | 미지원 |
-| 크기 조절 | 미지원 | `size` |
-| 비활성화 | prop 없음 (조건부 렌더로 처리) | `enabled` |
+| 항목          | iOS                            | Android                       |
+| ------------- | ------------------------------ | ----------------------------- |
+| 네이티브 구현 | `UIRefreshControl`             | `SwipeRefreshLayout`          |
+| 스피너 위치   | 리스트가 밀려 내려간 여백 안   | 리스트 위에 오버레이로 내려옴 |
+| 색 지정       | `tintColor`                    | `colors` (배열)               |
+| 텍스트 표시   | `title` 지원                   | 미지원                        |
+| 크기 조절     | 미지원                         | `size`                        |
+| 비활성화      | prop 없음 (조건부 렌더로 처리) | `enabled`                     |
 
 ## 알려진 iOS 버그 (Fabric / New Architecture)
 

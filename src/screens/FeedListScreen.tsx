@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,15 @@ import type {
   NativeStackScreenProps,
   NativeStackNavigationProp,
 } from "@react-navigation/native-stack";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import type {
   HomeStackParamList,
   RootStackParamList,
 } from "../navigation/types";
-import { usePostsInfinite } from "../api/posts";
+import { usePostsInfinite, useDeletePost, type Post } from "../api/posts";
 import { Btn } from "../components/Btn";
+import { SwipeableRow } from "../components/SwipeableRow";
+import { FeedSkeleton } from "../components/FeedSkeleton";
 import { styles } from "../theme/styles";
 
 // 목록: FeedList → 항목 누르면 FeedDetail로 이동 (타입 안전 params)
@@ -45,22 +48,37 @@ export function FeedListScreen({
     isError,
     error,
   } = usePostsInfinite();
+  const deletePost = useDeletePost();
+
+  // P7 — 롱프레스한 행의 옵션 시트. sheetRef.expand()로 열고 index -1로 닫힘 표시.
+  const [sheetPost, setSheetPost] = useState<Post | null>(null);
+  const sheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ["30%"], []);
+
+  const openSheet = useCallback((post: Post) => {
+    setSheetPost(post);
+    sheetRef.current?.expand();
+  }, []);
+  const closeSheet = useCallback(() => sheetRef.current?.close(), []);
 
   // data.pages(2차원) → flat으로 1차원화. FlatList는 평평한 배열만 받음.
   const posts = data?.pages.flat() ?? [];
 
   // 4상태 ①최초 로딩 ②에러 (③빈 ④정상은 아래 FlatList가 처리)
   if (isPending) {
-    return (
-      <View style={[styles.screen, styles.center, styles.pad]}>
-        {isPaused ? (
-          // 오프라인이라 쿼리가 pause됨 → 스피너면 무한로딩처럼 보임. 안내로 대체.
+    if (isPaused) {
+      // 오프라인이라 쿼리가 pause됨 → 스피너면 무한로딩처럼 보임. 안내로 대체.
+      return (
+        <View style={[styles.screen, styles.center, styles.pad]}>
           <Text style={styles.hint}>
             오프라인 — 연결되면 자동으로 불러옵니다
           </Text>
-        ) : (
-          <ActivityIndicator color="#93c5fd" />
-        )}
+        </View>
+      );
+    }
+    return (
+      <View style={styles.screen}>
+        <FeedSkeleton />
       </View>
     );
   }
@@ -152,36 +170,85 @@ export function FeedListScreen({
           </>
         }
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.row}
-            // navigate 인자가 HomeStackParamList['FeedDetail'] 모양이 아니면 컴파일 에러
-            onPress={() =>
-              navigation.navigate("FeedDetail", {
-                id: String(item.id),
-                title: item.title,
-              })
-            }
+          <SwipeableRow
+            onDelete={() => deletePost.mutate(item.id)}
+            onLongPress={() => openSheet(item)}
           >
-            <Image
-              source={{ uri: `https://picsum.photos/seed/${item.id}/100/100` }}
-              style={styles.thumb}
-              // ★ FlatList가 행 View를 재활용 → recyclingKey 없으면 스크롤 시
-              //   이전 item 썸네일이 잠깐 남아 깜빡임. 키 바뀌면 즉시 리셋.
-              recyclingKey={String(item.id)}
-              cachePolicy="memory-disk" // 메모리+디스크 캐시 → 되돌아가도 재요청 없음
-              transition={200} // 페이드인, 툭 튀는 느낌 제거
-              contentFit="cover"
-            />
-            <Text
-              style={[styles.rowTitle, styles.rowTitleFlex]}
-              numberOfLines={2}
+            <Pressable
+              style={styles.row}
+              // navigate 인자가 HomeStackParamList['FeedDetail'] 모양이 아니면 컴파일 에러
+              onPress={() =>
+                navigation.navigate("FeedDetail", {
+                  id: String(item.id),
+                  title: item.title,
+                })
+              }
             >
-              {item.title}
-            </Text>
-            <Text style={styles.rowSub}>#{item.id}</Text>
-          </Pressable>
+              <Image
+                source={{
+                  uri: `https://picsum.photos/seed/${item.id}/100/100`,
+                }}
+                style={styles.thumb}
+                // ★ FlatList가 행 View를 재활용 → recyclingKey 없으면 스크롤 시
+                //   이전 item 썸네일이 잠깐 남아 깜빡임. 키 바뀌면 즉시 리셋.
+                recyclingKey={String(item.id)}
+                cachePolicy="memory-disk" // 메모리+디스크 캐시 → 되돌아가도 재요청 없음
+                transition={200} // 페이드인, 툭 튀는 느낌 제거
+                contentFit="cover"
+              />
+              <Text
+                style={[styles.rowTitle, styles.rowTitleFlex]}
+                numberOfLines={2}
+              >
+                {item.title}
+              </Text>
+              <Text style={styles.rowSub}>#{item.id}</Text>
+            </Pressable>
+          </SwipeableRow>
         )}
       />
+      {/* P7 — 롱프레스 옵션 시트. index -1 = 닫힘, 최초 렌더는 항상 닫힌 채로 마운트만. */}
+      <BottomSheet
+        ref={sheetRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={styles.row}
+        handleIndicatorStyle={{ backgroundColor: "#8a92a6" }}
+      >
+        <BottomSheetView style={styles.pad}>
+          <Text style={styles.h1} numberOfLines={1}>
+            {sheetPost?.title}
+          </Text>
+          <Pressable
+            style={styles.sheetOption}
+            onPress={() => {
+              closeSheet();
+              if (sheetPost)
+                navigation.navigate("FeedDetail", {
+                  id: String(sheetPost.id),
+                  title: sheetPost.title,
+                });
+            }}
+          >
+            <Text style={styles.sheetOptionText}>상세 보기</Text>
+          </Pressable>
+          <Pressable
+            style={styles.sheetOption}
+            onPress={() => {
+              closeSheet();
+              if (sheetPost) deletePost.mutate(sheetPost.id);
+            }}
+          >
+            <Text style={[styles.sheetOptionText, styles.sheetOptionDanger]}>
+              삭제
+            </Text>
+          </Pressable>
+          <Pressable style={styles.sheetOption} onPress={closeSheet}>
+            <Text style={styles.sheetOptionText}>취소</Text>
+          </Pressable>
+        </BottomSheetView>
+      </BottomSheet>
     </View>
   );
 }

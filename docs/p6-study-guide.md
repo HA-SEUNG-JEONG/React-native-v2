@@ -20,8 +20,14 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-const { control, handleSubmit, formState: { errors, isSubmitting } } =
-  useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { username: "", password: "" } });
+const {
+  control,
+  handleSubmit,
+  formState: { errors, isSubmitting },
+} = useForm<FormValues>({
+  resolver: zodResolver(schema),
+  defaultValues: { username: "", password: "" },
+});
 ```
 
 `z.infer<typeof schema>`로 스키마 하나가 검증 규칙과 TypeScript 타입을 동시에 준다 — 별도 인터페이스 안 만들어도 됨.
@@ -40,8 +46,10 @@ const { control, handleSubmit, formState: { errors, isSubmitting } } =
       onBlur={onBlur}
     />
   )}
-/>
-{errors.username && <Text style={styles.hint}>{errors.username.message}</Text>}
+/>;
+{
+  errors.username && <Text style={styles.hint}>{errors.username.message}</Text>;
+}
 ```
 
 ### `KeyboardAvoidingView` — 플랫폼별로 동작이 다르다
@@ -146,7 +154,8 @@ export const asyncStoragePersister = createAsyncStoragePersister({
 // src/api/posts.ts
 export const TOGGLE_LIKE_KEY = ["toggleLike"] as const;
 queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
-  mutationFn: ({ id, next }: { id: string; next: boolean }) => toggleLikeApi(next),
+  mutationFn: ({ id, next }: { id: string; next: boolean }) =>
+    toggleLikeApi(next),
   onSuccess: (data, { id }) => {
     queryClient.setQueryData<Post>(["post", id], (old) =>
       old ? { ...old, liked: data.liked } : old,
@@ -191,9 +200,14 @@ W15(`NetworkScreen`의 인터셉터)의 후속. 같은 화면에 3개 섹션을 
 Expo SDK 54부터 `expo-file-system`은 클래스 기반 API가 기본이지만, **업로드 진행률 콜백(`createUploadTask`)은 legacy API에만 있음** — `expo-file-system/legacy`에서 import. `expo-image-picker`(기존 `PhotoScreen`에서 쓰던 것 재사용)로 이미지를 고른 뒤 `https://httpbin.org/post`(공개 echo 업로드 엔드포인트, 실서버 없음)로 MULTIPART 업로드하며 `{ totalBytesSent, totalBytesExpectedToSend }` 콜백을 비율로 변환해 진행률 바에 반영.
 
 ```ts
-FileSystem.createUploadTask(url, fileUri, options, ({ totalBytesSent, totalBytesExpectedToSend }) => {
-  onProgress(totalBytesSent / totalBytesExpectedToSend);
-});
+FileSystem.createUploadTask(
+  url,
+  fileUri,
+  options,
+  ({ totalBytesSent, totalBytesExpectedToSend }) => {
+    onProgress(totalBytesSent / totalBytesExpectedToSend);
+  },
+);
 ```
 
 ### WebSocket 개념
@@ -211,14 +225,14 @@ FileSystem.createUploadTask(url, fileUri, options, ({ totalBytesSent, totalBytes
 
 ## 파일
 
-| 파일 | 역할 |
-|---|---|
-| `src/screens/LoginScreen.tsx` | react-hook-form + zod 로그인 폼, `KeyboardAvoidingView` |
-| `src/screens/NetworkScreen.tsx` | 인터셉터 + 토큰 갱신 레이스 + 재시도/백오프 + 업로드 진행률 + WebSocket 데모 화면 |
-| `src/api/auth.ts` | 메모리 세션 기반 가짜 토큰 발급/검증/갱신 (레이스 방지 포함) |
-| `src/api/network.ts` | 재시도/백오프 래퍼, 업로드 진행률, WebSocket echo 연결 헬퍼 |
-| `src/api/persist.ts` | AsyncStorage 기반 쿼리 캐시 persister (MMKV 대체) |
-| `src/screens/FeedDetailScreen.tsx` | 낙관적 좋아요 + 오프라인 큐잉 배너 (W17에서 확장) |
+| 파일                               | 역할                                                                              |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| `src/screens/LoginScreen.tsx`      | react-hook-form + zod 로그인 폼, `KeyboardAvoidingView`                           |
+| `src/screens/NetworkScreen.tsx`    | 인터셉터 + 토큰 갱신 레이스 + 재시도/백오프 + 업로드 진행률 + WebSocket 데모 화면 |
+| `src/api/auth.ts`                  | 메모리 세션 기반 가짜 토큰 발급/검증/갱신 (레이스 방지 포함)                      |
+| `src/api/network.ts`               | 재시도/백오프 래퍼, 업로드 진행률, WebSocket echo 연결 헬퍼                       |
+| `src/api/persist.ts`               | AsyncStorage 기반 쿼리 캐시 persister (MMKV 대체)                                 |
+| `src/screens/FeedDetailScreen.tsx` | 낙관적 좋아요 + 오프라인 큐잉 배너 (W17에서 확장)                                 |
 
 ## 남은 작업
 

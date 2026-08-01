@@ -14,11 +14,12 @@ W11(카메라/이미지)에서 이 뼈대를 세우고, W12~W14는 같은 뼈대
 
 > **먼저 알아야 할 것 — 이 화면의 권한 코드는 "필수"가 아니다.**
 > 공식문서는 `launchImageLibraryAsync`에 대해 이렇게 못박는다:
-> *"No permissions request is necessary for launching the image library."*
+> _"No permissions request is necessary for launching the image library."_
 >
 > 갤러리 선택은 OS가 제공하는 별도 프로세스의 피커를 띄우는 것이라, 앱이 라이브러리를 직접 읽지 않는다. 그래서 권한이 필요 없다. 이 화면의 권한 게이트는 **P5 뼈대를 연습하려고 일부러 얹은 것**이다.
 >
 > 권한이 **진짜 필요한** 지점은 따로 있다:
+>
 > - `launchCameraAsync` — 카메라 권한 필수 (`Permissions.CAMERA`)
 > - 비디오 + `videoExportPreset: 'Passthrough'` + `allowsEditing: false` — 선택 후 iOS가 다이얼로그를 띄우므로, 문서는 **피커를 열기 전에 미리 요청**하라고 권한다
 >
@@ -34,19 +35,19 @@ W11(카메라/이미지)에서 이 뼈대를 세우고, W12~W14는 같은 뼈대
 
 모바일은 다르다. **OS가 재요청 자체를 막는다.**
 
-| 상태 | iOS | Android |
-|---|---|---|
-| 미결정 | 다이얼로그 뜸 | 다이얼로그 뜸 |
-| 거부 1회 | **다시는 다이얼로그 안 뜸** | 다시 요청 가능 |
-| 거부 2회 | — | **영구 거부** (`USER_FIXED`) |
+| 상태     | iOS                         | Android                      |
+| -------- | --------------------------- | ---------------------------- |
+| 미결정   | 다이얼로그 뜸               | 다이얼로그 뜸                |
+| 거부 1회 | **다시는 다이얼로그 안 뜸** | 다시 요청 가능               |
+| 거부 2회 | —                           | **영구 거부** (`USER_FIXED`) |
 
 Expo 문서가 양 플랫폼을 묶어 못박는다:
 
-> *"An operating-system level restriction on both Android and iOS prohibits an app from asking for the same permission more than once."*
+> _"An operating-system level restriction on both Android and iOS prohibits an app from asking for the same permission more than once."_
 
 **도달 조건은 다르다.** Android 문서 원문:
 
-> *"if the user taps Deny for a specific permission more than once during your app's lifetime of installation on a device, the user will no longer see the system permissions dialog if your app requests that permission again. The user's action implies "don't ask again," and is considered a permanent denial."*
+> _"if the user taps Deny for a specific permission more than once during your app's lifetime of installation on a device, the user will no longer see the system permissions dialog if your app requests that permission again. The user's action implies "don't ask again," and is considered a permanent denial."_
 
 즉 Android는 **거부 2회째에 자동으로** 영구 거부가 된다. 옛 Android UI에 있던 "다시 묻지 않기" 체크박스를 유저가 누르는 게 아니다 — 인터넷 예제/블로그에 그 설명이 아직 많이 남아 있으니 주의. 시뮬레이터/에뮬레이터로 테스트할 땐 **Android는 두 번 거부해야** 이 상태가 재현된다.
 
@@ -87,7 +88,7 @@ export function PhotoScreen(
   const pick = async () => {
     if (!status?.granted) {
       const res = await requestPermission();
-      if (!res.granted) return;   // 안내는 화면 배너가 담당
+      if (!res.granted) return; // 안내는 화면 배너가 담당
     }
 
     const result = await launchImageLibraryAsync({ mediaTypes: "images" });
@@ -113,7 +114,7 @@ if (status.granted) { ... }   // ✗ 아직 옛날 값
 
 ```tsx
 const res = await requestPermission();
-if (!res.granted) return;      // ✓ 방금 받은 결과
+if (!res.granted) return; // ✓ 방금 받은 결과
 ```
 
 ### 훅 반환값은 3개
@@ -132,11 +133,11 @@ const [status, requestPermission, getPermission] = useMediaLibraryPermissions();
 
 iOS 14+ / Android API 34+ 는 "전체 허용"과 "선택한 사진만 허용"을 구분한다. `MediaLibraryPermissionResponse`에는 이를 나타내는 필드가 따로 있다.
 
-| 값 | 의미 |
-|---|---|
-| `'all'` | 라이브러리 전체 접근 |
+| 값          | 의미                             |
+| ----------- | -------------------------------- |
+| `'all'`     | 라이브러리 전체 접근             |
 | `'limited'` | **유저가 고른 일부 사진만** 접근 |
-| `'none'` | 접근 불가 |
+| `'none'`    | 접근 불가                        |
 
 `granted === true`인데 `accessPrivileges === 'limited'`인 상태가 존재한다. 즉 "권한 있음"으로만 판단하면 유저가 왜 자기 사진 일부를 못 찾는지 설명할 수 없다. 갤러리 피커를 쓰는 지금 화면에선 OS 피커가 알아서 처리하지만, `expo-media-library`로 직접 앨범을 읽는 기능이라면 이 분기를 반드시 다뤄야 한다.
 
@@ -154,7 +155,7 @@ iOS 14+ / Android API 34+ 는 "전체 허용"과 "선택한 사진만 허용"을
 
 ```tsx
 if (!res.granted) {
-  if (!res.canAskAgain) Linking.openSettings();   // ✗
+  if (!res.canAskAgain) Linking.openSettings(); // ✗
   return;
 }
 ```
@@ -166,14 +167,20 @@ if (!res.granted) {
 해법은 **상태를 화면에 남기는 것**:
 
 ```tsx
-{blocked && (
-  <>
-    <Text style={styles.hint}>
-      사진 권한이 꺼져 있음. 앱에서 다시 물어볼 수 없어 설정에서 직접 켜야 함.
-    </Text>
-    <Btn label="설정 열기" onPress={() => Linking.openSettings()} kind="ghost" />
-  </>
-)}
+{
+  blocked && (
+    <>
+      <Text style={styles.hint}>
+        사진 권한이 꺼져 있음. 앱에서 다시 물어볼 수 없어 설정에서 직접 켜야 함.
+      </Text>
+      <Btn
+        label="설정 열기"
+        onPress={() => Linking.openSettings()}
+        kind="ghost"
+      />
+    </>
+  );
+}
 ```
 
 핸들러는 `return`만 한다. 화면에는 **왜 안 되는지**와 **무엇을 하면 되는지**가 상시 떠 있고, 앱을 벗어나는 결정은 유저가 버튼으로 내린다.
@@ -199,14 +206,14 @@ if (result.canceled) return;
 > 문서: [`MediaType`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#mediatype) · [`MediaTypeOptions` (deprecated)](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#mediatypeoptions) · [`ImagePickerOptions`](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/#imagepickeroptions)
 
 ```tsx
-launchImageLibraryAsync({ mediaTypes: "images" })
+launchImageLibraryAsync({ mediaTypes: "images" });
 ```
 
 SDK 54의 `mediaTypes` 타입은 `MediaType | MediaType[] | MediaTypeOptions`. 문자열 하나, 문자열 배열(`['images', 'videos']`), 그리고 구 열거형까지 셋 다 받는다.
 
 단 열거형은 문서에 명시적으로 deprecated로 표시돼 있다:
 
-> *Deprecated: To set media types available in the image picker use an array of `MediaType` instead.*
+> _Deprecated: To set media types available in the image picker use an array of `MediaType` instead._
 
 즉 `ImagePicker.MediaTypeOptions.Images`를 쓰는 인터넷 예제 대부분이 구버전이다. 권장 형태는 **배열**이다. **버전 고정 문서를 봐야 하는 이유** (`AGENTS.md` 규칙).
 
@@ -216,11 +223,11 @@ SDK 54의 `mediaTypes` 타입은 `MediaType | MediaType[] | MediaTypeOptions`. �
 
 iOS는 권한 다이얼로그에 "왜 필요한지" 문구가 없으면 심사에서 반려된다. 네이티브 `Info.plist`를 직접 건드리는 대신 config plugin에 넣는다.
 
-| 키 | 생성되는 네이티브 키 |
-|---|---|
-| `photosPermission` | `NSPhotoLibraryUsageDescription` |
-| `cameraPermission` | `NSCameraUsageDescription` |
-| `microphonePermission` | `NSMicrophoneUsageDescription` |
+| 키                     | 생성되는 네이티브 키             |
+| ---------------------- | -------------------------------- |
+| `photosPermission`     | `NSPhotoLibraryUsageDescription` |
+| `cameraPermission`     | `NSCameraUsageDescription`       |
+| `microphonePermission` | `NSMicrophoneUsageDescription`   |
 
 갤러리는 권한 다이얼로그가 안 뜨므로 이 문구가 없어도 됐다. 카메라를 붙인 지금도 `cameraPermission`을 생략하면 기본 문구가 자동 생성돼 **동작 자체엔 문제없다**(아래 카메라 섹션 참고). 커스텀 문구는 출시(P8) 심사 품질용이다.
 
@@ -258,10 +265,10 @@ image: {
 
 `navigation/types.ts`에 라우트를 추가해도 화면은 **생기지 않는다.**
 
-| 파일 | 역할 | 빠지면 |
-|---|---|---|
-| `types.ts` | "Photo 라우트는 params 없음" 타입 약속 | `navigate("Photo")`에 컴파일 에러 |
-| `index.tsx` | `<Stack.Screen name="Photo" .../>` 실제 등록 | 런타임에 라우트 없음 |
+| 파일        | 역할                                         | 빠지면                            |
+| ----------- | -------------------------------------------- | --------------------------------- |
+| `types.ts`  | "Photo 라우트는 params 없음" 타입 약속       | `navigate("Photo")`에 컴파일 에러 |
+| `index.tsx` | `<Stack.Screen name="Photo" .../>` 실제 등록 | 런타임에 라우트 없음              |
 
 TypeScript 타입은 컴파일하면 전부 지워진다(type erasure). 번들에 한 줄도 안 남으므로 런타임 효과가 0이다. 타입만 추가한 상태는 **약속만 하고 물건은 안 넣은 것** — `navigate("Photo")`가 tsc는 통과하는데 실행하면 못 찾는다.
 
@@ -276,16 +283,15 @@ TypeScript 타입은 컴파일하면 전부 지워진다(type erasure). 번들�
 ```tsx
 const [cameraStatus, cameraRequestPermission] = useCameraPermissions();
 
-const blocked =
-  cameraStatus?.granted === false && !cameraStatus.canAskAgain;
+const blocked = cameraStatus?.granted === false && !cameraStatus.canAskAgain;
 
 const takePhoto = async () => {
   if (!cameraStatus?.granted) {
     const res = await cameraRequestPermission();
-    if (!res.granted) return;           // ← res, status 아님 (함정 1)
+    if (!res.granted) return; // ← res, status 아님 (함정 1)
   }
   const result = await launchCameraAsync({ mediaTypes: "images" });
-  if (result.canceled) return;          // ← 취소 널가드 (함정 4)
+  if (result.canceled) return; // ← 취소 널가드 (함정 4)
   setUri(result.assets[0].uri);
 };
 ```
@@ -301,10 +307,10 @@ const takePhoto = async () => {
 
 app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동작한다.** 문서상 생략 시 기본 문구가 자동으로 들어간다:
 
-| 속성 | 생략 시 기본값 |
-|---|---|
-| `photosPermission` | `"Allow $(PRODUCT_NAME) to access your photos"` |
-| `cameraPermission` | `"Allow $(PRODUCT_NAME) to access your camera"` |
+| 속성                   | 생략 시 기본값                                      |
+| ---------------------- | --------------------------------------------------- |
+| `photosPermission`     | `"Allow $(PRODUCT_NAME) to access your photos"`     |
+| `cameraPermission`     | `"Allow $(PRODUCT_NAME) to access your camera"`     |
 | `microphonePermission` | `"Allow $(PRODUCT_NAME) to access your microphone"` |
 
 즉 `NSCameraUsageDescription`은 항상 생성된다. 커스텀 문구는 **심사 품질용 폴리시**지 동작 필수 조건이 아니다. `false`를 명시해야만 Android에서 권한이 차단된다. (출시 P8에서 앱 성격에 맞는 문구로 교체 예정.)
@@ -338,8 +344,8 @@ W11(카메라)까지는 권한이 **허용/거부 2진**이었다. 위치는 iOS
 const [status, requestPermission] = useForegroundPermissions();
 const blocked = status?.granted === false && !status.canAskAgain;
 
-const res = await requestPermission();   // ← 훅 requester. standalone 아님
-if (!res.granted) return;                // 게이트는 res.granted 불린 (문자열 비교 X)
+const res = await requestPermission(); // ← 훅 requester. standalone 아님
+if (!res.granted) return; // 게이트는 res.granted 불린 (문자열 비교 X)
 setScope(res.ios?.scope ?? null);
 ```
 
@@ -351,11 +357,15 @@ W11 카메라에서 `cameraRequestPermission()`(훅 requester)을 쓴 것과 같
 
 ```ts
 try {
-  const currentLocation = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
+  const currentLocation = await getCurrentPositionAsync({
+    accuracy: Accuracy.Balanced,
+  });
   const { latitude, longitude } = currentLocation.coords;
   setLocation({ latitude, longitude });
 } catch (e) {
-  setErrorMessage(e instanceof Error ? e.message : "위치를 가져오지 못했습니다.");
+  setErrorMessage(
+    e instanceof Error ? e.message : "위치를 가져오지 못했습니다.",
+  );
 }
 ```
 
@@ -365,7 +375,7 @@ try {
 
 ```ts
 import { Accuracy } from "expo-location";
-getCurrentPositionAsync({ accuracy: Accuracy.Balanced })  // 5(Highest) 같은 숫자 대신
+getCurrentPositionAsync({ accuracy: Accuracy.Balanced }); // 5(Highest) 같은 숫자 대신
 ```
 
 `Accuracy.Highest`(6)는 배터리를 많이 쓴다. 기본 `Balanced`(3)면 대부분 충분하다.
@@ -378,11 +388,11 @@ getCurrentPositionAsync({ accuracy: Accuracy.Balanced })  // 5(Highest) 같은 �
 
 ### 라이브러리 선택 — `expo-maps`가 아니라 `react-native-maps`
 
-| | [`expo-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/maps/) | [`react-native-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/) |
-|---|---|---|
-| Expo Go | **불가** — 문서 verbatim "Not available in the Expo Go app" | 포함됨, "No additional setup is required" |
-| 안정성 | **alpha, breaking change 잦음** | 안정 |
-| API | `AppleMaps.View` / `GoogleMaps.View` 플랫폼별 분리 | `MapView` 하나 |
+|         | [`expo-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/maps/) | [`react-native-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/) |
+| ------- | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Expo Go | **불가** — 문서 verbatim "Not available in the Expo Go app"     | 포함됨, "No additional setup is required"                                   |
+| 안정성  | **alpha, breaking change 잦음**                                 | 안정                                                                        |
+| API     | `AppleMaps.View` / `GoogleMaps.View` 플랫폼별 분리              | `MapView` 하나                                                              |
 
 샌드박스는 Expo Go로 돌리므로 `react-native-maps`. `expo-maps`는 dev build를 만들 때(P8 출시 단계) 다시 볼 것.
 
@@ -419,7 +429,9 @@ mapRef.current?.animateToRegion({ latitude, longitude, ...DELTA }, 500);
 ### Region은 zoom level이 아니다
 
 ```ts
-{ latitude, longitude, latitudeDelta, longitudeDelta }
+{
+  (latitude, longitude, latitudeDelta, longitudeDelta);
+}
 ```
 
 `delta`는 화면에 보이는 **위경도 범위(span)**다. 0.01 ≈ 동네 한 블록, 0.05 ≈ 도심 전체. 구글맵 URL의 `z=15` 같은 정수 zoom과 다른 모델이라, 확대하려면 숫자를 **키우는 게 아니라 줄인다**.
@@ -457,10 +469,10 @@ W11~W12는 권한 플로우였다. W13은 다른 문제다 — **권한은 필�
 
 로그인 여부 자체는 민감정보가 아니지만, 나중에 토큰을 저장할 자리이므로 처음부터 보안 저장소로 통일했다. `expo-secure-store`는 플랫폼별로 다른 네이티브 저장소를 쓴다:
 
-| 플랫폼 | 실제 저장 위치 | 앱 삭제 후 재설치 시 |
-|---|---|---|
-| iOS | Keychain (`kSecClassGenericPassword`) | **남아있음** — "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID." |
-| Android | `SharedPreferences` + Keystore 암호화 | **사라짐** — "Data saved using expo-secure-store will not be preserved upon app uninstallation." |
+| 플랫폼  | 실제 저장 위치                        | 앱 삭제 후 재설치 시                                                                                                                           |
+| ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| iOS     | Keychain (`kSecClassGenericPassword`) | **남아있음** — "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID." |
+| Android | `SharedPreferences` + Keystore 암호화 | **사라짐** — "Data saved using expo-secure-store will not be preserved upon app uninstallation."                                               |
 
 같은 API인데 두 플랫폼의 삭제 후 동작이 정반대다. iOS는 "로그아웃 안 하고 앱만 지웠다 다시 깔면 로그인 상태 유지"가 실제로 일어난다는 뜻 — 로그아웃 버튼 없이는 세션을 못 끊는 상태가 생길 수 있다.
 
@@ -742,28 +754,28 @@ content: {
 
 ## 관련 파일
 
-| 파일 | 변경 |
-|---|---|
-| `src/screens/PhotoScreen.tsx` | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영 |
-| `src/screens/LocationScreen.tsx` | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 + 지도/마커 |
-| `app.json` | expo-image-picker config plugin (`photosPermission`) |
-| `src/navigation/types.ts` | `Photo: undefined`, `Location: undefined` 라우트 타입 |
-| `src/navigation/index.tsx` | `<HomeStack.Screen name="Photo" / "Location">` 등록 |
-| `src/screens/FeedListScreen.tsx` | 사진·위치 화면 이동 버튼 |
-| `src/screens/NotificationScreen.tsx` | 신규 — 알림 권한 플로우 + 즉시/5초 지연 로컬 알림 예약 |
-| `App.tsx` | `setNotificationHandler` — 포그라운드 알림 표시 설정 (모듈 스코프) |
-| `src/navigation/types.ts` | `Notification: undefined` 라우트 타입 |
-| `src/navigation/index.tsx` | `<HomeStack.Screen name="Notification">` 등록 |
-| `src/screens/FeedListScreen.tsx` | 알림 화면 이동 버튼 |
-| `src/screens/PhotoScreen.tsx` | `expo-sharing`으로 로컬 사진 공유 버튼 추가 |
-| `package.json` | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8 |
-| `src/screens/NotificationScreen.tsx` | `addNotificationResponseReceivedListener` — 탭 시 `data.url`을 `Linking.openURL`로 열어 딥링크 이동 |
-| `src/theme/styles.ts` | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일 |
-| `package.json` | `react-native-maps` 1.20.1 |
-| `src/auth/AuthContext.tsx` | `persistError` 필드 추가 |
-| `App.tsx` | SecureStore 조회/저장/삭제 + `isReady` 부팅 게이트 |
-| `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너 |
-| `app.json` | expo-secure-store config plugin |
+| 파일                                               | 변경                                                                                                |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `src/screens/PhotoScreen.tsx`                      | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영                                                      |
+| `src/screens/LocationScreen.tsx`                   | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 + 지도/마커                         |
+| `app.json`                                         | expo-image-picker config plugin (`photosPermission`)                                                |
+| `src/navigation/types.ts`                          | `Photo: undefined`, `Location: undefined` 라우트 타입                                               |
+| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Photo" / "Location">` 등록                                                 |
+| `src/screens/FeedListScreen.tsx`                   | 사진·위치 화면 이동 버튼                                                                            |
+| `src/screens/NotificationScreen.tsx`               | 신규 — 알림 권한 플로우 + 즉시/5초 지연 로컬 알림 예약                                              |
+| `App.tsx`                                          | `setNotificationHandler` — 포그라운드 알림 표시 설정 (모듈 스코프)                                  |
+| `src/navigation/types.ts`                          | `Notification: undefined` 라우트 타입                                                               |
+| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Notification">` 등록                                                       |
+| `src/screens/FeedListScreen.tsx`                   | 알림 화면 이동 버튼                                                                                 |
+| `src/screens/PhotoScreen.tsx`                      | `expo-sharing`으로 로컬 사진 공유 버튼 추가                                                         |
+| `package.json`                                     | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8                                                 |
+| `src/screens/NotificationScreen.tsx`               | `addNotificationResponseReceivedListener` — 탭 시 `data.url`을 `Linking.openURL`로 열어 딥링크 이동 |
+| `src/theme/styles.ts`                              | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일                                    |
+| `package.json`                                     | `react-native-maps` 1.20.1                                                                          |
+| `src/auth/AuthContext.tsx`                         | `persistError` 필드 추가                                                                            |
+| `App.tsx`                                          | SecureStore 조회/저장/삭제 + `isReady` 부팅 게이트                                                  |
+| `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너                                                                                 |
+| `app.json`                                         | expo-secure-store config plugin                                                                     |
 
 ---
 

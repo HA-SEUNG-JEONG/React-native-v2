@@ -13,17 +13,24 @@
 
 HTML 태그(`div`/`span`/`p`/`img`)가 아예 없다. `react-native`에서 **import한 컴포넌트만** 화면에 그린다.
 
-| 웹 HTML | RN Core Component | 비고 |
-|--|--|--|
-| `<div>` | `<View>` | 레이아웃 컨테이너 |
-| `<span>` `<p>` | `<Text>` | 모든 텍스트는 여기 안에 |
-| `<img>` | `<Image>` | `source` prop |
-| 스크롤되는 `<div>` | `<ScrollView>` | 스크롤 명시 필요 |
-| `<input>` | `<TextInput>` | |
-| `<button>` | `<Pressable>` | `onPress` |
+| 웹 HTML            | RN Core Component | 비고                    |
+| ------------------ | ----------------- | ----------------------- |
+| `<div>`            | `<View>`          | 레이아웃 컨테이너       |
+| `<span>` `<p>`     | `<Text>`          | 모든 텍스트는 여기 안에 |
+| `<img>`            | `<Image>`         | `source` prop           |
+| 스크롤되는 `<div>` | `<ScrollView>`    | 스크롤 명시 필요        |
+| `<input>`          | `<TextInput>`     |                         |
+| `<button>`         | `<Pressable>`     | `onPress`               |
 
 ```tsx
-import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+} from "react-native";
 ```
 
 ## 2. 반드시 지켜야 할 규칙 3개
@@ -34,6 +41,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-nati
 <View>하승</View>          // ✕ 런타임 에러: "Text strings must be rendered within a <Text>"
 <View><Text>하승</Text></View>  // ✓
 ```
+
 웹은 `<div>하승</div>`이 되지만 RN은 문자열을 View에 직접 넣으면 에러다.
 
 ### (2) `<Image>`는 크기와 `{uri}`가 필수
@@ -42,6 +50,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-nati
 <Image style={styles.avatar} source={{ uri: USER.avatar }} />
 // avatar: { width: 120, height: 120, borderRadius: 60 }
 ```
+
 - 원격 이미지는 `source={{ uri: "..." }}` (문자열 아님, 객체).
 - **width/height 없으면 안 보인다.** 웹 `<img>`는 원본 크기로 알아서 뜨지만, RN은 크기를 명시해야 렌더된다(비동기 로드라 크기를 미리 알 수 없어서).
 - `borderRadius: width/2` = 원형.
@@ -51,6 +60,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-nati
 ```tsx
 <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
 ```
+
 웹은 `body`가 내용이 길면 자동 스크롤. RN은 **명시적으로** ScrollView(또는 FlatList 등 리스트)를 써야 스크롤된다. `style`은 스크롤 뷰 자체, `contentContainerStyle`은 안쪽 내용에 적용(둘의 구분 중요).
 
 > ⚠️ ScrollView는 자식을 **전부 한 번에 렌더**. 아이템이 많으면 P4의 FlatList(가상화)를 써야 한다. ScrollView는 개수가 적고 고정된 내용에만.
@@ -65,6 +75,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-nati
   <Text>{following ? "팔로잉" : "팔로우"}</Text>
 </Pressable>
 ```
+
 - 이벤트는 `onClick`이 아니라 **`onPress`**. RN엔 마우스가 아니라 터치.
 - `useState`, 토글 로직, 조건부 렌더는 **웹과 100% 동일**. 배운 그대로.
 
@@ -78,13 +89,13 @@ const styles = StyleSheet.create({
 });
 ```
 
-| CSS | RN StyleSheet |
-|--|--|
-| `background-color` (kebab) | `backgroundColor` (camelCase) |
-| `font-size: 24px` (단위) | `fontSize: 24` (숫자 = dp, 단위 없음) |
-| cascade / 상속 | **없음.** 각 컴포넌트에 스타일 직접 지정 |
-| `@media` | **없음** (P2에서 `useWindowDimensions`로) |
-| `class="a b"` | `style={[a, b]}` (배열) |
+| CSS                        | RN StyleSheet                             |
+| -------------------------- | ----------------------------------------- |
+| `background-color` (kebab) | `backgroundColor` (camelCase)             |
+| `font-size: 24px` (단위)   | `fontSize: 24` (숫자 = dp, 단위 없음)     |
+| cascade / 상속             | **없음.** 각 컴포넌트에 스타일 직접 지정  |
+| `@media`                   | **없음** (P2에서 `useWindowDimensions`로) |
+| `class="a b"`              | `style={[a, b]}` (배열)                   |
 
 - **단위 없는 숫자 = dp**(밀도 독립 픽셀). `px`가 아니다.
 - **상속이 없다.** 부모 `color`가 자식 Text로 안 내려간다. Text마다 색을 지정.
@@ -97,6 +108,7 @@ statsRow: { flexDirection: "row", gap: 32 },  // 가로 배치
 content: { alignItems: "center" },            // 가로 중앙
 tagRow: { flexDirection: "row", flexWrap: "wrap" },  // 넘치면 줄바꿈
 ```
+
 **RN의 모든 View는 기본이 Flexbox이고 기본 방향이 `column`(세로)** 이다. 웹은 `display: block`이 기본이라 이 지점이 헷갈린다 → P2에서 집중.
 
 ---

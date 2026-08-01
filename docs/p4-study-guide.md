@@ -18,6 +18,7 @@
 FlatList는 화면 밖으로 나간 행의 View 객체를 버리지 않고 **재활용(recycle)** 한다. 100개 아이템이 있어도 실제 View는 화면에 보이는 ~12개 + 여유분만 만들고, 스크롤하면 그 View들의 내용만 갈아끼운다. 메모리·성능상 이득이지만 이미지에서 함정이 생긴다.
 
 행 View가 재활용될 때:
+
 - 텍스트는 새 `props`로 즉시 다시 그려짐 → 문제 없음
 - 이미지는 **네트워크 로드가 비동기** → 새 이미지가 도착하기 전까지 **재활용된 View에 남아있던 이전 이미지가 잠깐 보임** (잔상/깜빡임)
 
@@ -29,7 +30,7 @@ FlatList는 화면 밖으로 나간 행의 View 객체를 버리지 않고 **재
 <Image
   source={{ uri: `https://picsum.photos/seed/${item.id}/100/100` }}
   style={styles.thumb}
-  recyclingKey={String(item.id)}   // ★ 핵심
+  recyclingKey={String(item.id)} // ★ 핵심
   cachePolicy="memory-disk"
   transition={200}
   contentFit="cover"
@@ -42,12 +43,12 @@ FlatList는 화면 밖으로 나간 행의 View 객체를 버리지 않고 **재
 
 ### `cachePolicy` — 되돌아왔을 때 재요청 여부
 
-| 값 | 메모리 캐시 | 디스크 캐시 | 체감 |
-|----|:---:|:---:|----|
-| `none` | ✕ | ✕ | 스크롤 진입마다 매번 재요청 (blank → 로드 반복) |
-| `memory` | ✓ | ✕ | 앱 실행 중엔 빠름, 앱 재시작하면 다시 받음 |
-| `disk` | ✕ | ✓ | expo-image 기본값 |
-| `memory-disk` | ✓ | ✓ | **되돌아가도 재요청 0.** 프로덕션 리스트 권장 |
+| 값            | 메모리 캐시 | 디스크 캐시 | 체감                                            |
+| ------------- | :---------: | :---------: | ----------------------------------------------- |
+| `none`        |      ✕      |      ✕      | 스크롤 진입마다 매번 재요청 (blank → 로드 반복) |
+| `memory`      |      ✓      |      ✕      | 앱 실행 중엔 빠름, 앱 재시작하면 다시 받음      |
+| `disk`        |      ✕      |      ✓      | expo-image 기본값                               |
+| `memory-disk` |      ✓      |      ✓      | **되돌아가도 재요청 0.** 프로덕션 리스트 권장   |
 
 부정 테스트(negative test)로 검증한 부분: `recyclingKey`를 빼고 `cachePolicy="none"`을 주면, 재스크롤마다 썸네일이 blank로 리로드되는 걸 육안으로 확인할 수 있다. 순수 "잔상"은 200ms 미만이라 스틸 캡처가 어렵지만, `none` + no-key 조합이 증상을 눈에 보이게 만든다.
 
@@ -65,13 +66,13 @@ thumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#2b3446" },
 
 ### 웹 `<img>` vs expo-image
 
-| | 웹 `<img>` | expo-image |
-|--|--|--|
-| 소스 | `src="url"` | `source={{ uri: "url" }}` |
-| 캐시 제어 | 브라우저 자동 | `cachePolicy` 명시 |
-| 재활용 잔상 | 없음(DOM 재활용 안 함) | `recyclingKey`로 대응 |
-| 페이드인 | CSS 직접 | `transition` prop |
-| fit | `object-fit` CSS | `contentFit` prop |
+|             | 웹 `<img>`             | expo-image                |
+| ----------- | ---------------------- | ------------------------- |
+| 소스        | `src="url"`            | `source={{ uri: "url" }}` |
+| 캐시 제어   | 브라우저 자동          | `cachePolicy` 명시        |
+| 재활용 잔상 | 없음(DOM 재활용 안 함) | `recyclingKey`로 대응     |
+| 페이드인    | CSS 직접               | `transition` prop         |
+| fit         | `object-fit` CSS       | `contentFit` prop         |
 
 ---
 
@@ -114,10 +115,10 @@ const likeMutation = useMutation({
     qc.setQueryData<Post>(["post", id], (old) =>
       old ? { ...old, liked: next } : old,
     );
-    return { prev };            // → onError로 전달
+    return { prev }; // → onError로 전달
   },
   onError: (_e, _next, ctx) => {
-    if (ctx?.prev) qc.setQueryData(["post", id], ctx.prev);  // 원상복구
+    if (ctx?.prev) qc.setQueryData(["post", id], ctx.prev); // 원상복구
   },
 });
 ```
@@ -142,7 +143,7 @@ const likeMutation = useMutation({
 
 ```tsx
 // 실서버라면 onSettled에서:
-qc.invalidateQueries({ queryKey: ["post", id] });   // ← ["post", id]만! 넓게 잡지 말 것
+qc.invalidateQueries({ queryKey: ["post", id] }); // ← ["post", id]만! 넓게 잡지 말 것
 ```
 
 이건 이전에 분석한 **Tailo PR #59 (좋아요 리셋 버그)** 와 정확히 같은 함정이다. 댓글 CRUD 후 `invalidateQueries(['feed', feedId])`처럼 **범위를 넓게** 잡으면, 좋아요와 무관한 피드 전체가 refetch되면서 낙관적 좋아요 상태를 덮어써 리셋시킨다. 교훈:
@@ -167,12 +168,12 @@ onPress={() => likeMutation.mutate(!liked)}   // disabled 없음
 
 같은 가상화(virtualization) 리스트지만 데이터 모양이 다르다.
 
-| | FlatList | SectionList |
-|--|--|--|
-| 데이터 prop | `data={평평한 배열}` | `sections={[{title, data}, ...]}` |
-| 헤더 | `ListHeaderComponent`(1개) | `renderSectionHeader`(섹션마다) |
-| sticky 헤더 | 없음 | `stickySectionHeadersEnabled` (iOS 기본 on) |
-| 용도 | 단순 목록 | 그룹핑된 목록(A~Z 연락처, 날짜별 등) |
+|             | FlatList                   | SectionList                                 |
+| ----------- | -------------------------- | ------------------------------------------- |
+| 데이터 prop | `data={평평한 배열}`       | `sections={[{title, data}, ...]}`           |
+| 헤더        | `ListHeaderComponent`(1개) | `renderSectionHeader`(섹션마다)             |
+| sticky 헤더 | 없음                       | `stickySectionHeadersEnabled` (iOS 기본 on) |
+| 용도        | 단순 목록                  | 그룹핑된 목록(A~Z 연락처, 날짜별 등)        |
 
 ### `sections` 모양 만들기 — `groupByTens`
 
@@ -180,7 +181,7 @@ onPress={() => likeMutation.mutate(!liked)}   // disabled 없음
 function groupByTens(posts: Post[]): { title: string; data: Post[] }[] {
   const buckets = new Map<number, Post[]>();
   for (const p of posts) {
-    const start = Math.floor((p.id - 1) / 10) * 10 + 1;  // 1~10→1, 11~20→11
+    const start = Math.floor((p.id - 1) / 10) * 10 + 1; // 1~10→1, 11~20→11
     const arr = buckets.get(start);
     if (arr) arr.push(p);
     else buckets.set(start, [p]);
@@ -191,7 +192,7 @@ function groupByTens(posts: Post[]): { title: string; data: Post[] }[] {
 }
 ```
 
-`Math.floor((id - 1) / 10) * 10 + 1` — id를 10칸 구간의 **시작값**으로 매핑. id 1~10은 모두 1, 11~20은 11. Map으로 그룹핑 후 `{title, data}[]` 모양으로 변환. SectionList가 이 모양을 그대로 먹는다.
+`Math.floor((id - 1) / 10) * 10 + 1` — id를 10칸 구간의 **시작값**으로 매핑. id 1~~10은 모두 1, 11~~20은 11. Map으로 그룹핑 후 `{title, data}[]` 모양으로 변환. SectionList가 이 모양을 그대로 먹는다.
 
 ### 캐시 공유 — `usePostsInfinite` 훅 추출
 
@@ -200,7 +201,7 @@ FeedList와 SectionList 화면이 **같은 데이터**를 다르게 보여줄 �
 ```tsx
 function usePostsInfinite() {
   return useInfiniteQuery({
-    queryKey: ["posts"],            // ← 두 화면 동일 키
+    queryKey: ["posts"], // ← 두 화면 동일 키
     queryFn: ({ pageParam }) => fetchPosts(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) =>
@@ -216,10 +217,7 @@ function usePostsInfinite() {
 ### `useMemo`로 그룹핑 결과 메모이즈
 
 ```tsx
-const sections = useMemo(
-  () => groupByTens(data?.pages.flat() ?? []),
-  [data],
-);
+const sections = useMemo(() => groupByTens(data?.pages.flat() ?? []), [data]);
 ```
 
 `groupByTens`는 매 렌더마다 배열을 새로 만든다. 리렌더가 잦은 리스트 화면에서 `data`가 안 바뀌었는데 매번 재계산 + 새 배열 참조를 SectionList에 넘기면 불필요한 작업이 생긴다. `data`가 바뀔 때만 재계산하도록 `useMemo`로 감쌌다.
@@ -244,11 +242,11 @@ sticky 헤더는 스크롤 시 리스트 상단에 **고정**되면서 아래 �
 
 ### TanStack Query 캐시 조작 3형제
 
-| 메서드 | 하는 일 | 언제 |
-|--|--|--|
-| `invalidateQueries` | 캐시를 stale 표시 → **재요청** | 서버가 진실. 최신 데이터 다시 받고 싶을 때 |
-| `setQueryData` | 캐시를 **로컬에서 즉시 수정** (네트워크 X) | 낙관적 업데이트, 응답으로 캐시 직접 갱신 |
-| `cancelQueries` | 진행 중 요청 **취소** | 낙관적 수정이 늦게 온 응답에 덮이는 것 방지 |
+| 메서드              | 하는 일                                    | 언제                                        |
+| ------------------- | ------------------------------------------ | ------------------------------------------- |
+| `invalidateQueries` | 캐시를 stale 표시 → **재요청**             | 서버가 진실. 최신 데이터 다시 받고 싶을 때  |
+| `setQueryData`      | 캐시를 **로컬에서 즉시 수정** (네트워크 X) | 낙관적 업데이트, 응답으로 캐시 직접 갱신    |
+| `cancelQueries`     | 진행 중 요청 **취소**                      | 낙관적 수정이 늦게 온 응답에 덮이는 것 방지 |
 
 낙관적 업데이트 = 이 셋의 조합이다: cancel → snapshot(get) → set → (실패 시) set으로 롤백.
 

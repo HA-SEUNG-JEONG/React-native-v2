@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
@@ -65,7 +66,9 @@ export default function App() {
         SecureStore.deleteItemAsync(AUTH_KEY)
           .then(() => setPersistError(null))
           .catch(() =>
-            setPersistError("로그아웃 정보 삭제 실패 — 기기에 값이 남아있을 수 있음"),
+            setPersistError(
+              "로그아웃 정보 삭제 실패 — 기기에 값이 남아있을 수 있음",
+            ),
           );
       },
     }),
@@ -73,30 +76,36 @@ export default function App() {
   );
 
   if (!isReady) {
-    return <View style={[styles.screen, styles.center]} />;
+    return (
+      <GestureHandlerRootView style={styles.screen}>
+        <View style={[styles.screen, styles.center]} />
+      </GestureHandlerRootView>
+    );
   }
 
   return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister: asyncStoragePersister,
-        maxAge: 1000 * 60 * 60 * 24, // 24시간 지난 캐시는 복원 안 함
-      }}
-      // 캐시 복원이 끝난 뒤에 호출해야 함 — 그 전에 부르면 재생할 뮤테이션이 아직 없음.
-      onSuccess={() => {
-        queryClient.resumePausedMutations();
-      }}
-    >
-      <AuthContext.Provider value={auth}>
-        <NavigationContainer
-          theme={DarkTheme}
-          linking={linking}
-          fallback={<LinkingFallback />}
-        >
-          <RootNavigator />
-        </NavigationContainer>
-      </AuthContext.Provider>
-    </PersistQueryClientProvider>
+    <GestureHandlerRootView style={styles.screen}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: asyncStoragePersister,
+          maxAge: 1000 * 60 * 60 * 24, // 24시간 지난 캐시는 복원 안 함
+        }}
+        // 캐시 복원이 끝난 뒤에 호출해야 함 — 그 전에 부르면 재생할 뮤테이션이 아직 없음.
+        onSuccess={() => {
+          queryClient.resumePausedMutations();
+        }}
+      >
+        <AuthContext.Provider value={auth}>
+          <NavigationContainer
+            theme={DarkTheme}
+            linking={linking}
+            fallback={<LinkingFallback />}
+          >
+            <RootNavigator />
+          </NavigationContainer>
+        </AuthContext.Provider>
+      </PersistQueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

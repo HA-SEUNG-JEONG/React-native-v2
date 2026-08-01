@@ -6,7 +6,11 @@
 // Promise를 공유(dedupe)해서 레이스를 막는다.
 // ============================================================
 
-type Tokens = { accessToken: string; accessExpiresAt: number; refreshToken: string };
+type Tokens = {
+  accessToken: string;
+  accessExpiresAt: number;
+  refreshToken: string;
+};
 
 const ACCESS_TTL_MS = 4000; // 데모용 — 실서비스는 보통 수분~수십 분
 
@@ -36,14 +40,19 @@ function issueTokens(): Tokens {
 
 export async function login(username: string, password: string): Promise<void> {
   await new Promise((r) => setTimeout(r, 400));
-  if (password !== "1234") throw new Error("비밀번호가 틀림 (데모 비밀번호: 1234)");
+  if (password !== "1234")
+    throw new Error("비밀번호가 틀림 (데모 비밀번호: 1234)");
   session = issueTokens();
 }
 
 // 서버가 accessToken을 검증한다고 가정 — 여기선 만료 시각만 비교해 401을 흉내.
 async function callProtectedApi(accessToken: string): Promise<string> {
   await new Promise((r) => setTimeout(r, 300));
-  if (!session || session.accessToken !== accessToken || Date.now() > session.accessExpiresAt) {
+  if (
+    !session ||
+    session.accessToken !== accessToken ||
+    Date.now() > session.accessExpiresAt
+  ) {
     const err = new Error("401 액세스 토큰 만료");
     (err as Error & { status?: number }).status = 401;
     throw err;
