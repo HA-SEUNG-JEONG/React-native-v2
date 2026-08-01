@@ -5,6 +5,7 @@ import {
   focusManager,
   onlineManager,
   useInfiniteQuery,
+  useMutation,
 } from "@tanstack/react-query";
 
 // ============================================================
@@ -41,6 +42,14 @@ export async function fetchPost(id: string): Promise<Post> {
   const res = await fetch(`${API}/${id}`);
   if (!res.ok) throw new Error(`글 불러오기 실패 (${res.status})`);
   return res.json();
+}
+
+// 가짜 삭제 API — jsonplaceholder는 실제로 지우지 않고 200만 돌려줌. 20% 랜덤 실패로
+// 스와이프 삭제의 "낙관적 제거 → 실패 시 원복"을 눈으로 보게 함.
+export async function deletePostApi(id: number): Promise<void> {
+  const res = await fetch(`${API}/${id}`, { method: "DELETE" });
+  await new Promise((r) => setTimeout(r, 400));
+  if (!res.ok || Math.random() < 0.2) throw new Error("삭제 실패 (서버 오류)");
 }
 
 export const queryClient = new QueryClient();
@@ -83,6 +92,32 @@ export function usePostsInfinite() {
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length < PAGE_SIZE ? undefined : allPages.length + 1,
+  });
+}
+
+// 스와이프 삭제: onMutate에서 무한스크롤 캐시(2차원 pages)의 해당 항목만 즉시
+// 제거하고 스냅샷을 남겨둠. 실패(20%)하면 onError가 그 스냅샷으로 되돌림.
+export function useDeletePost() {
+  return useMutation({
+    mutationFn: deletePostApi,
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ["posts"] });
+      const prev = queryClient.getQueryData(["posts"]);
+      queryClient.setQueryData(["posts"], (old: any) =>
+        old
+          ? {
+              ...old,
+              pages: old.pages.map((page: Post[]) =>
+                page.filter((p) => p.id !== id),
+              ),
+            }
+          : old,
+      );
+      return { prev };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.prev) queryClient.setQueryData(["posts"], context.prev);
+    },
   });
 }
 

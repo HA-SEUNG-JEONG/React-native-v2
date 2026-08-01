@@ -99,6 +99,34 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#2b3446",
   },
+  // P7 — 스와이프 삭제 배경, 롱프레스 바텀시트 옵션, 스켈레톤 로딩 행
+  swipeDeleteBg: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "#7f1d1d",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingRight: 24,
+  },
+  swipeDeleteText: { color: "#fff", fontWeight: "700" },
+  sheetOption: { paddingVertical: 16, paddingHorizontal: 20 },
+  sheetOptionText: { color: "#fff", fontSize: 16 },
+  sheetOptionDanger: { color: "#f87171" },
+  skeletonThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#2b3446",
+  },
+  skeletonLine: {
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: "#2b3446",
+  },
 });
 
 // 네비게이터 헤더 공통 옵션 (native-stack/auth 스택이 공유)
