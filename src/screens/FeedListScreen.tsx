@@ -59,10 +59,14 @@ export function FeedListScreen({
     setSheetPost(post);
     sheetRef.current?.expand();
   }, []);
-  const closeSheet = useCallback(() => sheetRef.current?.close(), []);
+  const closeSheet = useCallback(() => {
+    setSheetPost(null);
+    sheetRef.current?.close();
+  }, []);
 
   // data.pages(2차원) → flat으로 1차원화. FlatList는 평평한 배열만 받음.
-  const posts = data?.pages.flat() ?? [];
+  // Wrap in useMemo to preserve array reference (fixes FlatList memoization on re-renders)
+  const posts = useMemo(() => data?.pages.flat() ?? [], [data]);
 
   // 4상태 ①최초 로딩 ②에러 (③빈 ④정상은 아래 FlatList가 처리)
   if (isPending) {
@@ -171,7 +175,7 @@ export function FeedListScreen({
         }
         renderItem={({ item }) => (
           <SwipeableRow
-            onDelete={() => deletePost.mutate(item.id)}
+            onDelete={() => !deletePost.isPending && deletePost.mutate(item.id)}
             onLongPress={() => openSheet(item)}
           >
             <Pressable
@@ -237,7 +241,7 @@ export function FeedListScreen({
             style={styles.sheetOption}
             onPress={() => {
               closeSheet();
-              if (sheetPost) deletePost.mutate(sheetPost.id);
+              if (sheetPost && !deletePost.isPending) deletePost.mutate(sheetPost.id);
             }}
           >
             <Text style={[styles.sheetOptionText, styles.sheetOptionDanger]}>
