@@ -19,6 +19,16 @@ export function FeedDetailScreen({
   navigation,
 }: NativeStackScreenProps<HomeStackParamList, "FeedDetail">) {
   const { id } = route.params;
+
+  // Guard against missing id (e.g., deep-link without id)
+  if (!id) {
+    return (
+      <View style={[styles.screen, styles.pad, styles.center]}>
+        <Text style={styles.h1}>글을 찾을 수 없음</Text>
+        <Btn label="← 뒤로" onPress={() => navigation.goBack()} />
+      </View>
+    );
+  }
   const qc = useQueryClient();
   const {
     data: post,
@@ -78,7 +88,7 @@ export function FeedDetailScreen({
     return (
       <View style={[styles.screen, styles.pad, styles.center]}>
         <Text style={styles.h1}>에러</Text>
-        <Text style={styles.hint}>{(error as Error).message}</Text>
+        <Text style={styles.hint}>{error instanceof Error ? error.message : String(error)}</Text>
         <Btn label="다시 시도" onPress={() => refetch()} />
       </View>
     );
