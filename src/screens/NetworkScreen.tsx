@@ -64,7 +64,9 @@ export function NetworkScreen(
         maxRetries: 3,
         baseDelayMs: 500,
         onAttempt: ({ attempt, delayMs }) =>
-          appendLog(`[재시도] ${attempt}회차 실패 → ${Math.round(delayMs)}ms 대기 후 재시도`),
+          appendLog(
+            `[재시도] ${attempt}회차 실패 → ${Math.round(delayMs)}ms 대기 후 재시도`,
+          ),
       });
       appendLog(`[재시도] 최종 ${result}`);
     } catch (e) {
@@ -121,7 +123,9 @@ export function NetworkScreen(
           return;
         }
         const delayMs = 500 * 2 ** reconnectAttempt;
-        appendLog(`[WS] 연결 끊김 — ${delayMs}ms 후 재연결 시도 (${reconnectAttempt + 1}회차)`);
+        appendLog(
+          `[WS] 연결 끊김 — ${delayMs}ms 후 재연결 시도 (${reconnectAttempt + 1}회차)`,
+        );
         setTimeout(() => openSocket(reconnectAttempt + 1), delayMs);
       },
       onError: (message) => appendLog(`[WS] 오류: ${message}`),
@@ -135,7 +139,8 @@ export function NetworkScreen(
   };
 
   const sendMessage = () => {
-    if (!wsMessage.trim() || wsRef.current?.readyState !== WebSocket.OPEN) return;
+    if (!wsMessage.trim() || wsRef.current?.readyState !== WebSocket.OPEN)
+      return;
     wsRef.current.send(wsMessage);
     appendLog(`[WS] 송신: ${wsMessage}`);
     setWsMessage("");
@@ -156,21 +161,32 @@ export function NetworkScreen(
       />
 
       <Text style={styles.sectionHeader}>재시도/백오프 (W16)</Text>
-      <Text style={styles.hint}>60% 확률로 실패하는 가짜 API — 지수 백오프로 최대 3회 재시도.</Text>
+      <Text style={styles.hint}>
+        60% 확률로 실패하는 가짜 API — 지수 백오프로 최대 3회 재시도.
+      </Text>
       <Btn label="재시도 데모 실행" onPress={retryDemo} kind="ghost" />
 
       <Text style={styles.sectionHeader}>업로드 진행률 (W16)</Text>
-      <Btn label="갤러리에서 선택 후 업로드" onPress={pickAndUpload} kind="ghost" />
+      <Btn
+        label="갤러리에서 선택 후 업로드"
+        onPress={pickAndUpload}
+        kind="ghost"
+      />
       {uploadRatio !== null && (
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.round(uploadRatio * 100)}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.round(uploadRatio * 100)}%` },
+            ]}
+          />
         </View>
       )}
 
       <Text style={styles.sectionHeader}>WebSocket (W16)</Text>
       <Text style={styles.hint}>
-        공개 echo 서버 — 보낸 메시지를 그대로 돌려줌. 연결 끊기면 지수
-        백오프로 자동 재연결(최대 {WS_MAX_RECONNECT}회).
+        공개 echo 서버 — 보낸 메시지를 그대로 돌려줌. 연결 끊기면 지수 백오프로
+        자동 재연결(최대 {WS_MAX_RECONNECT}회).
       </Text>
       {wsConnected ? (
         <Btn label="연결 끊기" onPress={disconnectSocket} kind="danger" />

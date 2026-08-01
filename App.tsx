@@ -66,7 +66,9 @@ export default function App() {
         SecureStore.deleteItemAsync(AUTH_KEY)
           .then(() => setPersistError(null))
           .catch(() =>
-            setPersistError("로그아웃 정보 삭제 실패 — 기기에 값이 남아있을 수 있음"),
+            setPersistError(
+              "로그아웃 정보 삭제 실패 — 기기에 값이 남아있을 수 있음",
+            ),
           );
       },
     }),

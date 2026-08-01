@@ -62,7 +62,10 @@ export function uploadWithProgress(
       onProgress({
         sent: totalBytesSent,
         total: totalBytesExpectedToSend,
-        ratio: totalBytesExpectedToSend > 0 ? totalBytesSent / totalBytesExpectedToSend : 0,
+        ratio:
+          totalBytesExpectedToSend > 0
+            ? totalBytesSent / totalBytesExpectedToSend
+            : 0,
       });
     },
   );

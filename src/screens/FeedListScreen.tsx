@@ -185,7 +185,9 @@ export function FeedListScreen({
               }
             >
               <Image
-                source={{ uri: `https://picsum.photos/seed/${item.id}/100/100` }}
+                source={{
+                  uri: `https://picsum.photos/seed/${item.id}/100/100`,
+                }}
                 style={styles.thumb}
                 // ★ FlatList가 행 View를 재활용 → recyclingKey 없으면 스크롤 시
                 //   이전 item 썸네일이 잠깐 남아 깜빡임. 키 바뀌면 즉시 리셋.
@@ -222,10 +224,11 @@ export function FeedListScreen({
             style={styles.sheetOption}
             onPress={() => {
               closeSheet();
-              if (sheetPost) navigation.navigate("FeedDetail", {
-                id: String(sheetPost.id),
-                title: sheetPost.title,
-              });
+              if (sheetPost)
+                navigation.navigate("FeedDetail", {
+                  id: String(sheetPost.id),
+                  title: sheetPost.title,
+                });
             }}
           >
             <Text style={styles.sheetOptionText}>상세 보기</Text>

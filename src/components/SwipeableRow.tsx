@@ -34,9 +34,13 @@ export function SwipeableRow({
     })
     .onEnd(() => {
       if (translateX.value < DELETE_THRESHOLD) {
-        translateX.value = withTiming(OFFSCREEN, { duration: 200 }, (finished) => {
-          if (finished) runOnJS(onDelete)();
-        });
+        translateX.value = withTiming(
+          OFFSCREEN,
+          { duration: 200 },
+          (finished) => {
+            if (finished) runOnJS(onDelete)();
+          },
+        );
       } else {
         translateX.value = withSpring(0);
       }

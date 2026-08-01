@@ -60,7 +60,8 @@ export const queryClient = new QueryClient();
 // mutation을 재실행할 수 있음(컴포넌트가 마운트 안 돼 있어도 동작).
 export const TOGGLE_LIKE_KEY = ["toggleLike"] as const;
 queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
-  mutationFn: ({ id, next }: { id: string; next: boolean }) => toggleLikeApi(next),
+  mutationFn: ({ id, next }: { id: string; next: boolean }) =>
+    toggleLikeApi(next),
   // 재생 성공 시 캐시를 최종값으로 동기화. 실패(40% 랜덤)하면 오프라인일 때 낙관적으로
   // 반영해둔 값과 서버가 어긋난 채 남음 — 전형적인 오프라인 동기화 충돌.
   onSuccess: (data, { id }) => {

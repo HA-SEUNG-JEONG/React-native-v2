@@ -22,7 +22,9 @@ const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 ```
+
 이 앱의 트리 구조:
+
 ```
 NavigationContainer
 └ RootStack (인증 후)
@@ -34,6 +36,7 @@ NavigationContainer
   │  └ ProfileTab
   └ Compose (모달 그룹)
 ```
+
 **탭 하나(HomeTab)가 자기만의 스택**을 가진다(중첩). 그래서 홈 탭 안에서 List↔Detail 히스토리가 프로필 탭과 독립적으로 쌓인다.
 
 ## 2. 타입 안전 파라미터
@@ -42,17 +45,19 @@ NavigationContainer
 
 ```tsx
 type HomeStackParamList = {
-  FeedList: undefined;                        // 파라미터 없음
+  FeedList: undefined; // 파라미터 없음
   FeedSections: undefined;
   FeedDetail: { id: string; title?: string }; // 필수 id + 옵셔널 title
 };
 ```
+
 ```tsx
 // navigate 인자가 타입과 안 맞으면 컴파일 에러
 navigation.navigate("FeedDetail", { id: String(item.id), title: item.title });
 // 받는 쪽
-const { id } = route.params;   // route.params가 { id: string; title?: string }로 추론됨
+const { id } = route.params; // route.params가 { id: string; title?: string }로 추론됨
 ```
+
 웹 URL 쿼리(`?id=2`, 전부 문자열)와 달리 **객체를 그대로 넘기고 타입 체크**를 받는다. 화면 컴포넌트는 `NativeStackScreenProps<ParamList, "화면명">`으로 `navigation`/`route` 타입을 얻는다.
 
 ## 3. 인증 게이트 = 네비게이터 교체 (핵심 패턴)
@@ -78,6 +83,7 @@ function RootNavigator() {
   );
 }
 ```
+
 웹은 보호 라우트에서 `<Navigate to="/login">`로 **redirect**한다. RN(권장 패턴)은 **조건부로 아예 다른 네비게이터를 렌더**한다.
 
 **이 방식의 자동 보안 효과**: 로그아웃하면 `user`가 `null`이 되고 인증된 `RootStack` 전체가 **언마운트**된다. 보호 화면들이 트리에서 사라지므로 뒤로가기로 되돌아갈 수 없다. redirect 방식처럼 "뒤로가면 캐시된 보호 화면이 잠깐 보이는" 문제가 원천 차단된다.
@@ -89,6 +95,7 @@ function RootNavigator() {
   <RootStack.Screen name="Compose" component={ComposeScreen} />
 </RootStack.Group>
 ```
+
 `presentation: "modal"` → 카드가 **아래에서 위로** 슬라이드, iOS는 스와이프 다운으로 닫힘.
 
 모달은 **RootStack 소유**인데, 열려는 버튼은 깊숙한 FeedList(HomeStack) 안에 있다. 부모 네비게이터로 올라가 호출한다:
@@ -98,6 +105,7 @@ navigation
   .getParent<NativeStackNavigationProp<RootStackParamList>>()
   ?.navigate("Compose");
 ```
+
 `navigate` 액션은 **처리 가능한 네비게이터까지 자동으로 버블링**되지만, 타입 안전을 위해 `getParent`로 명시적으로 올라가 RootStack 타입을 지정했다.
 
 ## 5. 화면 생명주기 — useEffect vs useFocusEffect
@@ -105,17 +113,17 @@ navigation
 ```tsx
 useFocusEffect(
   useCallback(() => {
-    console.log("FeedList 포커스됨");        // 탭 진입/뒤로 복귀마다
+    console.log("FeedList 포커스됨"); // 탭 진입/뒤로 복귀마다
     return () => console.log("FeedList 블러됨"); // 떠날 때
   }, []),
 );
 ```
 
-| | `useEffect` | `useFocusEffect` |
-|--|--|--|
-| 실행 시점 | 최초 마운트 1회 | 화면이 **포커스될 때마다** |
-| 문제 | 탭 전환/뒤로 복귀를 못 잡음(화면이 언마운트 안 됨) | 복귀마다 재실행 |
-| 용도 | 초기 셋업 | 복귀 시 새로고침, 분석 로그, 타이머 재개 |
+|           | `useEffect`                                        | `useFocusEffect`                         |
+| --------- | -------------------------------------------------- | ---------------------------------------- |
+| 실행 시점 | 최초 마운트 1회                                    | 화면이 **포커스될 때마다**               |
+| 문제      | 탭 전환/뒤로 복귀를 못 잡음(화면이 언마운트 안 됨) | 복귀마다 재실행                          |
+| 용도      | 초기 셋업                                          | 복귀 시 새로고침, 분석 로그, 타이머 재개 |
 
 탭 네비게이션은 화면을 **언마운트하지 않고 유지**한다. 그래서 탭을 떠났다 돌아와도 `useEffect`는 다시 안 돈다 → 복귀 감지는 `useFocusEffect`가 필요. `useCallback`으로 감싸는 게 필수(매 렌더 새 함수면 매번 재구독).
 
@@ -126,14 +134,21 @@ const linking = {
   prefixes: [Linking.createURL("/"), "picsel://"],
   config: {
     screens: {
-      Tabs: { screens: { HomeTab: { screens: {
-        FeedList: "feed",
-        FeedDetail: "feed/:id",   // :id → route.params.id
-      } } } },
+      Tabs: {
+        screens: {
+          HomeTab: {
+            screens: {
+              FeedList: "feed",
+              FeedDetail: "feed/:id", // :id → route.params.id
+            },
+          },
+        },
+      },
     },
   },
 };
 ```
+
 - **`prefixes`**: 어떤 URL을 이 앱 링크로 인식할지. `Linking.createURL("/")`가 Expo Go dev용(`exp://.../--/`)과 빌드용(`picsel://`)을 자동 생성.
 - **`config.screens`**: **중첩 네비게이터 구조를 그대로 반영**해야 한다. `picsel://feed/2` → `Tabs > HomeTab > FeedDetail(id="2")`로 트리 깊이를 따라 내려간다.
 - `:id` = 경로 파라미터 → `route.params.id`로 들어옴.
@@ -142,30 +157,30 @@ const linking = {
 
 ## 7. 이동 액션 3종
 
-| 액션 | 동작 |
-|--|--|
-| `navigation.navigate("X", params)` | X로 이동(이미 스택에 있으면 그 화면으로) |
-| `navigation.push("X", params)` | X를 **새로** 스택에 쌓음(같은 화면 중복 가능) |
-| `navigation.goBack()` | 현재 화면 pop |
+| 액션                               | 동작                                          |
+| ---------------------------------- | --------------------------------------------- |
+| `navigation.navigate("X", params)` | X로 이동(이미 스택에 있으면 그 화면으로)      |
+| `navigation.push("X", params)`     | X를 **새로** 스택에 쌓음(같은 화면 중복 가능) |
+| `navigation.goBack()`              | 현재 화면 pop                                 |
 
 ```tsx
-navigation.push("FeedDetail", route.params);  // 같은 상세를 계속 쌓기 (스택 개념 실습)
-navigation.goBack();                           // 뒤로(pop)
+navigation.push("FeedDetail", route.params); // 같은 상세를 계속 쌓기 (스택 개념 실습)
+navigation.goBack(); // 뒤로(pop)
 ```
 
 ---
 
 ## 웹 라우팅 → RN 요약
 
-| 웹 (React Router) | RN (React Navigation) |
-|--|--|
-| URL + history | 화면 스택(push/pop) |
-| `<Route path>` | `<Stack.Screen name>` |
-| `<Link to>` / `navigate()` | `navigation.navigate()` |
-| `?query`, `:param` (문자열) | `route.params` (타입 있는 객체) |
-| 보호 라우트 = redirect | 인증 = 네비게이터 교체 |
-| 라우트 = URL 매칭 | 라우트 = 컴포넌트 트리 + (선택) 딥링크 |
-| `useEffect`로 마운트 감지 | `useFocusEffect`로 포커스 감지 |
+| 웹 (React Router)           | RN (React Navigation)                  |
+| --------------------------- | -------------------------------------- |
+| URL + history               | 화면 스택(push/pop)                    |
+| `<Route path>`              | `<Stack.Screen name>`                  |
+| `<Link to>` / `navigate()`  | `navigation.navigate()`                |
+| `?query`, `:param` (문자열) | `route.params` (타입 있는 객체)        |
+| 보호 라우트 = redirect      | 인증 = 네비게이터 교체                 |
+| 라우트 = URL 매칭           | 라우트 = 컴포넌트 트리 + (선택) 딥링크 |
+| `useEffect`로 마운트 감지   | `useFocusEffect`로 포커스 감지         |
 
 ## 복습 체크리스트
 

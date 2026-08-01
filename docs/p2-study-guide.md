@@ -28,14 +28,15 @@ statsRow: { flexDirection: "row", gap: 32 },  // 세로 기본 → 가로로 바
 
 기본 방향이 세로(column)라, **main axis = 세로, cross axis = 가로**.
 
-| 속성 | column(기본)일 때 | row일 때 |
-|--|--|--|
-| `justifyContent` | **세로** 정렬 | 가로 정렬 |
-| `alignItems` | **가로** 정렬 | 세로 정렬 |
+| 속성             | column(기본)일 때 | row일 때  |
+| ---------------- | ----------------- | --------- |
+| `justifyContent` | **세로** 정렬     | 가로 정렬 |
+| `alignItems`     | **가로** 정렬     | 세로 정렬 |
 
 ```tsx
 content: { alignItems: "center" },  // column이라 alignItems가 "가로 중앙"
 ```
+
 웹 flex(기본 row)에 익숙하면 justify/align이 반대로 느껴진다. **"main axis = flexDirection 방향"** 만 기억하면 헷갈리지 않는다.
 
 ## 3. `flex: 1` — 남은 공간 채우기
@@ -43,6 +44,7 @@ content: { alignItems: "center" },  // column이라 alignItems가 "가로 중앙
 ```tsx
 screen: { flex: 1, backgroundColor: "#0f1115" },  // 화면 전체 채움
 ```
+
 `flex: 1`은 "부모의 남은 공간을 다 차지". 화면 루트에 `flex: 1`을 줘야 배경이 전체를 덮는다. 현재 App.tsx의 sticky footer 패턴도 이걸로 만든다:
 
 ```tsx
@@ -59,6 +61,7 @@ screen: { flex: 1, backgroundColor: "#0f1115" },  // 화면 전체 채움
 paddingVertical: 13,   // 13dp (밀도 독립 픽셀)
 borderRadius: 12,
 ```
+
 - 숫자 = **dp**. 기기 픽셀 밀도와 무관하게 물리적으로 비슷한 크기로 보임.
 - `"50%"` 처럼 **문자열 %** 도 가능(부모 대비 비율).
 - **반응형은 고정 px 대신** `flex`, `%`, 또는 `useWindowDimensions()`(런타임 화면 크기)로. 미디어쿼리가 없다.
@@ -72,6 +75,7 @@ const insets = useSafeAreaInsets();
 // 바닥 바에 홈 인디케이터 높이만큼 여백 추가
 <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
 ```
+
 `insets`는 기기마다 다른 **동적 값** → StyleSheet(정적)에 못 넣고 inline으로 덧댄다. 이게 정적 스타일 + 동적 인셋을 배열로 합치는 실전 패턴.
 
 ## 6. 키보드 대응 — KeyboardAvoidingView
@@ -84,6 +88,7 @@ const insets = useSafeAreaInsets();
   keyboardVerticalOffset={headerHeight}
 >
 ```
+
 iOS는 `padding`, Android는 `height`가 자연스럽다. `Platform.OS`로 OS를 읽어 분기하는 게 RN의 기본 플랫폼 대응 방식.
 
 ## 7. 절대 배치 & 겹치기
@@ -97,6 +102,7 @@ iOS는 `padding`, Android는 `height`가 자연스럽다. `Platform.OS`로 OS를
   )}
 </View>
 ```
+
 - `position: "absolute"`는 **가장 가까운 부모 기준**(웹 `relative` 조상 지정 불필요, 부모가 기준이 됨).
 - 겹침 순서 = **JSX 순서**(나중 요소가 위). 세밀한 제어는 `zIndex`(iOS) / `elevation`(Android).
 
@@ -110,22 +116,23 @@ style={({ pressed }) => [
   disabled && { opacity: 0.5 },
 ]}
 ```
+
 상속·cascade가 없으니 **배열로 겹쳐** 표현한다. 뒤 요소가 앞을 덮어씀. `false`/`undefined`는 무시된다. Pressable은 `style`에 `({pressed}) =>` 함수를 줘 눌림 상태별 스타일도 가능.
 
 ---
 
 ## 웹 CSS → RN 매핑 요약
 
-| 웹 CSS | RN |
-|--|--|
-| `display: flex` 선언 | 기본 적용(모든 View) |
-| `flex-direction` 기본 `row` | 기본 `column` |
-| `px`, `em`, `rem` | dp(숫자), `%`(문자열) |
-| `@media` | `useWindowDimensions()` |
-| 브라우저가 노치 처리 | `useSafeAreaInsets()` |
-| `class` cascade | `style` 배열 |
-| `position: absolute` (조상 relative 필요) | 부모 기준 자동 |
-| `z-index` | `zIndex`(iOS) / `elevation`(Android) |
+| 웹 CSS                                    | RN                                   |
+| ----------------------------------------- | ------------------------------------ |
+| `display: flex` 선언                      | 기본 적용(모든 View)                 |
+| `flex-direction` 기본 `row`               | 기본 `column`                        |
+| `px`, `em`, `rem`                         | dp(숫자), `%`(문자열)                |
+| `@media`                                  | `useWindowDimensions()`              |
+| 브라우저가 노치 처리                      | `useSafeAreaInsets()`                |
+| `class` cascade                           | `style` 배열                         |
+| `position: absolute` (조상 relative 필요) | 부모 기준 자동                       |
+| `z-index`                                 | `zIndex`(iOS) / `elevation`(Android) |
 
 ## 복습 체크리스트
 

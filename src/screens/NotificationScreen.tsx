@@ -29,10 +29,12 @@ export function NotificationScreen(
     // 알림을 탭했을 때(포그라운드/백그라운드 공통) content.data.url을 앱 딥링크로
     // 열어 기존 navigation/index.tsx의 linking 설정을 그대로 태운다 — 새 네비게이션
     // 로직을 따로 안 만들고 이미 있는 URL → 화면 매핑을 재사용.
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url;
-      if (typeof url === "string") Linking.openURL(url);
-    });
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const url = response.notification.request.content.data?.url;
+        if (typeof url === "string") Linking.openURL(url);
+      },
+    );
     return () => sub.remove();
   }, []);
 
@@ -92,8 +94,8 @@ export function NotificationScreen(
       {blocked && (
         <>
           <Text style={styles.hint}>
-            알림 권한이 꺼져 있음. 앱에서 다시 물어볼 수 없어 설정에서 직접
-            켜야 함.
+            알림 권한이 꺼져 있음. 앱에서 다시 물어볼 수 없어 설정에서 직접 켜야
+            함.
           </Text>
           <Btn
             label="설정 열기"

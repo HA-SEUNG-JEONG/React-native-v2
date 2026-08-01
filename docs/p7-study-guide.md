@@ -24,12 +24,18 @@ Gesture Handler의 `Gesture.Pan()`으로 좌측 스와이프를, `Gesture.LongPr
 ```tsx
 const pan = Gesture.Pan()
   .activeOffsetX([-10, 10]) // 세로 스크롤과 구분 — 가로로 충분히 움직여야 활성화
-  .onUpdate((e) => { translateX.value = Math.min(0, e.translationX); })
+  .onUpdate((e) => {
+    translateX.value = Math.min(0, e.translationX);
+  })
   .onEnd(() => {
     if (translateX.value < DELETE_THRESHOLD) {
-      translateX.value = withTiming(OFFSCREEN, { duration: 200 }, (finished) => {
-        if (finished) runOnJS(onDelete)();
-      });
+      translateX.value = withTiming(
+        OFFSCREEN,
+        { duration: 200 },
+        (finished) => {
+          if (finished) runOnJS(onDelete)();
+        },
+      );
     } else {
       translateX.value = withSpring(0);
     }
@@ -57,6 +63,7 @@ const pan = Gesture.Pan()
 ## 실기기/시뮬레이터 검증 메모
 
 시뮬레이터(Expo Go)에서 `touch_path` 자동화로 확인:
+
 - 롱프레스 → 바텀시트 오픈 → "삭제" 탭 → 목록에서 즉시 사라짐: **확인**
 - 상세 화면 진입 애니메이션(크래시 없음, 레이아웃 정상): **확인**
 - 스켈레톤 렌더(코드 경로상 정상, 데이터가 빨리 와서 육안 캡처는 실패): **코드 리뷰로만 확인**
