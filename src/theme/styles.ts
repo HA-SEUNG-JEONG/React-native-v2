@@ -1,5 +1,10 @@
 import { StyleSheet } from "react-native";
 
+// 공용 색상 토큰
+export const colors = {
+  ghostText: "#93c5fd",
+};
+
 // 공용 StyleSheet — 모든 화면이 공유. RN은 cascade/상속이 없어 각 컴포넌트가
 // 여기서 직접 스타일을 골라 배열로 합쳐 쓴다.
 export const styles = StyleSheet.create({
@@ -30,7 +35,7 @@ export const styles = StyleSheet.create({
   thumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#2b3446" },
   rowSub: { color: "#8a92a6", fontSize: 13, fontFamily: "monospace" },
   sectionHeader: {
-    color: "#93c5fd",
+    color: colors.ghostText,
     fontSize: 13,
     fontWeight: "700",
     backgroundColor: "#0f1115", // sticky 시 아래 행이 비쳐 보이지 않게 배경 채움

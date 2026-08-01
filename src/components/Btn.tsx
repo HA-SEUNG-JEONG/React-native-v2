@@ -1,5 +1,5 @@
 import { Pressable, Text } from "react-native";
-import { styles } from "../theme/styles";
+import { styles, colors } from "../theme/styles";
 
 // 공용 버튼 — kind로 색만 바꿈. Pressable style에 ({pressed}) 함수를 줘 눌림 상태 표현.
 // cascade가 없으니 style 배열로 겹쳐 쌓음(뒤 요소가 앞을 덮음).
@@ -25,7 +25,7 @@ export function Btn({
         disabled && { opacity: 0.5 },
       ]}
     >
-      <Text style={[styles.btnText, kind === "ghost" && { color: "#93c5fd" }]}>
+      <Text style={[styles.btnText, kind === "ghost" && { color: colors.ghostText }]}>
         {label}
       </Text>
     </Pressable>
