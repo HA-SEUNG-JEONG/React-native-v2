@@ -65,9 +65,13 @@ queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
   // 재생 성공 시 캐시를 최종값으로 동기화. 실패(40% 랜덤)하면 오프라인일 때 낙관적으로
   // 반영해둔 값과 서버가 어긋난 채 남음 — 전형적인 오프라인 동기화 충돌.
   onSuccess: (data, { id }) => {
-    queryClient.setQueryData<Post>(["post", id], (old) =>
-      old ? { ...old, liked: data.liked } : old,
-    );
+    const old = queryClient.getQueryData<Post>(["post", id]);
+    if (!old) {
+      console.warn(`Post ${id} not found in cache after like toggle`);
+      queryClient.invalidateQueries({ queryKey: ["post", id] });
+    } else {
+      queryClient.setQueryData<Post>(["post", id], { ...old, liked: data.liked });
+    }
   },
 });
 
@@ -92,7 +96,7 @@ export function usePostsInfinite() {
     queryFn: ({ pageParam }) => fetchPosts(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < PAGE_SIZE ? undefined : allPages.length + 1,
+      lastPage.length < PAGE_SIZE ? undefined : 1 + allPages.length,
   });
 }
 
@@ -102,15 +106,15 @@ export function useDeletePost() {
   return useMutation({
     mutationFn: deletePostApi,
     onMutate: async (id: number) => {
-      await queryClient.cancelQueries({ queryKey: ["posts"] });
       const prev = queryClient.getQueryData(["posts"]);
+      await queryClient.cancelQueries({ queryKey: ["posts"] });
       queryClient.setQueryData(["posts"], (old: any) =>
         old
           ? {
               ...old,
-              pages: old.pages.map((page: Post[]) =>
-                page.filter((p) => p.id !== id),
-              ),
+              pages: old.pages
+                .map((page: Post[]) => page.filter((p) => p.id !== id))
+                .filter((page: Post[]) => page.length > 0),
             }
           : old,
       );
