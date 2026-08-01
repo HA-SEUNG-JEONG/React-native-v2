@@ -34,13 +34,13 @@ export function PhotoScreen(
       if (!res.granted) return;
     }
     const result = await launchCameraAsync({ mediaTypes: "images" });
-    if (result.canceled) return;
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
     setUri(result.assets[0].uri);
   };
 
   const pickPhoto = async () => {
     const result = await launchImageLibraryAsync({ mediaTypes: "images" });
-    if (result.canceled) return;
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
     setUri(result.assets[0].uri);
   };
 

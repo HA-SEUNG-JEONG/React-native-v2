@@ -45,15 +45,19 @@ export function LocationScreen(
     setErrorMessage(null);
 
     try {
-      const currentLocation = await getCurrentPositionAsync({
-        accuracy: Accuracy.Balanced,
-      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("위치 조회 시간 초과")), 15000)
+      );
+      const currentLocation = await Promise.race([
+        getCurrentPositionAsync({ accuracy: Accuracy.Balanced }),
+        timeoutPromise,
+      ]) as Awaited<ReturnType<typeof getCurrentPositionAsync>>;
       const { latitude, longitude } = currentLocation.coords;
       setLocation({ latitude, longitude });
 
       mapRef.current?.animateToRegion({ latitude, longitude, ...DELTA }, 500);
     } catch (e) {
-      // 권한 있어도 좌표 못 얻는 경우: 임시권한(한 번만 허용) 워밍업, 실내, GPS 미확보 등
+      // 권한 있어도 좌표 못 얻는 경우: 임시권한(한 번만 허용) 워밍업, 실내, GPS 미확보 등, 또는 타임아웃
       setErrorMessage(
         e instanceof Error ? e.message : "위치를 가져오지 못했습니다.",
       );
