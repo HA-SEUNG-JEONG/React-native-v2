@@ -124,6 +124,42 @@ export async function fetchProtected(): Promise<string> {
 
 ---
 
+## W16 — 네트워킹 심화 (재시도/백오프, 업로드 진행률, WebSocket)
+
+W15(`NetworkScreen`의 인터셉터)의 후속. 같은 화면에 3개 섹션을 추가하는 형태로 확장.
+
+### 재시도/백오프
+
+`withRetryBackoff(fn, { maxRetries, baseDelayMs })` — 지수 백오프(`baseDelayMs * 2^attempt` + jitter) 범용 래퍼. `flakyFetch`(60% 인위적 실패율, `toggleLikeApi`와 같은 패턴)로 데모 — 매 실패 시도마다 대기시간이 늘어나는 걸 로그로 확인 가능.
+
+### 업로드 진행률
+
+Expo SDK 54부터 `expo-file-system`은 클래스 기반 API가 기본이지만, **업로드 진행률 콜백(`createUploadTask`)은 legacy API에만 있음** — `expo-file-system/legacy`에서 import. `expo-image-picker`(기존 `PhotoScreen`에서 쓰던 것 재사용)로 이미지를 고른 뒤 `https://httpbin.org/post`(공개 echo 업로드 엔드포인트, 실서버 없음)로 MULTIPART 업로드하며 `{ totalBytesSent, totalBytesExpectedToSend }` 콜백을 비율로 변환해 진행률 바에 반영.
+
+```ts
+FileSystem.createUploadTask(
+  url,
+  fileUri,
+  options,
+  ({ totalBytesSent, totalBytesExpectedToSend }) => {
+    onProgress(totalBytesSent / totalBytesExpectedToSend);
+  },
+);
+```
+
+### WebSocket 개념
+
+공개 echo 서버(`wss://ws.postman-echo.com/raw`)에 연결해 송신한 메시지를 그대로 돌려받는 데모. RN은 `WebSocket`이 전역 내장 객체라 별도 라이브러리 불필요. 연결이 끊기면(`onclose`) 사용자가 직접 끊은 게 아닌 한 지수 백오프로 최대 3회까지 자동 재연결 — `manualCloseRef`로 "의도적 종료"와 "네트워크로 인한 종료"를 구분해야 무한 재연결 루프를 막을 수 있음.
+
+### 검증 — 네트워킹 심화
+
+- [x] `tsc --noEmit` 통과
+- [x] Expo v54 공식 문서로 `createUploadTask` 시그니처·legacy 여부 확인 후 구현(AGENTS.md 지침 준수)
+- [x] Metro 번들 정상 서빙 확인(빌드 에러 없음), 시뮬레이터에서 앱 크래시 없이 로그인 화면까지 렌더 확인
+- [ ] 재시도 로그의 실제 다중 attempt, 업로드 진행률 바의 0→100% 변화, WebSocket 송수신은 시뮬레이터 텍스트 입력/포커스 자동화 불안정(기존에 문서화된 한계, 로그인 폼부터 막힘)으로 이번 세션엔 화면 조작까지는 실측 못함 — 리뷰어 실기기 확인 필요
+
+---
+
 ## W17 — 오프라인 우선 (쿼리 영속화, 뮤테이션 큐잉/동기화)
 
 > 출처: [TanStack Query — Persist a Client](https://tanstack.com/query/v5/docs/framework/react/plugins/persistQueryClient) · [Offline mutations](https://tanstack.com/query/v5/docs/framework/react/guides/offline-mutations)
@@ -184,42 +220,6 @@ queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
 - [x] `tsc --noEmit` 통과
 - [x] `setMutationDefaults` 등록/`resumePausedMutations` 배선을 코드 레벨로 확인
 - [ ] 실기기/시뮬레이터에서 비행기 모드 → 좋아요 탭(큐잉 배너 확인) → 앱 재시작 → 비행기 모드 해제 → 자동 동기화까지 전체 체인 실측 필요 — 이번 세션 미수행
-
----
-
-## W16 — 네트워킹 심화 (재시도/백오프, 업로드 진행률, WebSocket)
-
-W15(`NetworkScreen`의 인터셉터)의 후속. 같은 화면에 3개 섹션을 추가하는 형태로 확장.
-
-### 재시도/백오프
-
-`withRetryBackoff(fn, { maxRetries, baseDelayMs })` — 지수 백오프(`baseDelayMs * 2^attempt` + jitter) 범용 래퍼. `flakyFetch`(60% 인위적 실패율, `toggleLikeApi`와 같은 패턴)로 데모 — 매 실패 시도마다 대기시간이 늘어나는 걸 로그로 확인 가능.
-
-### 업로드 진행률
-
-Expo SDK 54부터 `expo-file-system`은 클래스 기반 API가 기본이지만, **업로드 진행률 콜백(`createUploadTask`)은 legacy API에만 있음** — `expo-file-system/legacy`에서 import. `expo-image-picker`(기존 `PhotoScreen`에서 쓰던 것 재사용)로 이미지를 고른 뒤 `https://httpbin.org/post`(공개 echo 업로드 엔드포인트, 실서버 없음)로 MULTIPART 업로드하며 `{ totalBytesSent, totalBytesExpectedToSend }` 콜백을 비율로 변환해 진행률 바에 반영.
-
-```ts
-FileSystem.createUploadTask(
-  url,
-  fileUri,
-  options,
-  ({ totalBytesSent, totalBytesExpectedToSend }) => {
-    onProgress(totalBytesSent / totalBytesExpectedToSend);
-  },
-);
-```
-
-### WebSocket 개념
-
-공개 echo 서버(`wss://ws.postman-echo.com/raw`)에 연결해 송신한 메시지를 그대로 돌려받는 데모. RN은 `WebSocket`이 전역 내장 객체라 별도 라이브러리 불필요. 연결이 끊기면(`onclose`) 사용자가 직접 끊은 게 아닌 한 지수 백오프로 최대 3회까지 자동 재연결 — `manualCloseRef`로 "의도적 종료"와 "네트워크로 인한 종료"를 구분해야 무한 재연결 루프를 막을 수 있음.
-
-### 검증 — 네트워킹 심화
-
-- [x] `tsc --noEmit` 통과
-- [x] Expo v54 공식 문서로 `createUploadTask` 시그니처·legacy 여부 확인 후 구현(AGENTS.md 지침 준수)
-- [x] Metro 번들 정상 서빙 확인(빌드 에러 없음), 시뮬레이터에서 앱 크래시 없이 로그인 화면까지 렌더 확인
-- [ ] 재시도 로그의 실제 다중 attempt, 업로드 진행률 바의 0→100% 변화, WebSocket 송수신은 시뮬레이터 텍스트 입력/포커스 자동화 불안정(기존에 문서화된 한계, 로그인 폼부터 막힘)으로 이번 세션엔 화면 조작까지는 실측 못함 — 리뷰어 실기기 확인 필요
 
 ---
 

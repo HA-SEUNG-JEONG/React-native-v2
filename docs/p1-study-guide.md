@@ -65,6 +65,25 @@ import {
 
 > ⚠️ ScrollView는 자식을 **전부 한 번에 렌더**. 아이템이 많으면 P4의 FlatList(가상화)를 써야 한다. ScrollView는 개수가 적고 고정된 내용에만.
 
+### 2-1. TextInput 기본 프롭
+
+```tsx
+<TextInput
+  style={styles.input}
+  value={email}
+  onChangeText={setEmail}
+  placeholder="you@example.com"
+  keyboardType="email-address"
+  secureTextEntry={false}
+/>
+```
+
+- 웹 `<input value onChange>`와 짝: RN은 **`value` + `onChangeText`**(이벤트 객체가 아니라 문자열을 바로 준다).
+- `placeholder`가 웹의 placeholder 역할(별도 label 아님, 값 아님).
+- `keyboardType`(`"email-address"`/`"numeric"`/`"phone-pad"` 등)으로 OS 키보드 종류 지정.
+- `secureTextEntry`가 웹의 `type="password"` 대응.
+- react-hook-form과 엮은 실전 폼은 P6에서 다룸 — 여기서는 TextInput 단독 사용법만.
+
 ## 3. `onPress` (not `onClick`)
 
 ```tsx
@@ -78,6 +97,34 @@ import {
 
 - 이벤트는 `onClick`이 아니라 **`onPress`**. RN엔 마우스가 아니라 터치.
 - `useState`, 토글 로직, 조건부 렌더는 **웹과 100% 동일**. 배운 그대로.
+
+### 3-1. Pressable 상태 (`pressed`, `hitSlop`, `android_ripple`)
+
+boolean state로 직접 토글하는 대신, Pressable은 눌린 순간 자체를 렌더 프롭으로 준다(웹의 `:active`에 대응):
+
+```tsx
+<Pressable
+  style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+  onPress={handlePress}
+  onLongPress={handleLongPress}
+  hitSlop={8}
+  android_ripple={{ color: "#ffffff33" }}
+>
+  <Text>확인</Text>
+</Pressable>
+```
+
+- `style`에 함수를 주면 `{ pressed }`를 받는다 — 별도 state 없이 눌림 스타일 처리.
+- `onLongPress`: 길게 누르기(웹엔 없는 제스처).
+- `hitSlop`: 터치 가능 영역을 실제 뷰 크기보다 확장(작은 아이콘 버튼의 터치 난이도 보완).
+- `android_ripple`: Android 전용 물결 효과(iOS는 무시됨) — 플랫폼별 터치 피드백이 필요할 때.
+
+```mermaid
+flowchart LR
+    T["터치 시작"] -->|pressed: true| P["style 함수 재실행<br/>pressed 스타일 적용"]
+    P -->|손 뗌| R["pressed: false<br/>원래 스타일 복귀"]
+    P -.->|누른 채 유지| L["onLongPress 발동"]
+```
 
 ## 4. StyleSheet — CSS가 아니다
 
@@ -101,6 +148,12 @@ const styles = StyleSheet.create({
 - **상속이 없다.** 부모 `color`가 자식 Text로 안 내려간다. Text마다 색을 지정.
 - **조건부 스타일 = 배열**: `style={[styles.button, following && styles.buttonActive]}` — 뒤 요소가 앞을 덮어씀(cascade 대용).
 
+```mermaid
+flowchart TD
+    Parent["부모 View<br/>color: white"] -.->|웹: 상속됨| ChildWeb["자식 span<br/>(색 자동 상속)"]
+    Parent -->|RN: 상속 안 됨| ChildRN["자식 Text<br/>색 지정 안 하면 기본값"]
+```
+
 ## 5. Flexbox 맛보기 (P2 예고)
 
 ```tsx
@@ -110,6 +163,34 @@ tagRow: { flexDirection: "row", flexWrap: "wrap" },  // 넘치면 줄바꿈
 ```
 
 **RN의 모든 View는 기본이 Flexbox이고 기본 방향이 `column`(세로)** 이다. 웹은 `display: block`이 기본이라 이 지점이 헷갈린다 → P2에서 집중.
+
+```mermaid
+flowchart LR
+    subgraph Web["웹: display: block (기본)"]
+        direction TB
+        W1["div"] --> W2["div"] --> W3["div"]
+    end
+    subgraph RN["RN View: flexDirection column (기본)"]
+        direction TB
+        R1["View"] --> R2["View"] --> R3["View"]
+    end
+    subgraph RNRow["RN View: flexDirection row"]
+        direction LR
+        C1["View"] --> C2["View"] --> C3["View"]
+    end
+```
+
+- 웹 기본(`block`)과 RN 기본(`column`) 결과는 시각적으로 비슷해 보여 착각하기 쉽다 — 하지만 RN은 **명시적으로 Flexbox 규칙**을 따르는 것이지 block이 아니다.
+- `flexDirection: "row"`를 주는 순간에야 가로 배치(`statsRow`, `tagRow`)로 바뀐다.
+
+## 6. 짚고 넘어가면 좋은 것들
+
+이름만 알아두면 필요할 때 바로 찾아 쓸 수 있는 Core API들. 지금 상세히 안 봐도 됨 — 존재를 아는 게 목표.
+
+- **[`Alert`](https://reactnative.dev/docs/alert)** — JSX 컴포넌트가 아니라 `Alert.alert(title, message, buttons)` 명령형 호출. 웹의 `window.confirm`/`alert()`에 대응.
+- **[`Modal`](https://reactnative.dev/docs/modal)** — 화면 위에 띄우는 오버레이 컴포넌트. 웹의 `<dialog>`/포탈 모달 대응.
+- **[`ActivityIndicator`](https://reactnative.dev/docs/activityindicator)** — 로딩 스피너. 웹의 스피너 라이브러리 대신 RN 내장.
+- **`accessibilityLabel` / `accessibilityRole`** — 스크린리더용 접근성 프롭(웹의 `aria-label`/`role` 대응). 모든 Core Component에 붙일 수 있음. 자세히: [Accessibility](https://reactnative.dev/docs/accessibility).
 
 ---
 
@@ -132,3 +213,7 @@ tagRow: { flexDirection: "row", flexWrap: "wrap" },  // 넘치면 줄바꿈
 - [ ] 조건부 스타일을 배열로 주는 이유는? — [Style](https://reactnative.dev/docs/style)
 - [ ] `onClick`이 아니라 무엇을 쓰나? — [`Pressable`](https://reactnative.dev/docs/pressable)
 - [ ] ScrollView 대신 FlatList가 필요한 순간은? — [`FlatList`](https://reactnative.dev/docs/flatlist) · [Core Components and APIs](https://reactnative.dev/docs/components-and-apis)
+- [ ] TextInput에서 웹 `<input>`의 `onChange`에 대응하는 prop은? 왜 이벤트 객체가 아니라 문자열을 바로 주나? — [`TextInput`](https://reactnative.dev/docs/textinput)
+- [ ] Pressable의 `style`에 함수를 주면 뭘 받을 수 있나? `hitSlop`은 언제 쓰나? — [`Pressable`](https://reactnative.dev/docs/pressable)
+- [ ] 확인창을 띄울 때 JSX 컴포넌트가 아니라 함수 호출로 쓰는 API는? — [`Alert`](https://reactnative.dev/docs/alert)
+- [ ] 스크린리더 대응을 위해 붙이는 접근성 프롭 2가지는? — [Accessibility](https://reactnative.dev/docs/accessibility)

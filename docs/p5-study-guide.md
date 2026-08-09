@@ -14,7 +14,7 @@ W11(카메라/이미지)에서 이 뼈대를 세우고, W12~W14는 같은 뼈대
 
 > **먼저 알아야 할 것 — 이 화면의 권한 코드는 "필수"가 아니다.**
 > 공식문서는 `launchImageLibraryAsync`에 대해 이렇게 못박는다:
-> _"No permissions request is necessary for launching the image library."_
+> *"No permissions request is necessary for launching the image library."*
 >
 > 갤러리 선택은 OS가 제공하는 별도 프로세스의 피커를 띄우는 것이라, 앱이 라이브러리를 직접 읽지 않는다. 그래서 권한이 필요 없다. 이 화면의 권한 게이트는 **P5 뼈대를 연습하려고 일부러 얹은 것**이다.
 >
@@ -35,23 +35,36 @@ W11(카메라/이미지)에서 이 뼈대를 세우고, W12~W14는 같은 뼈대
 
 모바일은 다르다. **OS가 재요청 자체를 막는다.**
 
-| 상태     | iOS                         | Android                      |
-| -------- | --------------------------- | ---------------------------- |
-| 미결정   | 다이얼로그 뜸               | 다이얼로그 뜸                |
-| 거부 1회 | **다시는 다이얼로그 안 뜸** | 다시 요청 가능               |
-| 거부 2회 | —                           | **영구 거부** (`USER_FIXED`) |
+
+| 상태    | iOS               | Android                  |
+| ----- | ----------------- | ------------------------ |
+| 미결정   | 다이얼로그 뜸           | 다이얼로그 뜸                  |
+| 거부 1회 | **다시는 다이얼로그 안 뜸** | 다시 요청 가능                 |
+| 거부 2회 | —                 | **영구 거부** (`USER_FIXED`) |
+
 
 Expo 문서가 양 플랫폼을 묶어 못박는다:
 
-> _"An operating-system level restriction on both Android and iOS prohibits an app from asking for the same permission more than once."_
+> *"An operating-system level restriction on both Android and iOS prohibits an app from asking for the same permission more than once."*
 
 **도달 조건은 다르다.** Android 문서 원문:
 
-> _"if the user taps Deny for a specific permission more than once during your app's lifetime of installation on a device, the user will no longer see the system permissions dialog if your app requests that permission again. The user's action implies "don't ask again," and is considered a permanent denial."_
+> *"if the user taps Deny for a specific permission more than once during your app's lifetime of installation on a device, the user will no longer see the system permissions dialog if your app requests that permission again. The user's action implies "don't ask again," and is considered a permanent denial."*
 
 즉 Android는 **거부 2회째에 자동으로** 영구 거부가 된다. 옛 Android UI에 있던 "다시 묻지 않기" 체크박스를 유저가 누르는 게 아니다 — 인터넷 예제/블로그에 그 설명이 아직 많이 남아 있으니 주의. 시뮬레이터/에뮬레이터로 테스트할 땐 **Android는 두 번 거부해야** 이 상태가 재현된다.
 
 어느 쪽이든 코드에서 보는 값은 같다 — `canAskAgain === false`.
+
+```mermaid
+flowchart TD
+    A[미결정] -->|다이얼로그 뜸| B{유저 응답}
+    B -->|허용| G[granted]
+    B -->|거부| C["거부 1회<br/>canAskAgain: true"]
+    C -->|iOS: 여기서 끝| D["canAskAgain: false<br/>영구 차단"]
+    C -->|Android: 재요청 가능| E{다시 요청}
+    E -->|거부 2회째| D
+    E -->|허용| G
+```
 
 즉 앱이 "권한 주세요"를 다시 띄울 수 없는 막다른 상태가 존재한다. 이때 앱이 아무 말 없이 실패하면 유저는 **왜 버튼이 안 먹는지 영원히 모른다**. 앱을 지우고 다시 깔거나, 그냥 떠난다.
 
@@ -66,6 +79,15 @@ Expo 문서가 양 플랫폼을 묶어 못박는다:
 2. 요청             await requestPermission()   → OS 다이얼로그
 3. 거부 처리        canAskAgain 따라 두 갈래
 4. 기능 실행        launchImageLibraryAsync()
+```
+
+```mermaid
+flowchart TD
+    S1["1. 상태 확인<br/>status?.granted"] --> S2["2. 요청<br/>await requestPermission()"]
+    S2 --> S3{"3. 거부 처리<br/>canAskAgain?"}
+    S3 -->|true| R1["조용히 물러나고<br/>다음에 재시도"]
+    S3 -->|false| R2["영구 차단<br/>설정 앱으로 안내"]
+    S3 -->|granted| S4["4. 기능 실행<br/>launchImageLibraryAsync()"]
 ```
 
 3번이 두 갈래로 쪼개지는 게 핵심이다.
@@ -127,11 +149,13 @@ const [status, requestPermission, getPermission] = useMediaLibraryPermissions();
 
 iOS 14+ / Android API 34+ 는 "전체 허용"과 "선택한 사진만 허용"을 구분한다. `MediaLibraryPermissionResponse`에는 이를 나타내는 필드가 따로 있다.
 
-| 값          | 의미                             |
-| ----------- | -------------------------------- |
-| `'all'`     | 라이브러리 전체 접근             |
+
+| 값           | 의미                   |
+| ----------- | -------------------- |
+| `'all'`     | 라이브러리 전체 접근          |
 | `'limited'` | **유저가 고른 일부 사진만** 접근 |
-| `'none'`    | 접근 불가                        |
+| `'none'`    | 접근 불가                |
+
 
 `granted === true`인데 `accessPrivileges === 'limited'`인 상태가 존재한다. 즉 "권한 있음"으로만 판단하면 유저가 왜 자기 사진 일부를 못 찾는지 설명할 수 없다. 갤러리 피커를 쓰는 지금 화면에선 OS 피커가 알아서 처리하지만, `expo-media-library`로 직접 앨범을 읽는 기능이라면 이 분기를 반드시 다뤄야 한다.
 
@@ -207,7 +231,7 @@ SDK 54의 `mediaTypes` 타입은 `MediaType | MediaType[] | MediaTypeOptions`. �
 
 단 열거형은 문서에 명시적으로 deprecated로 표시돼 있다:
 
-> _Deprecated: To set media types available in the image picker use an array of `MediaType` instead._
+> *Deprecated: To set media types available in the image picker use an array of `MediaType` instead.*
 
 즉 `ImagePicker.MediaTypeOptions.Images`를 쓰는 인터넷 예제 대부분이 구버전이다. 권장 형태는 **배열**이다. **버전 고정 문서를 봐야 하는 이유** (`AGENTS.md` 규칙).
 
@@ -217,11 +241,13 @@ SDK 54의 `mediaTypes` 타입은 `MediaType | MediaType[] | MediaTypeOptions`. �
 
 iOS는 권한 다이얼로그에 "왜 필요한지" 문구가 없으면 심사에서 반려된다. 네이티브 `Info.plist`를 직접 건드리는 대신 config plugin에 넣는다.
 
-| 키                     | 생성되는 네이티브 키             |
+
+| 키                      | 생성되는 네이티브 키                      |
 | ---------------------- | -------------------------------- |
 | `photosPermission`     | `NSPhotoLibraryUsageDescription` |
 | `cameraPermission`     | `NSCameraUsageDescription`       |
 | `microphonePermission` | `NSMicrophoneUsageDescription`   |
+
 
 갤러리는 권한 다이얼로그가 안 뜨므로 이 문구가 없어도 됐다. 카메라를 붙인 지금도 `cameraPermission`을 생략하면 기본 문구가 자동 생성돼 **동작 자체엔 문제없다**(아래 카메라 섹션 참고). 커스텀 문구는 출시(P8) 심사 품질용이다.
 
@@ -235,7 +261,7 @@ iOS는 권한 다이얼로그에 "왜 필요한지" 문구가 없으면 심사�
 
 두 가지 실수를 했다.
 
-1. `styles.image`에 `objectFit: "cover"`를 넣었다 — 웹 CSS 습관. tsc는 통과하지만 `expo-image`의 공식 API는 **`contentFit` prop**이다. 같은 앱 안 `FeedListScreen` 썸네일에서 이미 `contentFit`을 쓰고 있었으니 일관성도 깨진다.
+1. `styles.image`에 `objectFit: "cover"`를 넣었다 — 웹 CSS 습관. tsc는 통과하지만 `expo-image`의 공식 API는 `**contentFit` prop**이다. 같은 앱 안 `FeedListScreen` 썸네일에서 이미 `contentFit`을 쓰고 있었으니 일관성도 깨진다.
 2. `style`을 아예 비워뒀다 — 크기를 지정하지 않으면 화면에 아무것도 안 나타났다. 웹 `<img>`처럼 원본 크기로 알아서 커지지 않는다. (문서에 명시된 규칙은 아니고 시뮬레이터 실측. 부모가 크기를 주지 않는 레이아웃이라 그런 것으로 보인다.)
 
 `contentFit`의 기본값은 문서상 `'cover'`라서 위 코드에서 생략해도 결과는 같다. 명시한 건 썸네일 쪽과 읽는 방식을 맞추기 위해서다.
@@ -259,10 +285,12 @@ image: {
 
 `navigation/types.ts`에 라우트를 추가해도 화면은 **생기지 않는다.**
 
-| 파일        | 역할                                         | 빠지면                            |
-| ----------- | -------------------------------------------- | --------------------------------- |
-| `types.ts`  | "Photo 라우트는 params 없음" 타입 약속       | `navigate("Photo")`에 컴파일 에러 |
-| `index.tsx` | `<Stack.Screen name="Photo" .../>` 실제 등록 | 런타임에 라우트 없음              |
+
+| 파일          | 역할                                       | 빠지면                         |
+| ----------- | ---------------------------------------- | --------------------------- |
+| `types.ts`  | "Photo 라우트는 params 없음" 타입 약속             | `navigate("Photo")`에 컴파일 에러 |
+| `index.tsx` | `<Stack.Screen name="Photo" .../>` 실제 등록 | 런타임에 라우트 없음                 |
+
 
 TypeScript 타입은 컴파일하면 전부 지워진다(type erasure). 번들에 한 줄도 안 남으므로 런타임 효과가 0이다. 타입만 추가한 상태는 **약속만 하고 물건은 안 넣은 것** — `navigate("Photo")`가 tsc는 통과하는데 실행하면 못 찾는다.
 
@@ -290,7 +318,7 @@ const takePhoto = async () => {
 };
 ```
 
-갤러리와 나란히 두면 대비가 선명하다: **`pickPhoto`엔 권한 게이트가 없고, `takePhoto`엔 있다.** 두 훅이 반환값 형태가 같다고 추상화하려다 이 차이를 지우면 안 된다. 형태가 같은 것과 역할이 같은 건 별개다.
+갤러리와 나란히 두면 대비가 선명하다: `**pickPhoto`엔 권한 게이트가 없고, `takePhoto`엔 있다.** 두 훅이 반환값 형태가 같다고 추상화하려다 이 차이를 지우면 안 된다. 형태가 같은 것과 역할이 같은 건 별개다.
 
 방향을 두 번 뒤집었다:
 
@@ -301,11 +329,13 @@ const takePhoto = async () => {
 
 app.json config plugin에 `cameraPermission`을 **안 넣어도 카메라는 동작한다.** 문서상 생략 시 기본 문구가 자동으로 들어간다:
 
-| 속성                   | 생략 시 기본값                                      |
+
+| 속성                     | 생략 시 기본값                                            |
 | ---------------------- | --------------------------------------------------- |
 | `photosPermission`     | `"Allow $(PRODUCT_NAME) to access your photos"`     |
 | `cameraPermission`     | `"Allow $(PRODUCT_NAME) to access your camera"`     |
 | `microphonePermission` | `"Allow $(PRODUCT_NAME) to access your microphone"` |
+
 
 즉 `NSCameraUsageDescription`은 항상 생성된다. 커스텀 문구는 **심사 품질용 폴리시**지 동작 필수 조건이 아니다. `false`를 명시해야만 Android에서 권한이 차단된다. (출시 P8에서 앱 성격에 맞는 문구로 교체 예정.)
 
@@ -327,6 +357,14 @@ W11(카메라)까지는 권한이 **허용/거부 2진**이었다. 위치는 iOS
 - `whenInUse` — 앱 사용 중에만. **"한 번만 허용"도 이걸로 뜬다** (단 이번 세션만 유효)
 - `always` — 백그라운드 포함. `requestBackgroundPermissionsAsync()` 별도 필요
 - `none` — 거부
+
+```mermaid
+flowchart TD
+    P["requestForegroundPermissionsAsync()"] --> Q{"ios.scope"}
+    Q -->|whenInUse| W["앱 사용 중에만<br/>('한 번만 허용'도 여기로 뜸)"]
+    Q -->|always| AL["백그라운드 포함<br/>requestBackgroundPermissionsAsync() 별도 필요"]
+    Q -->|none| N[거부]
+```
 
 `ios?`의 `?`는 필수다. Android엔 `ios`가 없고 `android.accuracy`만 있다 — optional chaining 안 하면 안드로이드에서 크래시.
 
@@ -382,11 +420,13 @@ getCurrentPositionAsync({ accuracy: Accuracy.Balanced }); // 5(Highest) 같은 �
 
 ### 라이브러리 선택 — `expo-maps`가 아니라 `react-native-maps`
 
+
 |         | [`expo-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/maps/) | [`react-native-maps`](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/) |
 | ------- | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Expo Go | **불가** — 문서 verbatim "Not available in the Expo Go app"     | 포함됨, "No additional setup is required"                                   |
-| 안정성  | **alpha, breaking change 잦음**                                 | 안정                                                                        |
-| API     | `AppleMaps.View` / `GoogleMaps.View` 플랫폼별 분리              | `MapView` 하나                                                              |
+| Expo Go | **불가** — 문서 verbatim "Not available in the Expo Go app"         | 포함됨, "No additional setup is required"                                      |
+| 안정성     | **alpha, breaking change 잦음**                                   | 안정                                                                          |
+| API     | `AppleMaps.View` / `GoogleMaps.View` 플랫폼별 분리                    | `MapView` 하나                                                                |
+
 
 샌드박스는 Expo Go로 돌리므로 `react-native-maps`. `expo-maps`는 dev build를 만들 때(P8 출시 단계) 다시 볼 것.
 
@@ -463,10 +503,12 @@ W11~W12는 권한 플로우였다. W13은 다른 문제다 — **권한은 필�
 
 로그인 여부 자체는 민감정보가 아니지만, 나중에 토큰을 저장할 자리이므로 처음부터 보안 저장소로 통일했다. `expo-secure-store`는 플랫폼별로 다른 네이티브 저장소를 쓴다:
 
-| 플랫폼  | 실제 저장 위치                        | 앱 삭제 후 재설치 시                                                                                                                           |
-| ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+
+| 플랫폼     | 실제 저장 위치                              | 앱 삭제 후 재설치 시                                                                                                                               |
+| ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | iOS     | Keychain (`kSecClassGenericPassword`) | **남아있음** — "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID." |
-| Android | `SharedPreferences` + Keystore 암호화 | **사라짐** — "Data saved using expo-secure-store will not be preserved upon app uninstallation."                                               |
+| Android | `SharedPreferences` + Keystore 암호화    | **사라짐** — "Data saved using expo-secure-store will not be preserved upon app uninstallation."                                              |
+
 
 같은 API인데 두 플랫폼의 삭제 후 동작이 정반대다. iOS는 "로그아웃 안 하고 앱만 지웠다 다시 깔면 로그인 상태 유지"가 실제로 일어난다는 뜻 — 로그아웃 버튼 없이는 세션을 못 끊는 상태가 생길 수 있다.
 
@@ -492,6 +534,23 @@ useEffect(() => {
 }, []);
 
 if (!isReady) return <View style={[styles.screen, styles.center]} />;
+```
+
+```mermaid
+sequenceDiagram
+    participant App as App.tsx (마운트)
+    participant SS as SecureStore
+    App->>App: isReady = false, user = null
+    App->>SS: getItemAsync(AUTH_KEY)
+    alt 성공
+        SS-->>App: 저장된 user
+        App->>App: setUser(user)
+    else 실패
+        SS-->>App: reject
+        App->>App: setUser(null)
+    end
+    App->>App: setIsReady(true)
+    App->>App: 네비게이션 렌더 (로그인 or 프로필)
 ```
 
 `getItemAsync`는 비동기다. 이 조회가 끝나기 전에 `user`는 초기값 `null`이고, 그 상태로 네비게이션을 그려버리면 **로그인 화면이 한 프레임 비쳤다가 실제 값이 오면 프로필로 바뀌는 깜빡임(flash)**이 생긴다. `isReady` 게이트로 조회가 끝날 때까지 렌더 자체를 미룬다 — 앱 부팅 화면(빈 `View`)이 그 자리를 대신한다.
@@ -521,9 +580,26 @@ curl -s -X POST http://localhost:8081/reload
 
 이러면 `App` 컴포넌트가 처음부터 다시 마운트되고 모든 `useState`가 초기값으로 돌아간다 — 진짜 콜드 부팅과 같은 조건. 리로드 직후 스크린샷에서 로그인 화면 없이 바로 프로필 화면(저장된 `user`)이 뜨는 걸로 `getItemAsync` 복원을 확인했다.
 
+> **미검증 주장**: "iOS는 앱 삭제 후 재설치해도 값이 남고 Android는 사라진다"는 위 표의 Expo 공식 문서 인용일 뿐, 이 프로젝트에서 실제로 앱 삭제 → 재설치까지 밟아본 적은 없다. Metro `/reload`는 JS 컨텍스트만 초기화할 뿐 네이티브 Keychain/Keystore는 건드리지 않아 이 시나리오를 대신하지 못한다 — 실기기/시뮬레이터에서 앱을 지웠다 다시 깔아 직접 확인해야 하는 항목.
+
 ### `requireAuthentication`(생체 인증)은 여기서 안 씀
 
 문서: **"The requireAuthentication option is not supported in Expo Go when biometric authentication is available due to a missing NSFaceIDUsageDescription key."** Expo Go로 개발 중인 지금은 이 옵션을 켜면 동작하지 않는다. Dev build로 넘어갈 때(P8 근처) 필요하면 추가할 옵션이지, 지금 빠뜨린 게 아니다.
+
+### 저장소 선택지 — SecureStore가 전부는 아니다
+
+`docs/react-native-curriculum.md`가 정의하는 W13은 저장소 4종(`AsyncStorage`/`MMKV`/`expo-secure-store`/`expo-file-system`+SQLite 개념)을 묶는데, 실제로 뭘 저장하느냐에 따라 이 프로젝트 안에 이미 넷 다 답이 갈려 있다:
+
+
+| 저장소                    | 이 프로젝트에서 쓰는 곳                               | 왜                                                                                                                 |
+| ---------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `expo-secure-store`    | `App.tsx` (이 섹션) — 로그인 유저 이름 1개             | 값 1개, 보안 저장소면 충분                                                                                                  |
+| `AsyncStorage`         | `src/api/persist.ts` — TanStack Query 캐시 전체 | 커리큘럼은 `MMKV`를 명시하지만 MMKV는 네이티브 모듈이라 Expo Go에서 못 돎 → 자세한 이유는 W17(`p6-study-guide.md`) "MMKV 대신 AsyncStorage를 쓴 이유" |
+| `expo-file-system`     | `src/api/network.ts` (W16) — 사진 업로드 진행률     | "저장"이 아니라 "이미 로컬에 있는 파일을 서버로 보내는" 용도라 `documentDirectory`/`cacheDirectory` 읽기·쓰기는 이 프로젝트에 없음                      |
+| SQLite (`expo-sqlite`) | 없음                                          | 관계형 쿼리·다중 레코드가 필요 없는 단일 값이라 SecureStore로 충분했다. 목록형 로컬 데이터(오프라인 게시글 등)가 생기면 후보                                     |
+
+
+같은 "저장"이어도 값 1개(SecureStore) vs 캐시 전체(AsyncStorage) vs 파일 자체(FileSystem)는 서로 대체재가 아니라 저장 대상이 다른 별개 문제라는 게 W13의 진짜 요점이다.
 
 ---
 
@@ -547,7 +623,7 @@ if (Platform.OS === "android") {
 }
 ```
 
-문서: Android 8+(API 26+)는 알림에 채널이 있어야 하고, 채널이 없으면 권한 프롬프트 자체가 의미 있게 뜨지 않는다. iOS엔 채널 개념이 없어서 `Platform.OS === "android"` 가드로 분기한다 — 이 가드를 빼고 iOS에서 호출하면 조용히 무시되긴 하지만, "iOS/Android 공통 코드"라는 착각을 남기지 않으려 명시적으로 나눴다.
+문서: Android 8+(API 26+)는 알림에 채널이 있어야 한다는 것과, Android 13+(API 33+)에서 채널이 없으면 권한 프롬프트 자체가 안 뜬다는 것은 서로 다른 버전 경계다. 채널 요건은 8+ 전체에 적용되지만, 런타임 권한 프롬프트는 13부터 생긴 개념이라 8~12에선 애초에 프롬프트가 없고 설치 시 자동으로 권한이 부여된다 — 그 구간에서 채널은 프롬프트를 틔우는 게 아니라 알림의 중요도/동작만 결정한다. iOS엔 채널 개념이 없어서 `Platform.OS === "android"` 가드로 분기한다 — 이 가드를 빼고 iOS에서 호출하면 조용히 무시되긴 하지만, "iOS/Android 공통 코드"라는 착각을 남기지 않으려 명시적으로 나눴다.
 
 ### `setNotificationHandler`는 모듈 스코프에서 1회
 
@@ -561,6 +637,15 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+```
+
+**포그라운드**란 앱이 화면 맨 앞에서 실제로 실행 중인 상태 — 사용자가 지금 그 앱을 보고 쓰는 중이라는 뜻이다. 나머지 두 상태와 비교하면: **백그라운드**는 JS 런타임은 살아있지만 화면 뒤로 밀려난 상태(홈 버튼 등), **종료(killed)**는 앱 프로세스 자체가 없는 상태. 이 셋을 구분하는 이유는 상태마다 알림 처리 주체가 다르기 때문이다 — 포그라운드는 OS가 알림을 안 띄워주니 앱이 직접 처리해야 하고, 백그라운드/종료는 OS가 알아서 배너/리스트에 띄운다.
+
+```mermaid
+flowchart LR
+    FG["포그라운드<br/>(화면 맨 앞)"] -->|OS가 안 띄움| H["setNotificationHandler가<br/>직접 처리해야 함"]
+    BG["백그라운드<br/>(JS는 살아있음)"] -->|OS가 자동 표시| Auto1[배너/리스트]
+    KL["종료 killed<br/>(프로세스 없음)"] -->|OS가 자동 표시| Auto2[배너/리스트]
 ```
 
 이 설정이 없으면 앱이 **포그라운드**일 때 온 알림은 기본적으로 화면에 안 나타난다(백그라운드/종료 상태는 OS가 알아서 표시하므로 영향 없음). `shouldShowBanner`/`shouldShowList`는 SDK 54 기준 필드명이다 — 예전 `shouldShowAlert`는 deprecated. 컴포넌트 안이 아니라 `App.tsx` 모듈 스코프에 둔 이유: 화면을 오가며 매번 재등록할 이유가 없는 앱 전역 설정이라서.
@@ -631,7 +716,21 @@ content: {
 
 `content.data`엔 임의 JSON을 실어 보낼 수 있고, 탭 응답(`response`) 안에 그대로 돌아온다. 새 네비게이션 로직을 만드는 대신 **이미 검증된 `Linking.openURL` → `linking.config.screens` 매핑**을 재사용했다 — W11~W13에서 이미 만들어둔 것을 새 기능이 그대로 가져다 쓴 사례.
 
-> **검증 범위의 한계**: 포그라운드 배너 탭과 잠금화면 알림 탭은 iOS 시뮬레이터에서 자동화 도구로 재현하기 까다로웠다(배너는 수 초 만에 사라지고, 잠금화면은 Face ID 시뮬레이션이 필요해 도구가 못 건드림). 대신 아래를 개별 확인했다: (1) `picsel://feed/1`이 실제로 `FeedDetail`로 연결되는 유효한 라우트라는 것(화면에 노출된 "딥링크:" 텍스트로 직접 확인), (2) 알림이 이 payload와 함께 정상 발송된다는 것, (3) 리스너 코드가 `tsc --noEmit` 통과. 알림 탭 → 앱 오픈 → 리스너 실행까지 이어지는 전체 체인은 실기기에서 손으로 눌러 확인하는 게 더 빠르고 확실하다.
+### 냉시작(cold start) 알림 탭 — 리스너 하나로는 안 잡힌다
+
+`addNotificationResponseReceivedListener`는 JS 런타임이 이미 떠 있어야 잡힌다. 알림을 탭해서 **종료 상태였던 앱이 새로 켜지는 경우**는 리스너 등록 시점 자체가 보장이 안 돼서 놓칠 수 있다. Expo는 이 경우를 위해 별도 API를 둔다:
+
+```tsx
+const lastResponse = Notifications.useLastNotificationResponse();
+useEffect(() => {
+  const url = lastResponse?.notification.request.content.data?.url;
+  if (typeof url === "string") Linking.openURL(url);
+}, [lastResponse]);
+```
+
+`useLastNotificationResponse()`(비훅 버전은 `getLastNotificationResponseAsync()`)는 "앱을 실행시킨 그 알림 응답"을 앱 초기화 시점에 조회한다. 리스너와 훅은 서로 대체가 아니라 **역할 분담**이다 — 리스너는 앱이 살아있는 동안(포그라운드/백그라운드)의 탭, 훅은 종료 상태에서 앱을 띄운 탭을 각각 담당한다. 둘 다 없으면 "포그라운드에서만 되는 딥링크"가 되고, W14가 원래 의도한 "알림 탭 → 어디서든 피드 상세로" 요건을 채우지 못한다.
+
+> **검증 범위의 한계**: 포그라운드 배너 탭과 잠금화면 알림 탭은 iOS 시뮬레이터에서 자동화 도구로 재현하기 까다로웠다(배너는 수 초 만에 사라지고, 잠금화면은 Face ID 시뮬레이션이 필요해 도구가 못 건드림). 대신 아래를 개별 확인했다: (1) `picsel://feed/1`이 실제로 `FeedDetail`로 연결되는 유효한 라우트라는 것(화면에 노출된 "딥링크:" 텍스트로 직접 확인), (2) 알림이 이 payload와 함께 정상 발송된다는 것, (3) 리스너·훅 코드가 `tsc --noEmit` 통과. 냉시작 케이스는 이제 앱 쪽 코드(`useLastNotificationResponse`)로는 처리돼 있고, 남은 한계는 순수히 "OS 레벨 배너/잠금화면 탭"을 시뮬레이터에서 자동으로 재현하는 도구 제약이다 — 앱이 그 탭을 못 받는 게 아니라, 그 탭 자체를 도구로 못 일으키는 문제로 범위가 좁혀졌다. 실기기에서 손으로 눌러 확인하는 게 더 빠르고 확실하다.
 
 ---
 
@@ -643,7 +742,7 @@ content: {
 2. **iOS 설정 앱에서 이 앱의 사진 권한을 끄고** 다시 시도 → 배너 노출
 3. 배너의 "설정 열기" → 이 앱 설정 페이지로 이동
 4. (실기기) "카메라로 촬영" → 첫 실행 권한 다이얼로그 → 거부 후 재시도 → `canAskAgain === false`면 배너 노출
-5. 피드 → "위치" → "현재 위치 가져오기" → 권한 다이얼로그(3지선다) → 허용 시 위도/경도 + `권한 범위: whenInUse` 표시. **시뮬은 Features > Location > Apple을 먼저 켜야** 좌표가 온다
+5. 피드 → "위치" → "현재 위치 가져오기" → 권한 다이얼로그(3지선다) → 허용 시 위도/경도 + `권한 범위: whenInUse` 표시. **시뮬은 Features &gt; Location &gt; Apple을 먼저 켜야** 좌표가 온다
 6. 설정 앱에서 위치 권한을 **Never**로 바꾼 뒤 버튼을 **다시 눌러** 훅 `status`를 갱신 → 거부 배너 노출. 권한 리셋은 `xcrun simctl privacy booted reset location`
 7. 위치 화면 진입 → **서울 기준 지도가 뜨고 마커는 없음**, 권한 팝업도 없음 (버튼이 트리거이므로)
 8. 버튼 → 허용 → 지도가 현재 좌표로 이동 + 마커 1개. 거부 상태면 지도는 서울에 그대로 남고 배너만 노출
@@ -732,6 +831,9 @@ content: {
 - [ ] 낙관적 쓰기 — 화면 상태(`user`)와 영속 상태(SecureStore 저장 성패)를 왜 분리했는지
 - [ ] Expo Go에서 Metro `/reload`로 "콜드 부팅"을 흉내내는 방법과 그게 왜 진짜 재시작과 같은 조건인지
 - [ ] `requireAuthentication`이 Expo Go에서 왜 동작하지 않는지
+- [ ] `AsyncStorage`/`expo-secure-store`/`expo-file-system`을 "뭘 저장하느냐"로 구분해 말할 수 있다 (쿼리 캐시 vs 로그인 상태 vs 로컬 파일)
+- [ ] 이 프로젝트에 SQLite가 없는 이유, 필요해지는 조건을 안다
+- [ ] iOS/Android 삭제-재설치 후 SecureStore 값 유지 여부가 **검증 안 된 문서상 주장**이라는 걸 안다
 
 ### 알림·공유 (W14)
 
@@ -743,33 +845,36 @@ content: {
 - [ ] `shareAsync`가 원격 URL이 아니라 로컬 파일 URI만 받는 이유, `isAvailableAsync()`가 막아주는 실패가 뭔지 — [`expo-sharing`](https://docs.expo.dev/versions/v54.0.0/sdk/sharing/)
 - [ ] Android에서 "JS 상태"가 아니라 "실제 OS 알림"을 확인하려면 뭘 봐야 하는지 (`dumpsys notification`)
 - [ ] `content.data`에 실은 값이 탭 응답(`response`)의 어디로 돌아오는지, 왜 새 네비게이션 로직 대신 기존 `linking.config`를 재사용했는지 — [`expo-linking`](https://docs.expo.dev/versions/v54.0.0/sdk/linking/)
+- [ ] `addNotificationResponseReceivedListener`와 `useLastNotificationResponse`가 왜 둘 다 필요한지 — 종료 상태에서 앱을 띄운 탭은 리스너만으로 안 잡히는 이유
 
 ---
 
 ## 관련 파일
 
-| 파일                                               | 변경                                                                                                |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/screens/PhotoScreen.tsx`                      | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영                                                      |
-| `src/screens/LocationScreen.tsx`                   | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 + 지도/마커                         |
-| `app.json`                                         | expo-image-picker config plugin (`photosPermission`)                                                |
-| `src/navigation/types.ts`                          | `Photo: undefined`, `Location: undefined` 라우트 타입                                               |
-| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Photo" / "Location">` 등록                                                 |
-| `src/screens/FeedListScreen.tsx`                   | 사진·위치 화면 이동 버튼                                                                            |
-| `src/screens/NotificationScreen.tsx`               | 신규 — 알림 권한 플로우 + 즉시/5초 지연 로컬 알림 예약                                              |
-| `App.tsx`                                          | `setNotificationHandler` — 포그라운드 알림 표시 설정 (모듈 스코프)                                  |
-| `src/navigation/types.ts`                          | `Notification: undefined` 라우트 타입                                                               |
-| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Notification">` 등록                                                       |
-| `src/screens/FeedListScreen.tsx`                   | 알림 화면 이동 버튼                                                                                 |
-| `src/screens/PhotoScreen.tsx`                      | `expo-sharing`으로 로컬 사진 공유 버튼 추가                                                         |
-| `package.json`                                     | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8                                                 |
+
+| 파일                                                 | 변경                                                                                       |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/screens/PhotoScreen.tsx`                      | 신규 — 권한 플로우 + 갤러리 선택 + 카메라 촬영                                                            |
+| `src/screens/LocationScreen.tsx`                   | 신규 — 위치 권한(scope) + `getCurrentPositionAsync` + 에러 상태 + 지도/마커                            |
+| `app.json`                                         | expo-image-picker config plugin (`photosPermission`)                                     |
+| `src/navigation/types.ts`                          | `Photo: undefined`, `Location: undefined` 라우트 타입                                         |
+| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Photo" / "Location">` 등록                                        |
+| `src/screens/FeedListScreen.tsx`                   | 사진·위치 화면 이동 버튼                                                                           |
+| `src/screens/NotificationScreen.tsx`               | 신규 — 알림 권한 플로우 + 즉시/5초 지연 로컬 알림 예약                                                       |
+| `App.tsx`                                          | `setNotificationHandler` — 포그라운드 알림 표시 설정 (모듈 스코프)                                       |
+| `src/navigation/types.ts`                          | `Notification: undefined` 라우트 타입                                                         |
+| `src/navigation/index.tsx`                         | `<HomeStack.Screen name="Notification">` 등록                                              |
+| `src/screens/FeedListScreen.tsx`                   | 알림 화면 이동 버튼                                                                              |
+| `src/screens/PhotoScreen.tsx`                      | `expo-sharing`으로 로컬 사진 공유 버튼 추가                                                          |
+| `package.json`                                     | `expo-notifications` 0.32.17, `expo-sharing` 14.0.8                                      |
 | `src/screens/NotificationScreen.tsx`               | `addNotificationResponseReceivedListener` — 탭 시 `data.url`을 `Linking.openURL`로 열어 딥링크 이동 |
-| `src/theme/styles.ts`                              | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일                                    |
-| `package.json`                                     | `react-native-maps` 1.20.1                                                                          |
-| `src/auth/AuthContext.tsx`                         | `persistError` 필드 추가                                                                            |
+| `src/theme/styles.ts`                              | `image` 미리보기, `location` 좌표 텍스트, `map` 지도 크기 스타일                                         |
+| `package.json`                                     | `react-native-maps` 1.20.1                                                               |
+| `src/auth/AuthContext.tsx`                         | `persistError` 필드 추가                                                                     |
 | `App.tsx`                                          | SecureStore 조회/저장/삭제 + `isReady` 부팅 게이트                                                  |
-| `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너                                                                                 |
-| `app.json`                                         | expo-secure-store config plugin                                                                     |
+| `src/screens/LoginScreen.tsx`, `ProfileScreen.tsx` | `persistError` 배너                                                                        |
+| `app.json`                                         | expo-secure-store config plugin                                                          |
+
 
 ---
 
@@ -778,5 +883,6 @@ content: {
 - **W11 카메라** — 완료. `launchCameraAsync` + 카메라 권한 게이트. 배너가 실제로 작동(실기기 검증 필요). `cameraPermission` 커스텀 문구는 출시 시 폴리시.
 - **W12** 위치 — 완료. `useForegroundPermissions` + `getCurrentPositionAsync` + scope 관찰 + 에러 상태. scope 세부는 실기기 검증 권장.
 - **W12** 지도 — 완료. `react-native-maps` `MapView` + `Marker` + `animateToRegion`. 남은 확장: 실시간 추적(`watchPositionAsync`), 주소 변환(`reverseGeocodeAsync`), 로딩 상태(현재 4상태 중 로딩만 미구현), 마커 다수 시 클러스터링.
-- **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제.
+- **W13 저장/보안** — 완료. `expo-secure-store`로 로그인 영속화(부팅 조회+낙관적 쓰기+저장 실패 배너). 로그인/재시작 복원/로그아웃 3가지 시나리오 시뮬레이터 실측. `requireAuthentication`(생체 인증)은 Expo Go 미지원이라 P8 dev build 전환 시 확장 여지. 토큰 만료·리프레시는 실제 인증 서버 붙을 때 과제. 앱 삭제 후 재설치 동작(iOS 유지/Android 소실)은 문서 인용일 뿐 실기기 미검증 — 실제 확인 필요.
 - **W14 알림/공유/링크** — 완료. `expo-notifications` 수동 권한 관리 + Android 채널 + 포그라운드 핸들러 + 즉시/5초 지연 로컬 알림, `expo-sharing`으로 로컬 사진 공유, 알림 탭 시 기존 `linking.config`를 재사용한 딥링크 이동(`addNotificationResponseReceivedListener` + `Linking.openURL`). iOS 시뮬레이터·Android 에뮬레이터 모두 실측(Android는 `dumpsys notification`으로 시스템 알림까지 확인). 원격 푸시(FCM 토큰)는 Expo Go에서 막혀 있어 dev build 전환 시(P8) 과제로 남음. 알림 탭 → 앱 오픈의 OS 레벨 체인(포그라운드 배너/잠금화면)은 시뮬레이터 자동화로 재현이 까다로워 실기기 수동 확인 권장.
+

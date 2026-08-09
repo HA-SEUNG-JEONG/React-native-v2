@@ -145,3 +145,14 @@ style={({ pressed }) => [
 - [ ] SafeArea 인셋을 StyleSheet가 아니라 inline으로 주는 이유는? — [safe-area-context](https://docs.expo.dev/versions/v54.0.0/sdk/safe-area-context/)
 - [ ] KeyboardAvoidingView의 `behavior`를 왜 Platform으로 분기하나? — [`KeyboardAvoidingView`](https://reactnative.dev/docs/keyboardavoidingview) · [Platform](https://reactnative.dev/docs/platform-specific-code)
 - [ ] cascade가 없는데 상태별 스타일을 어떻게 표현하나? — [`Pressable`](https://reactnative.dev/docs/pressable)
+
+## 더 공부해야 할 것
+
+> P2에서 다루지 않았거나 언급만 하고 넘어간 개념. 다음 실습 전 미리 문서를 훑어볼 것.
+
+1. **애니메이션 레이아웃 전환** — §8 배열 스타일은 상태 변화가 즉시(스냅) 반영될 뿐, 부드러운 전환은 미다룸 → [`LayoutAnimation`](https://reactnative.dev/docs/layoutanimation) · [Animations](https://reactnative.dev/docs/animations) · [Reanimated](https://docs.expo.dev/versions/v54.0.0/sdk/reanimated/)
+2. **`useWindowDimensions` 반응형 분기 실전** — §4에서 언급만 하고 실제 태블릿/폰 breakpoint 분기 로직은 검증 안 함 → [`useWindowDimensions`](https://reactnative.dev/docs/usewindowdimensions)
+3. **다크모드 대응** — 현재 코드베이스는 `#0f1115` 같은 색상을 하드코딩, 시스템 테마 감지는 미다룸 → [`useColorScheme`](https://reactnative.dev/docs/usecolorscheme) · [Appearance](https://reactnative.dev/docs/appearance)
+4. **플랫폼별 파일 분기** — §6은 `Platform.OS` 삼항 분기만 다룸, `.ios.tsx`/`.android.tsx` 확장자로 파일 자체를 나누는 기준은 미다룸 → [Platform-Specific Code](https://reactnative.dev/docs/platform-specific-code)
+5. **제스처 기반 인터랙션** — §7 절대배치·겹치기는 정적 레이아웃이고, 스와이프/드래그 같은 제스처는 `react-native-gesture-handler`가 필요 → [gesture-handler](https://docs.expo.dev/versions/v54.0.0/sdk/gesture-handler/)
+6. **`StyleSheet.absoluteFill`/`absoluteFillObject`** — §7의 절대배치 예시(`position/top/left`)를 줄여주는 유틸리티를 아직 안 씀 → [StyleSheet](https://reactnative.dev/docs/stylesheet)
