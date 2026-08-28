@@ -28,7 +28,7 @@
 
 - **내 답**: "uri가 올바른지 확인"
 - **문제점**: uri 문제는 두 번째 용의자. 첫 번째는 크기.
-- **정답**: `width`/`height` 미지정. RN Image는 원격 이미지를 **비동기 로드**하기 때문에 크기를 미리 알 수 없음 → 명시 안 하면 렌더 자체가 안 됨 (웹 `<img>`는 원본 크기로 알아서 뜨는 것과 정반대).
+- **정답**: `width`/`height` 미지정. RN Image는 원격 이미지를 **비동기 로드**하기 때문에 크기를 미리 알 수 없음 → 명시 안 하면 렌더 자체가 안 됨 (웹 img 요소는 원본 크기로 알아서 뜨는 것과 정반대).
   ```tsx
   <Image style={styles.avatar} source={{ uri: USER.avatar }} />
   // avatar: { width: 120, height: 120, borderRadius: 60 }  ← 이거 없으면 안 보임
@@ -82,7 +82,7 @@
 ### 8. TextInput onChangeText vs 웹 onChange — 모름
 
 - **내 답**: "잘 모르겠음"
-- **정답**: 웹 `<input onChange>`는 **이벤트 객체**를 콜백에 전달 → `e.target.value`로 값 꺼내야 함. RN `onChangeText`는 **문자열 자체**를 바로 콜백 인자로 줌 — 이벤트 객체 감쌀 필요 없음.
+- **정답**: 웹 input의 `onChange`는 **이벤트 객체**를 콜백에 전달 → `e.target.value`로 값 꺼내야 함. RN `onChangeText`는 **문자열 자체**를 바로 콜백 인자로 줌 — 이벤트 객체 감쌀 필요 없음.
   ```tsx
   <TextInput value={email} onChangeText={setEmail} />
   // onChangeText: (text: string) => void  ← text가 바로 문자열
