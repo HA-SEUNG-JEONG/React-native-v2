@@ -117,7 +117,24 @@ boolean state로 직접 토글하는 대신, Pressable은 눌린 순간 자체�
 - `style`에 함수를 주면 `{ pressed }`를 받는다 — 별도 state 없이 눌림 스타일 처리.
 - `onLongPress`: 길게 누르기(웹엔 없는 제스처).
 - `hitSlop`: 터치 가능 영역을 실제 뷰 크기보다 확장(작은 아이콘 버튼의 터치 난이도 보완).
+  - **타입**: `number`(사방 동일) 또는 `{ top, bottom, left, right }` 객체(방향별 다르게).
+    ```tsx
+    hitSlop={12}
+    hitSlop={{ top: 8, bottom: 24, left: 12, right: 12 }}
+    ```
+  - **부모 경계를 못 넘는다**: 확장된 터치 영역은 부모 View 바깥으로는 절대 안 나감 — 부모가 작으면 hitSlop 값을 키워도 소용없음.
+  - **형제 뷰와 겹치면 Z-index가 이긴다**: hitSlop으로 넓힌 영역이 다른 형제 뷰와 겹치는 경우, 위에 그려진(Z-index 높은) 뷰가 터치를 가져감 — hitSlop이 이 규칙을 뚫지 못함.
+  - **권장 범위**: 보통 8~24 정도. 터치 타겟 최소 44×44(iOS HIG 기준)를 채우는 만큼만 — 과하게 키우면 옆 버튼 오터치 유발.
 - `android_ripple`: Android 전용 물결 효과(iOS는 무시됨) — 플랫폼별 터치 피드백이 필요할 때.
+
+```mermaid
+flowchart LR
+    subgraph Parent["부모 View (경계 고정)"]
+        A["Pressable A<br/>hitSlop 확장 영역"] -.->|겹침| B["Pressable B<br/>(Z-index 위)"]
+    end
+    Note["겹친 영역 터치 → B가 가져감"]
+    B --> Note
+```
 
 ```mermaid
 flowchart LR

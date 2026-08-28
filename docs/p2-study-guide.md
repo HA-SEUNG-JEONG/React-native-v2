@@ -39,6 +39,22 @@ content: { alignItems: "center" },  // column이라 alignItems가 "가로 중앙
 
 웹 flex(기본 row)에 익숙하면 justify/align이 반대로 느껴진다. **"main axis = flexDirection 방향"** 만 기억하면 헷갈리지 않는다.
 
+```mermaid
+flowchart LR
+    subgraph ColumnDefault["column (기본) — main axis = 세로"]
+        direction TB
+        CJ["justifyContent → 세로 정렬"]
+        CA["alignItems → 가로 정렬"]
+        C1["Box1"] --> C2["Box2"] --> C3["Box3"]
+    end
+    subgraph RowMode["row — main axis = 가로"]
+        direction LR
+        RJ["justifyContent → 가로 정렬"]
+        RA["alignItems → 세로 정렬"]
+        R1["Box1"] --> R2["Box2"] --> R3["Box3"]
+    end
+```
+
 ## 3. `flex: 1` — 남은 공간 채우기
 
 ```tsx
@@ -53,6 +69,16 @@ screen: { flex: 1, backgroundColor: "#0f1115" },  // 화면 전체 채움
   ...내용...
 </ScrollView>
 <View style={styles.footer}>...버튼...</View>   // 항상 바닥
+```
+
+```mermaid
+flowchart TB
+    subgraph Screen["screen: { flex: 1 } — 화면 전체"]
+        direction TB
+        SV["ScrollView<br/>style: flex:1<br/>contentContainerStyle: flexGrow:1<br/>(내용 짧아도 남는 공간까지 늘어남)"]
+        FT["footer<br/>(항상 바닥에 고정)"]
+        SV --> FT
+    end
 ```
 
 ## 4. 단위 — 숫자는 dp, px 아님
@@ -91,6 +117,36 @@ const insets = useSafeAreaInsets();
 
 iOS는 `padding`, Android는 `height`가 자연스럽다. `Platform.OS`로 OS를 읽어 분기하는 게 RN의 기본 플랫폼 대응 방식.
 
+### `behavior` 세 가지와 Android 생략 가능성
+
+`behavior`는 `"height" | "position" | "padding"` 세 값을 받는다. `"position"`은 자식(주로 포커스된 입력창)의 위치만 옮기고 컨테이너 크기는 그대로 둬 레이아웃이 안 깨져야 하는 특수 케이스에 쓴다. iOS `padding`이 왜 되고 Android `height`가 왜 필요한지, 그리고 Android는 `windowSoftInputMode: adjustResize` 기본값 덕에 `behavior` 자체를 생략해도 되는 경우가 많다는 점은 [P6 §KeyboardAvoidingView](./p6-study-guide.md)에 정리되어 있다 — 여기선 중복 서술 안 함.
+
+### `keyboardVerticalOffset` — 헤더 높이만큼 보정
+
+`behavior="padding"`은 화면 **맨 아래**에서부터 키보드 높이를 계산한다. 그런데 네비게이션 헤더가 있으면 KeyboardAvoidingView는 헤더 아래부터 시작하니, 보정 없이는 그 헤더 높이만큼 과하게 밀어올린다. `keyboardVerticalOffset`이 그 오차를 빼주는 값이다. `ComposeScreen.tsx`가 실제로 이렇게 쓴다:
+
+```tsx
+const headerHeight = useHeaderHeight();
+
+<KeyboardAvoidingView
+  style={styles.screen}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={headerHeight ?? 0}
+>
+```
+
+`@react-navigation/elements`의 `useHeaderHeight()`가 현재 화면의 실제 헤더 높이(px)를 돌려준다. 반대로 헤더가 없는 `LoginScreen.tsx`는 offset 없이 그냥 쓴다 — **보정할 헤더가 없으면 offset도 필요 없다**는 뜻.
+
+### ScrollView와 같이 쓸 때
+
+입력 필드가 여러 개라 스크롤이 필요하면 `ScrollView`를 KeyboardAvoidingView **안쪽**에 둔다(반대로 감싸면 키보드가 스크롤 영역까지 밀어올리지 못함). 이때 스크롤 중에도 버튼 탭이 먹게 하려면 `keyboardShouldPersistTaps="handled"`를 같이 준다 — 기본값(`"never"`)은 키보드가 떠 있는 동안 첫 탭을 키보드 닫기로만 소비한다.
+
+```tsx
+<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+  <ScrollView keyboardShouldPersistTaps="handled">...입력 필드들...</ScrollView>
+</KeyboardAvoidingView>
+```
+
 ## 7. 절대 배치 & 겹치기
 
 ```tsx
@@ -105,6 +161,16 @@ iOS는 `padding`, Android는 `height`가 자연스럽다. `Platform.OS`로 OS를
 
 - `position: "absolute"`는 **가장 가까운 부모 기준**(웹 `relative` 조상 지정 불필요, 부모가 기준이 됨).
 - 겹침 순서 = **JSX 순서**(나중 요소가 위). 세밀한 제어는 `zIndex`(iOS) / `elevation`(Android).
+
+```mermaid
+flowchart TB
+    subgraph Parent["부모 View (200x200) — absolute 기준점"]
+        direction TB
+        Img["Image<br/>JSX 순서 1번 → 아래"]
+        Spin["ActivityIndicator<br/>position: absolute, top:90, left:90<br/>JSX 순서 2번 → 위에 겹침"]
+        Img -.->|겹침| Spin
+    end
+```
 
 ## 8. 조건부·배열 스타일 (cascade 대용)
 
@@ -144,15 +210,16 @@ style={({ pressed }) => [
 - [ ] RN 숫자 단위는 무엇이고 반응형은 어떻게 하나? — [`useWindowDimensions`](https://reactnative.dev/docs/usewindowdimensions)
 - [ ] SafeArea 인셋을 StyleSheet가 아니라 inline으로 주는 이유는? — [safe-area-context](https://docs.expo.dev/versions/v54.0.0/sdk/safe-area-context/)
 - [ ] KeyboardAvoidingView의 `behavior`를 왜 Platform으로 분기하나? — [`KeyboardAvoidingView`](https://reactnative.dev/docs/keyboardavoidingview) · [Platform](https://reactnative.dev/docs/platform-specific-code)
+- [ ] `keyboardVerticalOffset`은 왜 필요하고, 헤더 없는 화면엔 왜 안 줘도 되나? — [`useHeaderHeight`](https://reactnavigation.org/docs/elements/#useheaderheight)
 - [ ] cascade가 없는데 상태별 스타일을 어떻게 표현하나? — [`Pressable`](https://reactnative.dev/docs/pressable)
 
-## 더 공부해야 할 것
+## 9. 짚고 넘어가면 좋은 것들
 
-> P2에서 다루지 않았거나 언급만 하고 넘어간 개념. 다음 실습 전 미리 문서를 훑어볼 것.
+이름만 알아두면 필요할 때 바로 찾아 쓸 수 있는 개념들. P2에서 다루지 않았거나 언급만 하고 넘어감 — 지금 상세히 안 봐도 됨, 존재를 아는 게 목표.
 
-1. **애니메이션 레이아웃 전환** — §8 배열 스타일은 상태 변화가 즉시(스냅) 반영될 뿐, 부드러운 전환은 미다룸 → [`LayoutAnimation`](https://reactnative.dev/docs/layoutanimation) · [Animations](https://reactnative.dev/docs/animations) · [Reanimated](https://docs.expo.dev/versions/v54.0.0/sdk/reanimated/)
-2. **`useWindowDimensions` 반응형 분기 실전** — §4에서 언급만 하고 실제 태블릿/폰 breakpoint 분기 로직은 검증 안 함 → [`useWindowDimensions`](https://reactnative.dev/docs/usewindowdimensions)
-3. **다크모드 대응** — 현재 코드베이스는 `#0f1115` 같은 색상을 하드코딩, 시스템 테마 감지는 미다룸 → [`useColorScheme`](https://reactnative.dev/docs/usecolorscheme) · [Appearance](https://reactnative.dev/docs/appearance)
-4. **플랫폼별 파일 분기** — §6은 `Platform.OS` 삼항 분기만 다룸, `.ios.tsx`/`.android.tsx` 확장자로 파일 자체를 나누는 기준은 미다룸 → [Platform-Specific Code](https://reactnative.dev/docs/platform-specific-code)
-5. **제스처 기반 인터랙션** — §7 절대배치·겹치기는 정적 레이아웃이고, 스와이프/드래그 같은 제스처는 `react-native-gesture-handler`가 필요 → [gesture-handler](https://docs.expo.dev/versions/v54.0.0/sdk/gesture-handler/)
-6. **`StyleSheet.absoluteFill`/`absoluteFillObject`** — §7의 절대배치 예시(`position/top/left`)를 줄여주는 유틸리티를 아직 안 씀 → [StyleSheet](https://reactnative.dev/docs/stylesheet)
+- **[`LayoutAnimation`](https://reactnative.dev/docs/layoutanimation)** — §8 배열 스타일은 상태 변화가 즉시(스냅) 반영될 뿐, 부드러운 전환은 미다룸. [Animations](https://reactnative.dev/docs/animations) · [Reanimated](https://docs.expo.dev/versions/v54.0.0/sdk/reanimated/)
+- **[`useWindowDimensions`](https://reactnative.dev/docs/usewindowdimensions)** — §4에서 언급만 하고 실제 태블릿/폰 breakpoint 분기 로직은 검증 안 함.
+- **[`useColorScheme`](https://reactnative.dev/docs/usecolorscheme)** — 현재 코드베이스는 `#0f1115` 같은 색상을 하드코딩, 시스템 테마 감지는 미다룸. [Appearance](https://reactnative.dev/docs/appearance)
+- **[Platform-Specific Code](https://reactnative.dev/docs/platform-specific-code)** — §6은 `Platform.OS` 삼항 분기만 다룸, `.ios.tsx`/`.android.tsx` 확장자로 파일 자체를 나누는 기준은 미다룸.
+- **[gesture-handler](https://docs.expo.dev/versions/v54.0.0/sdk/gesture-handler/)** — §7 절대배치·겹치기는 정적 레이아웃, 스와이프/드래그 같은 제스처는 별도 라이브러리 필요.
+- **[`StyleSheet.absoluteFill`](https://reactnative.dev/docs/stylesheet)**/`absoluteFillObject` — §7의 절대배치 예시(`position/top/left`)를 줄여주는 유틸리티를 아직 안 씀.
