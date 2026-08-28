@@ -44,6 +44,7 @@
 
 ### 4. StyleSheet vs CSS 차이 4가지 — 모름
 
+- **내 답**: "잘 모르겠음"
 - **정답 4가지**:
   1. **케이스**: kebab-case → camelCase (`background-color` → `backgroundColor`)
   2. **단위**: `24px`(단위 있음) → `24`(단위 없는 숫자 = dp, 밀도 독립 픽셀)
@@ -54,6 +55,7 @@
 
 ### 5. 조건부 스타일을 배열로 쓰는 이유 — 모름
 
+- **내 답**: "잘 모르겠음"
 - **정답**: RN 스타일엔 CSS의 cascade(우선순위 규칙)가 없어서, 조건에 따라 스타일 합성할 문법 자체가 없음. 대신 배열에 여러 스타일을 순서대로 나열하면 **뒤 요소가 앞 요소를 덮어씀** — 이게 cascade 대용 메커니즘.
   ```tsx
   style={[styles.button, following && styles.buttonActive]}
@@ -79,6 +81,7 @@
 
 ### 8. TextInput onChangeText vs 웹 onChange — 모름
 
+- **내 답**: "잘 모르겠음"
 - **정답**: 웹 `<input onChange>`는 **이벤트 객체**를 콜백에 전달 → `e.target.value`로 값 꺼내야 함. RN `onChangeText`는 **문자열 자체**를 바로 콜백 인자로 줌 — 이벤트 객체 감쌀 필요 없음.
   ```tsx
   <TextInput value={email} onChangeText={setEmail} />
@@ -89,6 +92,7 @@
 
 ### 9. Pressable style 함수형 인자 / hitSlop — 모름
 
+- **내 답**: "잘 모르겠음"
 - **정답 (2부분)**:
   - `style`에 함수를 주면 `{ pressed }` (boolean)를 인자로 받음 — 별도 `useState` 없이 눌림 스타일을 즉시 처리 가능 (웹의 `:active` 의사 클래스 대응).
     ```tsx
@@ -103,6 +107,7 @@
 
 ### 10. 확인창을 함수 호출로 쓰는 API — 모름
 
+- **내 답**: "잘 모르겠음"
 - **정답**: `Alert` — `Alert.alert(title, message, buttons)`. JSX 컴포넌트 아니라 **명령형 함수 호출**. 웹의 `window.confirm()`/`alert()`에 대응.
 - **암기 고리**: `Modal`은 JSX 컴포넌트(화면에 계속 떠 있는 오버레이)지만, `Alert`는 "한 번 부르고 끝나는" 명령형 API라는 점이 결정적 차이.
 - 근거: 가이드 §6, 207줄.
