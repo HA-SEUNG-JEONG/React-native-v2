@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
@@ -7,6 +7,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import { queryClient } from "./src/api/posts";
 import { asyncStoragePersister } from "./src/api/persist";
+import { logout } from "./src/api/auth";
 import { AuthContext, type Auth } from "./src/auth/AuthContext";
 import { RootNavigator, linking, LinkingFallback } from "./src/navigation";
 import { styles } from "./src/theme/styles";
@@ -45,6 +46,17 @@ export default function App() {
       .finally(() => setIsReady(true));
   }, []);
 
+  // 알림 탭 → 딥링크. 앱 최상단에서 처리해야 특정 화면 마운트 여부와 무관하게 동작.
+  // useLastNotificationResponse는 종료 상태(cold start) 탭과 실행 중 탭을 모두 돌려줌
+  // (실행 중 탭용 리스너를 따로 달면 같은 URL을 두 번 열게 됨).
+  // isReady 이후에만 열기 — 그래야 NavigationContainer의 linking 구독이 먼저 붙어 있음.
+  const lastResponse = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    if (!isReady) return;
+    const url = lastResponse?.notification.request.content.data?.url;
+    if (typeof url === "string") Linking.openURL(url);
+  }, [isReady, lastResponse]);
+
   const auth = useMemo<Auth>(
     () => ({
       user,
@@ -62,6 +74,10 @@ export default function App() {
           );
       },
       signOut: () => {
+        // 다음 로그인으로 데이터가 이월되지 않게 메모리 세션·쿼리/뮤테이션 캐시를 비움.
+        // clear()가 영속 캐시(AsyncStorage)에도 빈 상태로 반영되고, 대기 중인 좋아요 큐도 폐기됨.
+        logout();
+        queryClient.clear();
         setUser(null);
         SecureStore.deleteItemAsync(AUTH_KEY)
           .then(() => setPersistError(null))

@@ -62,16 +62,26 @@ export const TOGGLE_LIKE_KEY = ["toggleLike"] as const;
 queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
   mutationFn: ({ id, next }: { id: string; next: boolean }) =>
     toggleLikeApi(next),
-  // 재생 성공 시 캐시를 최종값으로 동기화. 실패(40% 랜덤)하면 오프라인일 때 낙관적으로
-  // 반영해둔 값과 서버가 어긋난 채 남음 — 전형적인 오프라인 동기화 충돌.
+  // 재생 성공 시 캐시를 최종값으로 동기화.
   onSuccess: (data, { id }) => {
     const old = queryClient.getQueryData<Post>(["post", id]);
     if (!old) {
       console.warn(`Post ${id} not found in cache after like toggle`);
       queryClient.invalidateQueries({ queryKey: ["post", id] });
     } else {
-      queryClient.setQueryData<Post>(["post", id], { ...old, liked: data.liked });
+      queryClient.setQueryData<Post>(["post", id], {
+        ...old,
+        liked: data.liked,
+      });
     }
+  },
+  // 재시작 후 재생된 뮤테이션은 컴포넌트·onMutate 컨텍스트(스냅샷)가 없어 화면 쪽 onError가
+  // 안 돈다. 토글이라 직전 값 = !next → 그걸로 되돌림. (마운트 중엔 화면의 onError가 이 기본값을
+  // 덮어써 스냅샷으로 복구.) ponytail: 같은 글을 오프라인에서 여러 번 토글한 경우 순서 꼬임은 미처리.
+  onError: (_e, { id, next }) => {
+    queryClient.setQueryData<Post>(["post", id], (old) =>
+      old ? { ...old, liked: !next } : old,
+    );
   },
 });
 

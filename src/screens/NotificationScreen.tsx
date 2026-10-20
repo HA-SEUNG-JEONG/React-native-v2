@@ -31,26 +31,7 @@ export function NotificationScreen(
         const message = e instanceof Error ? e.message : String(e);
         setPermissionError(message);
       });
-
-    // 알림을 탭했을 때(포그라운드/백그라운드 공통) content.data.url을 앱 딥링크로
-    // 열어 기존 navigation/index.tsx의 linking 설정을 그대로 태운다 — 새 네비게이션
-    // 로직을 따로 안 만들고 이미 있는 URL → 화면 매핑을 재사용.
-    const sub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const url = response.notification.request.content.data?.url;
-        if (typeof url === "string") Linking.openURL(url);
-      },
-    );
-    return () => sub.remove();
   }, []);
-
-  // addNotificationResponseReceivedListener는 JS 런타임이 이미 떠 있을 때만 잡힘.
-  // 종료 상태(cold start)에서 알림 탭으로 앱이 켜지는 경우는 이 훅으로 잡아야 함.
-  const lastResponse = Notifications.useLastNotificationResponse();
-  useEffect(() => {
-    const url = lastResponse?.notification.request.content.data?.url;
-    if (typeof url === "string") Linking.openURL(url);
-  }, [lastResponse]);
 
   // 카메라/위치와 같은 패턴: 영구 거부면 요청해도 OS 다이얼로그가 안 뜬다.
   const blocked = status?.granted === false && !status.canAskAgain;
