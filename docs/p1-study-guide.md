@@ -1,6 +1,6 @@
 # P1 학습 가이드 — RN 멘탈모델 & Core Components
 
-> 대상 실습: 프로필 카드 (`rn-sandbox/App.tsx`)
+> 대상 실습: 프로필 카드 (학습 당시 별도 샌드박스의 `App.tsx`, 이 레포 `src/`에는 없음)
 > 출처: [The Basics](https://reactnative.dev/docs/getting-started) · [Core Components and APIs](https://reactnative.dev/docs/components-and-apis)
 > 검증: iOS 시뮬레이터 / Android 에뮬레이터 실행 확인
 > 대상 독자: **웹 React 숙련자.** JS/hooks/상태·이벤트는 웹과 동일하므로 스킵하고, **웹과 다른 지점만** 정리.

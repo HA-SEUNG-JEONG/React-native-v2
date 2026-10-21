@@ -242,8 +242,10 @@ if (sheetPost && !deletePost.isPending) deletePost.mutate(sheetPost.id);
 ### id 없는 상세 화면 진입 — [`src/screens/FeedDetailScreen.tsx`](../src/screens/FeedDetailScreen.tsx) · [#22](https://github.com/HA-SEUNG-JEONG/React-native-v2/pull/22)
 
 ```tsx
-// after (추가)
+// after (추가) — 가드는 모든 훅 호출 뒤에 둔다 (Rules of Hooks).
+// useQuery에는 enabled: !!id를 줘서 id 없이는 요청하지 않는다.
 const { id } = route.params;
+// ... useQueryClient, useQuery, useMutation 등 훅 호출 ...
 
 if (!id) {
   return (
