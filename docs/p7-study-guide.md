@@ -69,6 +69,23 @@ const pan = Gesture.Pan()
 - 스켈레톤 렌더(코드 경로상 정상, 데이터가 빨리 와서 육안 캡처는 실패): **코드 리뷰로만 확인**
 - **스와이프 삭제 제스처**: 이후 재검증 완료 — `mcp__Claude_Code_iOS_Simulator__control`의 `touch_path`(여러 중간 좌표 + `dt_ms`로 연속 이동 이벤트 생성)로 시뮬레이터에서 재현 성공(행이 목록에서 실제로 삭제됨, 뒤 항목들 자연스럽게 당겨짐). 이전 실패는 Pan 제스처 자체의 한계가 아니라 **단발 tap/swipe 액션이 연속 `onUpdate` 이벤트를 만들지 못한 것**이 원인이었음. 부수 교훈: 시뮬레이터 좌표는 반드시 `xcrun simctl io booted screenshot`로 뜬 원본(3배 픽셀) 스크린샷을 분석해 나눈 값을 써야 함 — MCP `screenshot` 결과를 눈대중으로 읽은 좌표는 계속 빗나갔다(대화형 렌더 이미지가 실제 포인트 좌표계와 다른 비율로 보임).
 
+---
+
+## 복습 체크리스트
+
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+- [ ] 새 네이티브 의존성을 설치한 뒤 Metro를 `expo start -c`로 캐시 초기화하며 재시작해야 하는 이유는? (`WorkletsError`)
+- [ ] `GestureHandlerRootView`로 감싸지 않으면 어떤 증상이 나타나는가? — [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/)
+- [ ] 같은 행에서 pan과 longPress를 `Gesture.Race`로 묶는 이유는? 먼저 조건을 만족한 쪽이 이기면 나머지 제스처는 어떻게 되는가? — [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/)
+- [ ] 스와이프 임계값을 넘었을 때 `runOnJS(onDelete)()`를 `withTiming` 콜백 안에서 부르는 이유는? — [Reanimated](https://docs.swmansion.com/react-native-reanimated/)
+- [ ] 낙관적 삭제가 실패하면 목록은 무엇을 근거로 원래대로 돌아가는가?
+- [ ] 바텀시트를 행마다 만들지 않고 화면당 1개 + `selectedPost` state로 두는 이유는? — [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/)
+- [ ] 스피너 대신 행 모양 스켈레톤을 쓰면 대기 체감이 왜 달라지는가?
+- [ ] 진입 애니메이션을 Reanimated 내장 프리셋으로 만들고 shared-element 전환 라이브러리는 뺀 이유는? — [Reanimated](https://docs.swmansion.com/react-native-reanimated/)
+
+---
+
 ## 남은 작업
 
 P7 완전 졸업(스와이프 삭제 실측 검증 포함) — 다음은 P8 (W21–24) 출시: EAS 빌드, iOS/Android 스토어 제출, Sentry, OTA.

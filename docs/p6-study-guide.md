@@ -223,6 +223,40 @@ queryClient.setMutationDefaults(TOGGLE_LIKE_KEY, {
 
 ---
 
+## 복습 체크리스트
+
+> 답이 막히면 위 해당 섹션으로. 코드를 안 보고 **말로 설명**할 수 있어야 통과.
+
+### W15 폼 (`LoginScreen`)
+
+- [ ] RN `TextInput`에 웹의 `register`(ref 기반 등록)를 그대로 쓰기 어려워서 `Controller`로 감싸는 이유는? — [react-hook-form](https://react-hook-form.com/)
+- [ ] 웹 react-hook-form 코드를 RN으로 옮길 때 실제로 바뀌는 부분은 무엇 하나뿐인가? — [`TextInput`](https://reactnative.dev/docs/textinput)
+- [ ] `KeyboardAvoidingView`의 `behavior`를 iOS는 `"padding"`, Android는 `"height"`로 나눠 주는 이유는? — [`KeyboardAvoidingView`](https://reactnative.dev/docs/keyboardavoidingview)
+- [ ] Android에서는 `behavior`를 생략해도 되는 경우가 많은 이유는? (`adjustResize`)
+- [ ] 폼 자체 검증 실패와 서버측 로그인 실패를 화면에서 따로 다루는 이유는?
+
+### W15 네트워킹 (`NetworkScreen`, `api/auth.ts`)
+
+- [ ] 리프레시 토큰이 1회용(rotate)일 때, 동시 요청마다 리프레시하면 왜 멀쩡한 세션이 로그아웃되는가?
+- [ ] `refreshInFlight`를 공유하면 동시 요청 3개에서 실제 갱신 호출은 몇 번 나가며, 나머지 요청은 무엇을 기다리는가?
+- [ ] 401을 받은 인터셉터가 재시도 전에 하는 일은 무엇이고, 재시도는 몇 번 하는가?
+
+### W16 네트워킹 심화
+
+- [ ] 지수 백오프 대기 시간은 `baseDelayMs * 2^attempt`에 무엇을 더한 값인가?
+- [ ] 업로드 진행률 콜백(`createUploadTask`)은 왜 `expo-file-system/legacy`에서 import해야 하는가?
+- [ ] WebSocket `onclose`마다 무조건 재연결하면 어떤 문제가 생기며, `manualCloseRef`는 그걸 어떻게 막는가?
+
+### W17 오프라인 우선
+
+- [ ] Expo Go에서 MMKV 대신 AsyncStorage를 쓴 이유는? (MMKV는 네이티브 모듈이라 dev client가 필요)
+- [ ] 오프라인에서 누른 좋아요는 React Query 안에서 어떤 상태로 남는가? — [TanStack — Offline mutations](https://tanstack.com/query/v5/docs/framework/react/guides/offline-mutations)
+- [ ] 뮤테이션 `mutationFn`을 `useMutation` 안이 아니라 `setMutationDefaults`로 전역 등록해야 하는 이유는? — [TanStack — Offline mutations](https://tanstack.com/query/v5/docs/framework/react/guides/offline-mutations)
+- [ ] `FeedDetailScreen`이 마운트돼 있지 않아도 큐가 재생되는 이유는? (`onSuccess`의 `resumePausedMutations`) — [TanStack — Persist a Client](https://tanstack.com/query/v5/docs/framework/react/plugins/persistQueryClient)
+- [ ] 재연결 후 재생이 실패하면 화면과 서버는 각각 어떤 상태이며, 이 프로젝트는 그걸 어떻게 알리는가?
+
+---
+
 ## 파일
 
 | 파일                               | 역할                                                                              |

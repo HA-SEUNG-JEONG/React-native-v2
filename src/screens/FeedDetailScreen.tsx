@@ -20,15 +20,6 @@ export function FeedDetailScreen({
 }: NativeStackScreenProps<HomeStackParamList, "FeedDetail">) {
   const { id } = route.params;
 
-  // Guard against missing id (e.g., deep-link without id)
-  if (!id) {
-    return (
-      <View style={[styles.screen, styles.pad, styles.center]}>
-        <Text style={styles.h1}>글을 찾을 수 없음</Text>
-        <Btn label="← 뒤로" onPress={() => navigation.goBack()} />
-      </View>
-    );
-  }
   const qc = useQueryClient();
   const {
     data: post,
@@ -39,6 +30,7 @@ export function FeedDetailScreen({
   } = useQuery({
     queryKey: ["post", id],
     queryFn: () => fetchPost(id),
+    enabled: !!id, // id 없으면 요청 안 함 — 훅 호출 순서를 지키려고 가드는 훅 뒤로 내림
   });
 
   // ★ 낙관적 업데이트: 서버 응답 기다리지 않고 캐시를 먼저 바꿔 화면 즉시 반영.
@@ -77,6 +69,15 @@ export function FeedDetailScreen({
     }),
   }).some((v) => v.id === id && v.isPaused);
 
+  // 딥링크에 id가 빠진 경우 (Rules of Hooks: 모든 훅 호출 뒤에 early return)
+  if (!id) {
+    return (
+      <View style={[styles.screen, styles.pad, styles.center]}>
+        <Text style={styles.h1}>글을 찾을 수 없음</Text>
+        <Btn label="← 뒤로" onPress={() => navigation.goBack()} />
+      </View>
+    );
+  }
   if (isPending) {
     return (
       <View style={[styles.screen, styles.center]}>
@@ -88,7 +89,9 @@ export function FeedDetailScreen({
     return (
       <View style={[styles.screen, styles.pad, styles.center]}>
         <Text style={styles.h1}>에러</Text>
-        <Text style={styles.hint}>{error instanceof Error ? error.message : String(error)}</Text>
+        <Text style={styles.hint}>
+          {error instanceof Error ? error.message : String(error)}
+        </Text>
         <Btn label="다시 시도" onPress={() => refetch()} />
       </View>
     );
