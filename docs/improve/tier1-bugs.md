@@ -111,11 +111,7 @@ npx eslint .
 - `src/api/posts.ts:118-132` — `onMutate`가 캐시에서 해당 행을 **즉시** 제거한다.
 - `src/screens/FeedListScreen.tsx:244` — 바텀시트 삭제도 같은 가드.
 
-문제 코드 (`FeedListScreen.tsx:178`):
-
-```tsx
-onDelete={() => !deletePost.isPending && deletePost.mutate(item.id)}
-```
+문제 위치: `FeedListScreen.tsx:178`의 `onDelete` 핸들러. 코드는 직접 열어서 본다.
 
 코드로 추적한 시나리오:
 
@@ -259,11 +255,7 @@ npx eslint .
 - `src/screens/FeedDetailScreen.tsx:21,32,33` — `route.params.id`가 그대로 `fetchPost(id)`로 간다. `enabled: !!id`는 빈 문자열만 막는다.
 - `src/navigation/index.tsx:166` — `FeedDetail: "feed/:id"`. 딥링크의 `:id` 구간이 그대로 `route.params.id`가 된다.
 
-문제 코드 (`posts.ts:42`):
-
-```ts
-const res = await fetch(`${API}/${id}`);
-```
+문제 위치: `posts.ts:42`의 `fetch` 호출. 코드는 직접 열어서 본다.
 
 `id`는 외부 입력(딥링크)인데 형식 검증도, URL 인코딩도 없다. 숫자가 아닌 값(`abc`)은 404로 끝나 에러 화면이 뜨지만, `/`, `..`, `?`, `#` 같은 문자가 들어오면 URL 구조가 바뀔 수 있다. 예: 디코딩된 id가 `../users/1`이면 `.../posts/../users/1`이 되어 다른 엔드포인트가 요청될 수 있다.
 
@@ -282,12 +274,7 @@ xcrun simctl openurl booted "exp://127.0.0.1:8081/--/feed/abc"
 
 - `App.tsx:53-58` — `lastResponse?.notification.request.content.data?.url`이 `string`이기만 하면 `Linking.openURL(url)`에 그대로 넘긴다 (`:56-57`).
 
-문제 코드 (`App.tsx:56-57`):
-
-```tsx
-const url = lastResponse?.notification.request.content.data?.url;
-if (typeof url === "string") Linking.openURL(url);
-```
+문제 위치: `App.tsx:56-57`의 `data.url` 처리부. 코드는 직접 열어서 본다.
 
 `typeof`가 `string`인지만 본다. 알림 payload의 `data`는 보내는 쪽(푸시 서버, 또는 서버가 잘못된 값을 보낸 경우)이 정한다. `https://...`, `tel:`, `sms:`, 다른 앱의 scheme도 전부 열린다. 이 앱이 열어야 하는 건 자기 앱의 딥링크뿐이다.
 

@@ -8,6 +8,9 @@ P1~P7 학습 Phase와 이름이 겹치지 않도록 이 미션은 **Tier 1 / 2 /
 
 ---
 
+> **⚠️ 브랜치 `improve/missions-empty`**: 미션 대상 코드를 비웠다. 비운 자리에는 `// TODO(미션 N-N): 힌트` 주석이 있다 (`grep -rn "TODO(미션" src App.tsx`). 이 문서의 줄 번호와 "현재 코드" 설명, 재현 절차는 **원본(`improve/missions`) 기준**이라 이 브랜치에서는 그대로 재현되지 않는다. 원본은 `git show improve/missions:<경로>`로 볼 수 있지만, 정답을 미리 보지 않으려면 열지 않는다.
+> 비운 곳: 1-1 `NetworkScreen` effect, 1-2 `SwipeableRow`·`FeedListScreen` 삭제 핸들러, 1-4/1-5 `App.tsx` 알림 링크, 1-4 `fetchPost`, 1-6 `logout`, 2-3 `useDeletePost`, 2-5 `withRetryBackoff`·`LocationScreen` 타임아웃, 2-7 `FeedListScreen` isError 분기. 나머지 미션(1-3, 2-1, 2-2, 2-4, 2-6, 2-8~2-11, 3-x)은 "없는 코드를 추가"하거나 기존 코드를 고치는 작업이라 그대로 뒀다.
+
 ## 1. 진행 방식
 
 ### 힌트온리 규칙

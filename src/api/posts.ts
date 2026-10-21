@@ -39,9 +39,8 @@ export async function toggleLikeApi(
 }
 
 export async function fetchPost(id: string): Promise<Post> {
-  const res = await fetch(`${API}/${id}`);
-  if (!res.ok) throw new Error(`글 불러오기 실패 (${res.status})`);
-  return res.json();
+  // TODO(미션 1-4): id는 외부(딥링크)에서 온 값. 요청 전에 무엇을 확인/처리해야 할까?
+  throw new Error(`미구현 fetchPost(${id})`);
 }
 
 // 가짜 삭제 API — jsonplaceholder는 실제로 지우지 않고 200만 돌려줌. 20% 랜덤 실패로
@@ -113,26 +112,10 @@ export function usePostsInfinite() {
 // 스와이프 삭제: onMutate에서 무한스크롤 캐시(2차원 pages)의 해당 항목만 즉시
 // 제거하고 스냅샷을 남겨둠. 실패(20%)하면 onError가 그 스냅샷으로 되돌림.
 export function useDeletePost() {
+  // TODO(미션 2-3): 낙관적 제거 → 실패 시 롤백 → 끝나면 서버와 재동기화.
+  //   콜백 순서(onMutate/onError/onSettled)와 스냅샷을 잡는 시점, 캐시 타입(any 대신)을 생각해 보세요.
   return useMutation({
     mutationFn: deletePostApi,
-    onMutate: async (id: number) => {
-      const prev = queryClient.getQueryData(["posts"]);
-      await queryClient.cancelQueries({ queryKey: ["posts"] });
-      queryClient.setQueryData(["posts"], (old: any) =>
-        old
-          ? {
-              ...old,
-              pages: old.pages
-                .map((page: Post[]) => page.filter((p) => p.id !== id))
-                .filter((page: Post[]) => page.length > 0),
-            }
-          : old,
-      );
-      return { prev };
-    },
-    onError: (_err, _id, context) => {
-      if (context?.prev) queryClient.setQueryData(["posts"], context.prev);
-    },
   });
 }
 

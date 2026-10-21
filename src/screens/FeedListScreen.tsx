@@ -18,7 +18,7 @@ import type {
   HomeStackParamList,
   RootStackParamList,
 } from "../navigation/types";
-import { usePostsInfinite, useDeletePost, type Post } from "../api/posts";
+import { usePostsInfinite, type Post } from "../api/posts";
 import { Btn } from "../components/Btn";
 import { SwipeableRow } from "../components/SwipeableRow";
 import { FeedSkeleton } from "../components/FeedSkeleton";
@@ -45,10 +45,8 @@ export function FeedListScreen({
     isRefetching,
     isPending,
     isPaused,
-    isError,
-    error,
   } = usePostsInfinite();
-  const deletePost = useDeletePost();
+  // TODO(미션 1-2, 2-7): 삭제 훅(useDeletePost)과 에러 상태(isError, error)는 직접 연결하세요.
 
   // P7 — 롱프레스한 행의 옵션 시트. sheetRef.expand()로 열고 index -1로 닫힘 표시.
   const [sheetPost, setSheetPost] = useState<Post | null>(null);
@@ -86,15 +84,7 @@ export function FeedListScreen({
       </View>
     );
   }
-  if (isError) {
-    return (
-      <View style={[styles.screen, styles.pad, styles.center]}>
-        <Text style={styles.h1}>에러</Text>
-        <Text style={styles.hint}>{(error as Error).message}</Text>
-        <Btn label="다시 시도" onPress={() => refetch()} />
-      </View>
-    );
-  }
+  // TODO(미션 2-7): 에러 화면. isError가 참이어도 이미 받은 데이터가 있다면 어떻게 해야 할까?
 
   return (
     <View style={styles.screen}>
@@ -175,7 +165,9 @@ export function FeedListScreen({
         }
         renderItem={({ item }) => (
           <SwipeableRow
-            onDelete={() => !deletePost.isPending && deletePost.mutate(item.id)}
+            onDelete={() => {
+              // TODO(미션 1-2): 삭제 요청 + 진행 중 가드. 가드로 무시될 때의 UI 상태까지 고려.
+            }}
             onLongPress={() => openSheet(item)}
           >
             <Pressable
@@ -241,7 +233,7 @@ export function FeedListScreen({
             style={styles.sheetOption}
             onPress={() => {
               closeSheet();
-              if (sheetPost && !deletePost.isPending) deletePost.mutate(sheetPost.id);
+              // TODO(미션 1-2): 시트 삭제도 같은 규칙으로.
             }}
           >
             <Text style={[styles.sheetOptionText, styles.sheetOptionDanger]}>

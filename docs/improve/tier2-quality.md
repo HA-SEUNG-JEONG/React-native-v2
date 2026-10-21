@@ -402,13 +402,7 @@ npx eslint .      # NotificationScreen:19 warning 해소 확인
 
 ### 증상과 위치
 
-`src/screens/FeedListScreen.tsx:89-97`
-
-```tsx
-if (isError) {
-  return ( /* "에러" 전체 화면 + 다시 시도 */ );
-}
-```
+`src/screens/FeedListScreen.tsx:89-97` — `isError` 분기. 코드는 직접 열어서 본다.
 
 `isPending`(`:72`)은 "데이터가 아직 없음"이라 올바르다. 그러나 `isError`는 **데이터가 있어도** 참이 될 수 있다. 이미 받은 목록이 있는 상태에서 새로고침이나 다음 페이지가 실패하면, 멀쩡한 목록이 에러 화면으로 통째로 대체된다.
 

@@ -13,30 +13,15 @@ export type RetryAttempt = { attempt: number; delayMs: number };
 // onAttempt로 화면에 시도 로그를 실시간 노출.
 export async function withRetryBackoff<T>(
   fn: () => Promise<T>,
-  {
-    maxRetries = 3,
-    baseDelayMs = 500,
-    onAttempt,
-  }: {
+  _options: {
     maxRetries?: number;
     baseDelayMs?: number;
     onAttempt?: (info: RetryAttempt) => void;
   } = {},
 ): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (e) {
-      if (attempt >= maxRetries) {
-        const err = e as Error;
-        throw new Error(`Request failed after ${attempt + 1} attempts: ${err.message}`);
-      }
-      const baseBackoff = baseDelayMs * 2 ** attempt;
-      const delayMs = baseBackoff * (1 + Math.random() * 0.5);
-      onAttempt?.({ attempt: attempt + 1, delayMs });
-      await new Promise((r) => setTimeout(r, delayMs));
-    }
-  }
+  // TODO(미션 2-5): 지금은 재시도 없이 1회만 호출. 어떤 오류는 재시도하면 안 되고(4xx),
+  //   원래 오류 정보(cause)는 보존돼야 하며, 중단(AbortSignal)도 받을 수 있어야 합니다.
+  return fn();
 }
 
 // 데모용 가짜 API — toggleLikeApi와 같은 패턴(인위적 실패율)으로 재시도 동작을 눈으로 확인.
