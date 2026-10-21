@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
@@ -46,16 +46,9 @@ export default function App() {
       .finally(() => setIsReady(true));
   }, []);
 
-  // 알림 탭 → 딥링크. 앱 최상단에서 처리해야 특정 화면 마운트 여부와 무관하게 동작.
-  // useLastNotificationResponse는 종료 상태(cold start) 탭과 실행 중 탭을 모두 돌려줌
-  // (실행 중 탭용 리스너를 따로 달면 같은 URL을 두 번 열게 됨).
-  // isReady 이후에만 열기 — 그래야 NavigationContainer의 linking 구독이 먼저 붙어 있음.
-  const lastResponse = Notifications.useLastNotificationResponse();
-  useEffect(() => {
-    if (!isReady) return;
-    const url = lastResponse?.notification.request.content.data?.url;
-    if (typeof url === "string") Linking.openURL(url);
-  }, [isReady, lastResponse]);
+  // TODO(미션 1-4, 1-5): 알림 탭 → 딥링크. 앱 최상단에서 처리해야 화면 마운트 여부와 무관.
+  //   힌트: Notifications.useLastNotificationResponse (cold start 탭 + 실행 중 탭 모두).
+  //   data.url을 그대로 믿어도 될까? 로그아웃 상태에서 받은 링크는 로그인 후 어떻게 될까?
 
   const auth = useMemo<Auth>(
     () => ({

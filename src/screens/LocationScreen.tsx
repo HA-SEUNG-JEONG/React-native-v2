@@ -45,13 +45,10 @@ export function LocationScreen(
     setErrorMessage(null);
 
     try {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("위치 조회 시간 초과")), 15000)
-      );
-      const currentLocation = await Promise.race([
-        getCurrentPositionAsync({ accuracy: Accuracy.Balanced }),
-        timeoutPromise,
-      ]) as Awaited<ReturnType<typeof getCurrentPositionAsync>>;
+      // TODO(미션 2-5): 15초 타임아웃을 Promise.race로. 이긴 쪽이 정해진 뒤 타이머는 어떻게 될까?
+      const currentLocation = await getCurrentPositionAsync({
+        accuracy: Accuracy.Balanced,
+      });
       const { latitude, longitude } = currentLocation.coords;
       setLocation({ latitude, longitude });
 

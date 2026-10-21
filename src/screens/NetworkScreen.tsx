@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { FlatList, Text, TextInput, View } from "react-native";
 import { launchImageLibraryAsync } from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -102,16 +102,8 @@ export function NetworkScreen(
   const [wsConnected, setWsConnected] = useState(false);
   const [wsMessage, setWsMessage] = useState("");
 
-  useEffect(() => {
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+  // TODO(미션 1-1): 화면이 언마운트된 뒤에도 소켓/재연결 타이머/상태 갱신이 살아 있습니다.
+  //   정리 요청(close)과 정리 완료(onClose)는 같은 시점이 아닙니다.
 
   const openSocket = (reconnectAttempt = 0) => {
     manualCloseRef.current = false;
@@ -139,7 +131,10 @@ export function NetworkScreen(
         appendLog(
           `[WS] 연결 끊김 — ${delayMs}ms 후 재연결 시도 (${reconnectAttempt + 1}회차)`,
         );
-        timeoutRef.current = setTimeout(() => openSocket(reconnectAttempt + 1), delayMs);
+        timeoutRef.current = setTimeout(
+          () => openSocket(reconnectAttempt + 1),
+          delayMs,
+        );
       },
       onError: (message) => appendLog(`[WS] 오류: ${message}`),
     });
