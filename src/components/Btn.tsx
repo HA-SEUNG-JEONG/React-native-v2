@@ -25,7 +25,12 @@ export function Btn({
         disabled && { opacity: 0.5 },
       ]}
     >
-      <Text style={[styles.btnText, kind === "ghost" && { color: colors.ghostText }]}>
+      <Text
+        style={[
+          styles.btnText,
+          kind === "ghost" && { color: colors.ghostText },
+        ]}
+      >
         {label}
       </Text>
     </Pressable>

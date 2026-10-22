@@ -110,11 +110,7 @@ export function ComposeScreen({
               console.error(error.error);
             }}
           />
-          {isLoading && (
-            <ActivityIndicator
-              style={spinnerStyles.overlay}
-            />
-          )}
+          {isLoading && <ActivityIndicator style={spinnerStyles.overlay} />}
         </View>
       </ScrollView>
       {/* 바닥 바 = 버튼만. inset은 정적 스타일 아니므로 inline으로 덧댐. */}
