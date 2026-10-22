@@ -47,7 +47,10 @@ export function LoginScreen(
       try {
         signIn(values.username);
       } catch (signInError) {
-        const message = signInError instanceof Error ? signInError.message : String(signInError);
+        const message =
+          signInError instanceof Error
+            ? signInError.message
+            : String(signInError);
         setLoginError(message);
       }
     } catch (e) {
