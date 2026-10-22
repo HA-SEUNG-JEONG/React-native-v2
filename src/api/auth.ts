@@ -29,6 +29,7 @@ export function isLoggedIn() {
 
 export function logout() {
   // TODO(미션 1-6): 로그아웃은 모듈 상태를 어디까지 되돌려야 할까? 선언된 let 변수를 전부 훑어보세요.
+  // session 값을 null로 비워야 할까?
 }
 
 function issueTokens(): Tokens {
