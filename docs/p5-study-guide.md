@@ -378,7 +378,8 @@ const blocked = status?.granted === false && !status.canAskAgain;
 
 const res = await requestPermission(); // ← 훅 requester. standalone 아님
 if (!res.granted) return; // 게이트는 res.granted 불린 (문자열 비교 X)
-setScope(res.ios?.scope ?? null);
+// 타입은 res.ios?.scope지만 런타임은 다르다: iOS는 최상위 res.scope, Android는 res.android.accuracy
+setScope((res as { scope?: string }).scope ?? res.android?.accuracy ?? null);
 ```
 
 W11 카메라에서 `cameraRequestPermission()`(훅 requester)을 쓴 것과 같은 이유다.
@@ -791,8 +792,8 @@ content: {
 
 ### 위치 (W12)
 
-- [ ] iOS "한 번만 허용"이 `ios.scope`의 어떤 값으로 뜨는지, `whenInUse`/`always`/`none` 차이 — [`requestForegroundPermissionsAsync()`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationrequestforegroundpermissionsasync)
-- [ ] `ios?.scope`의 `?`가 왜 필수인지 (Android 크래시)
+- [ ] iOS "한 번만 허용"이 `scope`(응답 최상위)의 어떤 값으로 뜨는지, `whenInUse`/`always`/`none` 차이 — [`requestForegroundPermissionsAsync()`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationrequestforegroundpermissionsasync)
+- [ ] 타입 선언(`ios?.scope`)과 런타임 응답(iOS `res.scope`, Android `res.android.accuracy`)이 다른 이유, 그리고 `res.ios?.scope`로 읽으면 왜 양쪽 다 `null`인지
 - [ ] 훅 requester vs standalone `requestForegroundPermissionsAsync()` — 왜 훅 것을 써야 `status`가 갱신되는지 — [`useForegroundPermissions`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationuseforegroundpermissions)
 - [ ] "권한 있음 ≠ 데이터 얻음" — `getCurrentPositionAsync`가 throw하는데 try/catch 없으면 어떻게 되는지 — [`getCurrentPositionAsync`](https://docs.expo.dev/versions/v54.0.0/sdk/location/#locationgetcurrentpositionasyncoptions)
 - [ ] 네이티브 기능의 4상태(정상/로딩/에러/거부)를 말할 수 있다
