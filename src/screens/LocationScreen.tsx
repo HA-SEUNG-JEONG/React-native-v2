@@ -1,4 +1,4 @@
-import { Linking, Text, View } from "react-native";
+import { Linking, Text, View, Platform } from "react-native";
 import { styles } from "../theme/styles";
 import {
   Accuracy,
@@ -41,7 +41,9 @@ export function LocationScreen(
     if (!res.granted) {
       return;
     }
-    setScope(res.ios?.scope ?? null);
+    setScope(
+      (res as { scope?: string }).scope ?? res.android?.accuracy ?? null,
+    );
     setErrorMessage(null);
 
     try {
@@ -87,7 +89,11 @@ export function LocationScreen(
           />
         </>
       )}
-      {scope && <Text>권한 범위 : {scope}</Text>}
+      {scope && (
+        <Text style={styles.hint}>
+          {Platform.OS === "ios" ? "권한 범위" : "위치 정확도"} : {scope}
+        </Text>
+      )}
       {errorMessage && <Text style={styles.hint}>{errorMessage}</Text>}
     </View>
   );
