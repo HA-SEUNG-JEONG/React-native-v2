@@ -36,19 +36,19 @@ Tier 1이 "깨지는 것"이었다면 Tier 2는 "깨지기 쉬운 것"이다. �
 
 | 구분 | 위치 | 규칙 | 자동 수정 |
 |------|------|------|-----------|
-| error | `src/api/network.ts:32` | `prettier/prettier` | 가능 |
-| error | `src/components/Btn.tsx:28` | `prettier/prettier` | 가능 |
-| error | `src/screens/ComposeScreen.tsx:113` | `prettier/prettier` | 가능 |
-| error | `src/screens/FeedListScreen.tsx:244` | `prettier/prettier` | 가능 |
-| error | `src/screens/LocationScreen.tsx:49, 51, 54` | `prettier/prettier` (3건) | 가능 |
-| error | `src/screens/LoginScreen.tsx:50` | `prettier/prettier` | 가능 |
-| error | `src/screens/NetworkScreen.tsx:142` | `prettier/prettier` | 가능 |
-| warning | `src/screens/NotificationScreen.tsx:19` | `@typescript-eslint/no-unused-vars` (`permissionError`) | 불가, 수동 |
-| warning | `src/screens/ProfileScreen.tsx:21` | `@typescript-eslint/no-unused-vars` (`e`) | 불가, 수동 |
+| error | `src/api/network.ts`의 `withRetryBackoff` 최종 실패 `throw new Error(...)` | `prettier/prettier` | 가능 |
+| error | `src/components/Btn.tsx`의 `Btn` 안 `<Text style=...>` | `prettier/prettier` | 가능 |
+| error | `src/screens/ComposeScreen.tsx`의 `isLoading &&` `ActivityIndicator` 블록 | `prettier/prettier` | 가능 |
+| error | `src/screens/FeedListScreen.tsx`의 시트 "삭제" `Pressable`의 `onPress` 안 `deletePost.mutate` 줄 | `prettier/prettier` | 가능 |
+| error | `src/screens/LocationScreen.tsx`의 `getCurrentPosition` 안 `timeoutPromise` / `Promise.race` 블록 | `prettier/prettier` (3건) | 가능 |
+| error | `src/screens/LoginScreen.tsx`의 `onSubmit` 안쪽 `catch (signInError)`의 `message` 계산 줄 | `prettier/prettier` | 가능 |
+| error | `src/screens/NetworkScreen.tsx`의 `openSocket` → `onClose`의 재연결 `setTimeout` 줄 | `prettier/prettier` | 가능 |
+| warning | `src/screens/NotificationScreen.tsx`의 `permissionError` state 선언 | `@typescript-eslint/no-unused-vars` (`permissionError`) | 불가, 수동 |
+| warning | `src/screens/ProfileScreen.tsx`의 `handleSignOut` 안 `catch (e)` | `@typescript-eslint/no-unused-vars` (`e`) | 불가, 수동 |
 
 ### 왜 문제인가
 
-prettier 에러는 포맷 차이일 뿐이라 기계가 안전하게 고친다. `no-unused-vars`는 "지울지, 쓸지"가 의도에 달려 있어 자동 수정이 없다. 이 두 경고는 단순 청소 대상이 아니라 **미해결 설계의 흔적**이다. `NotificationScreen:19`는 에러 상태를 저장만 하고 화면에 안 그린 것(2-6), `ProfileScreen:21`은 실제로 던지지 않는 함수를 감싼 try/catch(2-10)다.
+prettier 에러는 포맷 차이일 뿐이라 기계가 안전하게 고친다. `no-unused-vars`는 "지울지, 쓸지"가 의도에 달려 있어 자동 수정이 없다. 이 두 경고는 단순 청소 대상이 아니라 **미해결 설계의 흔적**이다. `NotificationScreen`의 `permissionError`는 에러 상태를 저장만 하고 화면에 안 그린 것(2-6), `ProfileScreen`의 `handleSignOut` `catch (e)`는 실제로 던지지 않는 함수를 감싼 try/catch(2-10)다.
 
 ### 공식 문서
 
@@ -80,7 +80,7 @@ npm run typecheck
 
 - `--fix` 결과를 diff로 확인하지 않고 커밋한다.
 - 포맷 변경과 로직 변경을 한 커밋에 섞는다. 포맷만 `style:` 커밋으로 분리한다.
-- `LoginScreen.tsx:50`은 2-10에서 지워질 죽은 try/catch 안에 있다. 순서가 바뀌어도 결과는 같지만 알고 있어야 한다.
+- `LoginScreen.tsx`의 `onSubmit` 안쪽 `catch (signInError)`는 2-10에서 지워질 죽은 try/catch 안에 있다. 순서가 바뀌어도 결과는 같지만 알고 있어야 한다.
 
 ---
 
@@ -90,10 +90,10 @@ npm run typecheck
 
 ### 증상과 위치
 
-- `src/api/posts.ts:55` — `export const queryClient = new QueryClient();` `defaultOptions`가 없다.
-- `App.tsx:107-112` — `PersistQueryClientProvider`의 `maxAge: 1000 * 60 * 60 * 24`(24시간, 111행).
-- `src/api/persist.ts:7-10` — `createAsyncStoragePersister`(키 `rn-sandbox-query-cache`).
-- queryFn: `src/api/posts.ts:106`(`fetchPosts(pageParam)`), `src/screens/FeedDetailScreen.tsx:32`(`fetchPost(id)`). `signal`을 받지도 넘기지도 않는다. 호출 대상은 `posts.ts:25`, `posts.ts:41`의 `fetch`.
+- `src/api/posts.ts`의 `queryClient` 선언 — `export const queryClient = new QueryClient();` `defaultOptions`가 없다.
+- `App.tsx`의 `PersistQueryClientProvider` `persistOptions` — `maxAge: 1000 * 60 * 60 * 24`(24시간).
+- `src/api/persist.ts`의 `asyncStoragePersister` — `createAsyncStoragePersister`(키 `rn-sandbox-query-cache`).
+- queryFn: `src/api/posts.ts`의 `usePostsInfinite`(`fetchPosts(pageParam)`), `src/screens/FeedDetailScreen.tsx`의 `useQuery`(`fetchPost(id)`). `signal`을 받지도 넘기지도 않는다. 호출 대상은 `posts.ts`의 `fetchPosts`, `fetchPost` 안 `fetch`.
 
 재현 (retry): 존재하지 않는 글의 딥링크를 연다. jsonplaceholder는 `/posts/99999`에 404를 준다(확인함). Expo Go라면 `exp://…/--/feed/99999` 형태다(정확한 URL은 Metro 터미널의 주소로 확인 필요). 상세 화면이 스피너로 약 7초(기본 재시도 간격 1s + 2s + 4s) 머문 뒤 에러를 보여준다. 404는 다시 해도 같은 결과인데도 재시도한다.
 
@@ -159,12 +159,12 @@ npx eslint .
 
 ### 증상과 위치
 
-`src/api/posts.ts:115-137` `useDeletePost`.
+`src/api/posts.ts`의 `useDeletePost`.
 
-- `:119-120` — `getQueryData`로 스냅샷을 **먼저** 뜨고 `cancelQueries`를 **나중에** 기다린다. 순서가 반대다. 같은 레포의 `FeedDetailScreen.tsx:47-49`는 cancel 후 스냅샷 순서다.
-- `:121` — `(old: any)`와 `:126-127`의 `(page: Post[])` 수동 주석. 캐시 모양이 타입으로 보장되지 않는다.
+- `onMutate` 앞부분 — `getQueryData`로 스냅샷을 **먼저** 뜨고 `cancelQueries`를 **나중에** 기다린다. 순서가 반대다. 같은 레포의 `FeedDetailScreen.tsx`의 `likeMutation` `onMutate`는 cancel 후 스냅샷 순서다.
+- `onMutate`의 `setQueryData` 콜백 — `(old: any)`와 `pages` 안 `map`/`filter` 콜백의 `(page: Post[])` 수동 주석. 캐시 모양이 타입으로 보장되지 않는다.
 - `onSettled`가 없다. 성공/실패 후 서버 상태와 맞추지 않는다.
-- `["post", id]` 캐시는 손대지 않는다. 키의 `id`는 상세에서 **문자열**(`FeedDetailScreen.tsx:31`), 삭제 쪽 `id`는 **숫자**(`posts.ts:118`)다.
+- `["post", id]` 캐시는 손대지 않는다. 키의 `id`는 상세에서 **문자열**(`FeedDetailScreen.tsx`의 `useQuery` `queryKey: ["post", id]`), 삭제 쪽 `id`는 **숫자**(`posts.ts`의 `useDeletePost` `onMutate: async (id: number)`)다.
 
 재현: 글 상세를 한 번 열어 `["post", id]` 캐시를 만든 뒤 뒤로 가서, 같은 글을 스와이프 삭제한다. 삭제 후 그 글의 상세를 다시 열면(딥링크 `feed/:id` 등) 어떻게 보이는지 확인한다.
 
@@ -205,7 +205,7 @@ grep -n "any" src/api/posts.ts      # 삭제 훅에서 any가 사라졌는지
 ### 흔한 함정
 
 - `["post", id]`에 숫자 `id`를 그대로 쓴다. 쿼리 키 비교에서 `3`과 `"3"`은 다르다.
-- 빈 페이지를 `filter`로 제거하면 `allPages.length`가 줄어, `getNextPageParam`(`posts.ts:108-109`, `1 + allPages.length`)이 이미 받은 페이지 번호를 다시 가리킬 수 있다. 또 마지막 로드 페이지가 한 글 삭제로 10개 미만이 되면 `hasNextPage`가 `false`가 된다. 코드 읽기 기준 추론이므로 시뮬레이터로 확인한다(2-11 테스트 후보).
+- 빈 페이지를 `filter`로 제거하면 `allPages.length`가 줄어, `getNextPageParam`(`posts.ts`의 `usePostsInfinite`, `1 + allPages.length`)이 이미 받은 페이지 번호를 다시 가리킬 수 있다. 또 마지막 로드 페이지가 한 글 삭제로 10개 미만이 되면 `hasNextPage`가 `false`가 된다. 코드 읽기 기준 추론이므로 시뮬레이터로 확인한다(2-11 테스트 후보).
 - 롤백만 하고 `onSettled` 재동기화를 빼먹는다.
 
 ---
@@ -220,20 +220,20 @@ HTTP 실패와 일반 실패가 같은 `Error`라 구분하려면 캐스트나 �
 
 | 위치 | 현재 |
 |------|------|
-| `src/api/posts.ts:27`, `:43` | ``throw new Error(`… (${res.status})`)`` — 상태가 메시지 안에 묻힘 |
-| `src/api/auth.ts:64-66` | `(err as Error & { status?: number }).status = 401` — 던지는 쪽 캐스트 |
-| `src/api/auth.ts:91` | `(e as Error & { status?: number }).status !== 401` — 받는 쪽 캐스트 |
-| `src/screens/NetworkScreen.tsx:41, 74, 91` | `(e as Error).message` — `catch`의 `e`는 `unknown` |
-| `src/api/network.ts:31` | `const err = e as Error` |
-| `src/screens/FeedListScreen.tsx:93`, `FeedSectionsScreen.tsx:44` | `(error as Error).message` |
+| `src/api/posts.ts`의 `fetchPosts`, `fetchPost` | ``throw new Error(`… (${res.status})`)`` — 상태가 메시지 안에 묻힘 |
+| `src/api/auth.ts`의 `callProtectedApi` 401 분기 | `(err as Error & { status?: number }).status = 401` — 던지는 쪽 캐스트 |
+| `src/api/auth.ts`의 `fetchProtected` `catch` | `(e as Error & { status?: number }).status !== 401` — 받는 쪽 캐스트 |
+| `src/screens/NetworkScreen.tsx`의 `callOnce`, `retryDemo`, `pickAndUpload` 각 `catch` | `(e as Error).message` — `catch`의 `e`는 `unknown` |
+| `src/api/network.ts`의 `withRetryBackoff` `catch` | `const err = e as Error` |
+| `src/screens/FeedListScreen.tsx`와 `FeedSectionsScreen.tsx`의 `isError` 분기 | `(error as Error).message` |
 
-이미 `instanceof` 패턴을 쓰는 곳도 있다: `FeedDetailScreen.tsx:93`, `NotificationScreen.tsx:31`, `LoginScreen.tsx:54`.
+이미 `instanceof` 패턴을 쓰는 곳도 있다: `FeedDetailScreen.tsx`의 `isError` 분기, `NotificationScreen.tsx`의 `getPermissionsAsync().catch`, `LoginScreen.tsx`의 `onSubmit` 바깥 `catch`.
 
 ### 왜 문제인가
 
 `catch (e)`의 `e`는 `unknown`이다. 캐스트는 컴파일러의 검사를 끄고 "맞을 것"이라고 선언하는 것이다. 에러에 의미(상태 코드)를 담은 전용 클래스가 있으면 `instanceof`로 좁힌 뒤 필드를 타입 안전하게 읽는다. 이 구분이 2-2의 retry 정책, 2-5의 4xx 비재시도의 토대다.
 
-참고: React Query v5의 기본 에러 타입은 `Error`다(설치된 `@tanstack/query-core`의 `DefaultError`로 확인). `FeedListScreen:93`, `FeedSectionsScreen:44`의 `as Error`는 캐스트를 지워도 타입 에러가 나지 않을 가능성이 높다. 지워 보고 `tsc` 결과로 확인한다.
+참고: React Query v5의 기본 에러 타입은 `Error`다(설치된 `@tanstack/query-core`의 `DefaultError`로 확인). `FeedListScreen`, `FeedSectionsScreen`의 `isError` 분기 `as Error`는 캐스트를 지워도 타입 에러가 나지 않을 가능성이 높다. 지워 보고 `tsc` 결과로 확인한다.
 
 ### 공식 문서
 
@@ -256,7 +256,7 @@ npm test
 grep -rn "as Error\|Error & {" src      # 남은 캐스트
 ```
 
-시뮬레이터: Network 화면에서 "보호된 API 호출 (1회)"를 4초 이상 기다린 뒤 눌러, 401 → 갱신 → 재시도 흐름(`auth.ts:86-96`)이 그대로 동작하는지 확인한다.
+시뮬레이터: Network 화면에서 "보호된 API 호출 (1회)"를 4초 이상 기다린 뒤 눌러, 401 → 갱신 → 재시도 흐름(`auth.ts`의 `fetchProtected`)이 그대로 동작하는지 확인한다.
 
 ### 자기 체크리스트
 
@@ -279,11 +279,11 @@ grep -rn "as Error\|Error & {" src      # 남은 캐스트
 
 ### 증상과 위치
 
-`src/api/network.ts:14-40` `withRetryBackoff`.
+`src/api/network.ts`의 `withRetryBackoff`.
 
-- `:28-33` — 모든 에러를 재시도한다. 마지막에 ``new Error(`Request failed after … attempts: ${err.message}`)``로 **새 에러를 만들어** 원본(`HttpError`의 `status`, 스택)을 잃는다(`:31`의 캐스트 포함).
-- 취소 수단이 없다. 대기(`:37`)와 `fn` 모두 중단할 방법이 없다.
-- `src/screens/LocationScreen.tsx:47-54` — `Promise.race`에 쓰는 `setTimeout`(`:49`, 15초)을 **절대 clear하지 않는다**. 위치를 2초에 얻어도 타이머는 15초까지 살아 있다.
+- `catch` 블록 — 모든 에러를 재시도한다. 마지막에 ``new Error(`Request failed after … attempts: ${err.message}`)``로 **새 에러를 만들어** 원본(`HttpError`의 `status`, 스택)을 잃는다(`const err = e as Error` 캐스트 포함).
+- 취소 수단이 없다. 대기(`await new Promise((r) => setTimeout(r, delayMs))`)와 `fn` 모두 중단할 방법이 없다.
+- `src/screens/LocationScreen.tsx`의 `getCurrentPosition` `try` 블록 — `Promise.race`에 쓰는 `timeoutPromise`의 `setTimeout`(15초)을 **절대 clear하지 않는다**. 위치를 2초에 얻어도 타이머는 15초까지 살아 있다.
 
 재현(백오프): Network 화면 "재시도 데모 실행"을 반복해 로그를 본다. 재시도 불가 에러(예: 4xx)를 흉내 내는 `fn`을 임시로 넘기면 끝까지 재시도하는 것을 볼 수 있다.
 
@@ -326,7 +326,7 @@ npm test
 
 - `signal`을 `fn`에 넘기지 않고 대기에만 쓴다.
 - abort 때 `Promise`는 reject했는데 타이머는 안 지운다.
-- 호출부(`NetworkScreen.tsx:74`)가 원본 메시지를 읽는다는 사실을 잊고 `message` 형식을 바꾼다.
+- 호출부(`NetworkScreen.tsx`의 `retryDemo` `catch`)가 원본 메시지를 읽는다는 사실을 잊고 `message` 형식을 바꾼다.
 - `flakyFetch`는 `status` 없는 일반 `Error`를 던진다. "재시도하지 않을 에러"의 기본값을 정할 때 이 데모가 깨지지 않는지 확인한다.
 
 ---
@@ -343,17 +343,17 @@ npm test
 
 | 위치 | 호출 |
 |------|------|
-| `src/screens/NotificationScreen.tsx:23` | `setNotificationChannelAsync` — `await`도 `catch`도 없음 |
-| `:40`, `:46` | `requestPermissionsAsync` |
-| `:56`, `:66` | `scheduleNotificationAsync` |
-| `src/screens/PhotoScreen.tsx:33`, `:36` | `cameraRequestPermission`, `launchCameraAsync` |
-| `:42` | `launchImageLibraryAsync` |
-| `:51-52` | `isAvailableAsync` / `shareAsync` |
-| `src/screens/NetworkScreen.tsx:82`, `:86` | `launchImageLibraryAsync`는 `try` 밖, `picked.assets[0].uri`는 `try`(`:85`) 안이라 잡히긴 하지만, `assets`가 빈 배열이면 `undefined.uri` TypeError 메시지가 그대로 로그에 찍힘 |
+| `src/screens/NotificationScreen.tsx`의 마운트 `useEffect` | `setNotificationChannelAsync` — `await`도 `catch`도 없음 |
+| 같은 파일 `requestPermission`, `requestAndSetPermission` | `requestPermissionsAsync` |
+| 같은 파일 `scheduleNow`, `scheduleDelayed` | `scheduleNotificationAsync` |
+| `src/screens/PhotoScreen.tsx`의 `takePhoto` | `cameraRequestPermission`, `launchCameraAsync` |
+| 같은 파일 `pickPhoto` | `launchImageLibraryAsync` |
+| 같은 파일 `share` | `isAvailableAsync` / `shareAsync` |
+| `src/screens/NetworkScreen.tsx`의 `pickAndUpload` | `launchImageLibraryAsync`는 `try` 밖, `picked.assets[0].uri`는 `try` 안이라 잡히긴 하지만, `assets`가 빈 배열이면 `undefined.uri` TypeError 메시지가 그대로 로그에 찍힘 |
 
-`NotificationScreen.tsx:28-33`의 `getPermissionsAsync`는 `catch`로 `permissionError`를 저장한다. 그러나 `permissionError`는 **화면 어디에도 렌더되지 않는다**(2-1의 warning과 같은 변수). `PhotoScreen.tsx:37, 43`에는 이미 `assets` 방어(`!result.assets || length === 0`)가 있다. 같은 패턴이 `NetworkScreen`에는 없다.
+`NotificationScreen.tsx`의 마운트 `useEffect` 안 `getPermissionsAsync`는 `catch`로 `permissionError`를 저장한다. 그러나 `permissionError`는 **화면 어디에도 렌더되지 않는다**(2-1의 warning과 같은 변수). `PhotoScreen.tsx`의 `takePhoto`, `pickPhoto`에는 이미 `assets` 방어(`!result.assets || length === 0`)가 있다. 같은 패턴이 `NetworkScreen`에는 없다.
 
-참고(범위 밖 관찰): `LocationScreen.tsx:40`의 `requestPermission()`도 `try` 밖이다.
+참고(범위 밖 관찰): `LocationScreen.tsx`의 `getCurrentPosition` 첫 줄 `requestPermission()`도 `try` 밖이다.
 
 ### 왜 문제인가
 
@@ -367,15 +367,15 @@ npm test
 ### 힌트
 
 - 힌트 1: 이 세 화면에서 "사용자가 누른 뒤 `await`하는 호출"을 모두 표로 만든다. 각 호출이 거부되면 화면에 무엇이 보여야 하는지 한 줄씩 적는다.
-- 힌트 2: `try/catch`와 에러 메시지 상태. `NotificationScreen`의 `permissionError`가 이미 있다. `e instanceof Error ? e.message : String(e)` 패턴은 같은 파일 `:31`에 있다. 렌더는 `blocked` 블록(`:90-102`) 근처의 조건부 `Text`.
-- 힌트 3: (a) 여러 호출이 같은 상태 하나를 공유할 때, 성공 시 이전 에러를 지우는 위치. (b) `canceled`는 에러가 아니다. 사용자가 취소한 것을 오류로 표시하지 않는다. (c) `NetworkScreen`의 `finally`(`:92-94`)가 `setUploadRatio(null)`을 하므로 `try` 범위를 어디까지 넓힐지 생각한다.
+- 힌트 2: `try/catch`와 에러 메시지 상태. `NotificationScreen`의 `permissionError`가 이미 있다. `e instanceof Error ? e.message : String(e)` 패턴은 같은 파일 `getPermissionsAsync().catch` 안에 있다. 렌더는 `blocked &&` 블록 근처의 조건부 `Text`.
+- 힌트 3: (a) 여러 호출이 같은 상태 하나를 공유할 때, 성공 시 이전 에러를 지우는 위치. (b) `canceled`는 에러가 아니다. 사용자가 취소한 것을 오류로 표시하지 않는다. (c) `NetworkScreen`의 `pickAndUpload` `finally`가 `setUploadRatio(null)`을 하므로 `try` 범위를 어디까지 넓힐지 생각한다.
 
 ### 검증
 
 ```bash
 nvm use 22.21.1
 npm run typecheck
-npx eslint .      # NotificationScreen:19 warning 해소 확인
+npx eslint .      # NotificationScreen의 permissionError warning 해소 확인
 ```
 
 시뮬레이터: 알림 권한 요청 → 허용/거부/설정 열기 흐름이 이전과 같은지. Photo 화면 "카메라로 촬영"을 눌렀을 때 시뮬레이터에서 에러가 화면에 보이는지(수정 전에 콘솔 경고만 뜨는지는 확인 필요). 실기기: 카메라 촬영 성공/취소/권한 영구 거부 3경로.
@@ -402,13 +402,13 @@ npx eslint .      # NotificationScreen:19 warning 해소 확인
 
 ### 증상과 위치
 
-`src/screens/FeedListScreen.tsx:89-97` — `isError` 분기. 코드는 직접 열어서 본다.
+`src/screens/FeedListScreen.tsx`의 `FeedListScreen` 안 `isError` 분기. 코드는 직접 열어서 본다.
 
-`isPending`(`:72`)은 "데이터가 아직 없음"이라 올바르다. 그러나 `isError`는 **데이터가 있어도** 참이 될 수 있다. 이미 받은 목록이 있는 상태에서 새로고침이나 다음 페이지가 실패하면, 멀쩡한 목록이 에러 화면으로 통째로 대체된다.
+`isPending` 분기는 "데이터가 아직 없음"이라 올바르다. 그러나 `isError`는 **데이터가 있어도** 참이 될 수 있다. 이미 받은 목록이 있는 상태에서 새로고침이나 다음 페이지가 실패하면, 멀쩡한 목록이 에러 화면으로 통째로 대체된다.
 
-재현: 첫 페이지를 받은 뒤 실패를 만든다. 네트워크 끊김은 `isPaused`(오프라인 배너)로 처리되어 에러가 아니므로 이 재현엔 쓸 수 없다. 임시로 `fetchPosts`(`posts.ts:25`)가 `page === 2`일 때 던지게 바꾸고, 스크롤해서 다음 페이지를 요청한다(확인 후 반드시 되돌린다). 기본 재시도 때문에 실패 확정까지 수 초 걸린다.
+재현: 첫 페이지를 받은 뒤 실패를 만든다. 네트워크 끊김은 `isPaused`(오프라인 배너)로 처리되어 에러가 아니므로 이 재현엔 쓸 수 없다. 임시로 `fetchPosts`(`posts.ts`)가 `page === 2`일 때 던지게 바꾸고, 스크롤해서 다음 페이지를 요청한다(확인 후 반드시 되돌린다). 기본 재시도 때문에 실패 확정까지 수 초 걸린다.
 
-같은 패턴: `FeedSectionsScreen.tsx:40-48`(범위 밖, 함께 고칠지는 선택).
+같은 패턴: `FeedSectionsScreen.tsx`의 `isError` 분기(범위 밖, 함께 고칠지는 선택).
 
 ### 왜 문제인가
 
@@ -423,7 +423,7 @@ React Query의 `status`는 "마지막 시도의 결과"이고 `data`는 "마지�
 ### 힌트
 
 - 힌트 1: 에러가 났을 때 "보여줄 데이터가 있는가"가 분기 기준이다. 현재 조건에 무엇이 빠졌는지 본다.
-- 힌트 2: `isError`와 `data`(또는 `posts.length`)의 조합, 그리고 훅이 주는 세분화된 상태 `isRefetchError`, `isFetchNextPageError`(설치된 타입에서 확인함). 에러 표시는 목록 위의 배너(`offlineBar` 스타일 참고, `:102-106`)나 푸터.
+- 힌트 2: `isError`와 `data`(또는 `posts.length`)의 조합, 그리고 훅이 주는 세분화된 상태 `isRefetchError`, `isFetchNextPageError`(설치된 타입에서 확인함). 에러 표시는 목록 위의 배너(`isPaused &&` 오프라인 배너의 `offlineBar` 스타일 참고)나 푸터.
 - 힌트 3: (a) 다음 페이지 실패 시 `onEndReached`가 같은 요청을 즉시 반복하지 않게 한다. (b) 에러 배너의 "다시 시도"가 `refetch`(전체)인지 `fetchNextPage`인지 상황에 따라 다르다. (c) 에러 화면을 유지해야 하는 경우(데이터 0건)도 남겨 둔다.
 
 ### 검증
@@ -457,11 +457,11 @@ npx eslint .
 
 ### 증상과 위치
 
-`grep -rn "accessib\|aria-\|role=" src`는 결과가 없다. `hitSlop`은 `src/screens/ComposeScreen.tsx:131` 한 곳뿐이다.
+`grep -rn "accessib\|aria-\|role=" src`는 결과가 없다. `hitSlop`은 `src/screens/ComposeScreen.tsx`의 닫기 `Pressable` 한 곳뿐이다.
 
-- `src/components/Btn.tsx:18-31` — `Pressable`에 role, state가 없다. 텍스트 자식이 있어 라벨은 자동으로 만들어지지만, "로그인 중…" 같은 진행 상태는 전달되지 않는다.
-- `TextInput` — `LoginScreen.tsx:74, 93`, `ComposeScreen.tsx:73, 84`, `NetworkScreen.tsx:211`. 모두 `placeholder`뿐이다. 값이 입력되면 placeholder는 사라져서 스크린 리더 사용자는 무슨 입력란인지 알 수 없다.
-- 직접 쓴 `Pressable` — `ComposeScreen.tsx:122`(닫기, 이것만 `hitSlop` 있음), `FeedListScreen.tsx:227, 240, 251`(시트 옵션), `FeedSectionsScreen.tsx:70`.
+- `src/components/Btn.tsx`의 `Btn` 안 `Pressable` — `Pressable`에 role, state가 없다. 텍스트 자식이 있어 라벨은 자동으로 만들어지지만, "로그인 중…" 같은 진행 상태는 전달되지 않는다.
+- `TextInput` — `LoginScreen.tsx`의 아이디/비밀번호 `Controller` 안 두 개, `ComposeScreen.tsx`의 제목/본문 두 개, `NetworkScreen.tsx`의 WebSocket 메시지 입력 한 개. 모두 `placeholder`뿐이다. 값이 입력되면 placeholder는 사라져서 스크린 리더 사용자는 무슨 입력란인지 알 수 없다.
+- 직접 쓴 `Pressable` — `ComposeScreen.tsx`의 닫기 `Pressable`(이것만 `hitSlop` 있음), `FeedListScreen.tsx`의 `BottomSheet` 안 옵션 `Pressable` 세 개(상세 보기/삭제/취소), `FeedSectionsScreen.tsx`의 `renderItem` `Pressable`.
 
 확인 방법: Xcode의 Accessibility Inspector로 시뮬레이터 요소의 role, label, state를 본다.
 
@@ -480,7 +480,7 @@ npx eslint .
 
 - 힌트 1: `Btn` 하나만 먼저 고친다. 버튼이 가질 수 있는 상태가 무엇인지(비활성, 진행 중) props와 비교해 본다.
 - 힌트 2: `role="button"`(또는 `accessibilityRole`), `accessibilityState`의 `disabled`/`busy`, 입력란의 `accessibilityLabel`. `hitSlop`은 `Rect | number`.
-- 힌트 3: (a) 문서상 `role`이 `accessibilityRole`보다 우선한다. 둘을 섞지 않는다. (b) `Pressable`이 `disabled` prop을 `accessibilityState`에 합쳐 주는지 RN 소스(`node_modules/react-native/Libraries/Components/Pressable/Pressable.js` 229행 부근)에서 확인하고, 이미 있는 것을 중복으로 넣지 않는다. (c) `Btn` 높이는 `paddingVertical: 13`(`theme/styles.ts`) 기준으로 이미 충분할 수 있다. `hitSlop`이 필요한 대상을 먼저 정한다.
+- 힌트 3: (a) 문서상 `role`이 `accessibilityRole`보다 우선한다. 둘을 섞지 않는다. (b) `Pressable`이 `disabled` prop을 `accessibilityState`에 합쳐 주는지 RN 소스(`node_modules/react-native/Libraries/Components/Pressable/Pressable.js`의 `_accessibilityState` 계산부)에서 확인하고, 이미 있는 것을 중복으로 넣지 않는다. (c) `Btn` 높이는 `paddingVertical: 13`(`theme/styles.ts`) 기준으로 이미 충분할 수 있다. `hitSlop`이 필요한 대상을 먼저 정한다.
 
 ### 검증
 
@@ -515,12 +515,12 @@ npx eslint .
 
 | 항목 | 현재 상태 | 판정 |
 |------|-----------|------|
-| `@react-navigation/elements` | `ComposeScreen.tsx:16`에서 `useHeaderHeight`를 **직접 import**. `package.json` dependencies에 **없음**(`bottom-tabs`·`native-stack`의 하위 의존성으로 설치됨, lock으로 확인) | 해당 |
-| `expo-status-bar` | `package.json:35`에 선언. `src`, `App.tsx`, `index.ts`에서 import 0건 | 해당 (제거 or 사용) |
-| `eslint-config-prettier` | `package.json:52` **한 번만** 선언 | 중복 선언은 해당 없음 (아래 참고) |
+| `@react-navigation/elements` | `ComposeScreen.tsx`의 import 문에서 `useHeaderHeight`를 **직접 import**. `package.json` dependencies에 **없음**(`bottom-tabs`·`native-stack`의 하위 의존성으로 설치됨, lock으로 확인) | 해당 |
+| `expo-status-bar` | `package.json`의 `dependencies`에 선언. `src`, `App.tsx`, `index.ts`에서 import 0건 | 해당 (제거 or 사용) |
+| `eslint-config-prettier` | `package.json`의 `devDependencies`에 **한 번만** 선언 | 중복 선언은 해당 없음 (아래 참고) |
 | `engines` | `package.json`에 필드 없음. `.nvmrc`도 없음 | 해당 |
-| `app.json` 플러그인·권한 문구 | `expo-image-picker`에 `photosPermission`(영어)만, `cameraPermission` 없음(`app.json:32-35`). `expo-location`, `expo-notifications` 플러그인 항목 없음 | 해당 |
-| `app.json` `userInterfaceStyle` | `"light"`(`app.json:9`). 앱은 `DarkTheme`(`App.tsx:120`)와 어두운 배경 | 해당 |
+| `app.json` 플러그인·권한 문구 | `expo-image-picker`에 `photosPermission`(영어)만, `cameraPermission` 없음(`app.json`의 `plugins` 중 `expo-image-picker` 항목). `expo-location`, `expo-notifications` 플러그인 항목 없음 | 해당 |
+| `app.json` `userInterfaceStyle` | `"light"`(`app.json`의 `expo.userInterfaceStyle`). 앱은 `DarkTheme`(`App.tsx`의 `NavigationContainer` `theme`)와 어두운 배경 | 해당 |
 
 ### 증상과 위치
 
@@ -582,9 +582,9 @@ npx expo install --check     # 선언 버전이 SDK 54와 맞는지 (옵션 동�
 ### 증상과 위치
 
 - **RootParamList 전역 선언 없음.** `grep -rn "ReactNavigation\|RootParamList" src App.tsx` 결과 없음. `src/navigation/types.ts`에는 `RootStackParamList` 등 **개별 param list 타입**만 있다.
-- **`tabsScreenOptions`**: `src/navigation/index.tsx:32-38` 타입 없는 객체 리터럴. `:86`에서 `screenOptions`로 전달. (`theme/styles.ts:138`의 `stackHeader`도 같은 모양이나 범위 밖.)
-- **`import type` 누락**: `src/screens/LocationScreen.tsx:10-11` `HomeStackParamList`, `NativeStackScreenProps`가 타입인데 일반 `import`. 다른 화면은 모두 `import type`.
-- **죽은 try/catch**: `src/screens/LoginScreen.tsx:47-52`의 안쪽 `try { signIn(...) }`. `signIn`은 `(name: string) => void`(`src/auth/AuthContext.tsx:7`)이고 `App.tsx:64-75` 구현은 동기 구간에서 던지지 않으며 저장 실패는 자체 `.catch`로 처리한다. `src/screens/ProfileScreen.tsx:18-23`의 `await signOut()`도 동기 함수이고(`App.tsx:76-89`) `catch (e)`의 `e`는 쓰이지 않는다(2-1 warning). `clearPersistError?.()`의 `?.`도 필수 필드에 붙어 있다.
+- **`tabsScreenOptions`**: `src/navigation/index.tsx`의 `tabsScreenOptions` 타입 없는 객체 리터럴. `TabsScreen`의 `Tab.Navigator`에서 `screenOptions`로 전달. (`theme/styles.ts`의 `stackHeader`도 같은 모양이나 범위 밖.)
+- **`import type` 누락**: `src/screens/LocationScreen.tsx`의 import 문 중 `HomeStackParamList`, `NativeStackScreenProps`가 타입인데 일반 `import`. 다른 화면은 모두 `import type`.
+- **죽은 try/catch**: `src/screens/LoginScreen.tsx`의 `onSubmit` 안쪽 `try { signIn(...) }`. `signIn`은 `(name: string) => void`(`src/auth/AuthContext.tsx`의 `Auth` 타입)이고 `App.tsx`의 `auth` `useMemo` 안 `signIn` 구현은 동기 구간에서 던지지 않으며 저장 실패는 자체 `.catch`로 처리한다. `src/screens/ProfileScreen.tsx`의 `handleSignOut` 안 `await signOut()`도 동기 함수이고(`App.tsx`의 `auth` `useMemo` 안 `signOut`) `catch (e)`의 `e`는 쓰이지 않는다(2-1 warning). `clearPersistError?.()`의 `?.`도 필수 필드에 붙어 있다.
 
 ### 왜 문제인가
 
@@ -602,17 +602,17 @@ npx expo install --check     # 선언 버전이 SDK 54와 맞는지 (옵션 동�
 - 힌트 1: 먼저 두 문서(7.x와 6.x)에서 "루트 타입을 어떻게 등록하는가"를 비교한다. 방식이 다르다.
   - 7.x 문서(문서 원문으로 확인 필요): `declare module '@react-navigation/native' { interface RootNavigator extends … }` 방식
   - 6.x 문서: `declare global { namespace ReactNavigation { interface RootParamList … } }` 방식
-  - 설치된 `@react-navigation/core`(7.21.5)의 타입 정의(`node_modules/@react-navigation/core/lib/typescript/src/types.d.ts` 85-106행)에는 `RootNavigator` 인터페이스(주석 예시는 `'@react-navigation/core'` 모듈 확장)와, 그것에서 파생되는 전역 `ReactNavigation.RootParamList`가 함께 있다.
-  - **이 프로젝트가 어느 쪽인지는 확인 필요.** 이 프로젝트는 네비게이터를 `createNativeStackNavigator<ParamList>()` 제네릭 방식으로 만들고(`index.tsx:26-29`), 루트가 로그인 여부로 두 갈래(`:112-122`, `:125-143`)다. 문서의 예제가 이 구조에 그대로 맞는지, 어느 네비게이터를 "루트"로 등록할지는 문서를 읽고 직접 판단하며 `tsc`로 확인한다.
+  - 설치된 `@react-navigation/core`(7.21.5)의 타입 정의(`node_modules/@react-navigation/core/lib/typescript/src/types.d.ts`의 `RootNavigator` 인터페이스 선언부 주변)에는 `RootNavigator` 인터페이스(주석 예시는 `'@react-navigation/core'` 모듈 확장)와, 그것에서 파생되는 전역 `ReactNavigation.RootParamList`가 함께 있다.
+  - **이 프로젝트가 어느 쪽인지는 확인 필요.** 이 프로젝트는 네비게이터를 `createNativeStackNavigator<ParamList>()` 제네릭 방식으로 만들고(`index.tsx`의 `HomeStack`, `Tab`, `RootStack`, `AuthStack` 선언), 루트가 로그인 여부로 두 갈래(`RootNavigator`의 `user == null` 분기와 그 아래 `RootStack.Navigator` 반환)다. 문서의 예제가 이 구조에 그대로 맞는지, 어느 네비게이터를 "루트"로 등록할지는 문서를 읽고 직접 판단하며 `tsc`로 확인한다.
 - 힌트 2: `BottomTabNavigationOptions`(`@react-navigation/bottom-tabs`에서 export됨, 확인함)로 `tabsScreenOptions`에 타입 부여. 단순 주석 대신 `satisfies` 연산자 사용 여부는 장단을 비교한다. `import type { … }`.
-- 힌트 3: 죽은 `try/catch`를 지울 때 **바깥** `try/catch`(`login` 실패 처리, `:53-56`)는 살아 있는 경로다. 안쪽만 지운다. `ProfileScreen`은 `await`가 정말 필요한지 함께 판단한다.
+- 힌트 3: 죽은 `try/catch`를 지울 때 **바깥** `try/catch`(`login` 실패 처리, `onSubmit`의 바깥 `catch`)는 살아 있는 경로다. 안쪽만 지운다. `ProfileScreen`은 `await`가 정말 필요한지 함께 판단한다.
 
 ### 검증
 
 ```bash
 nvm use 22.21.1
 npm run typecheck     # 전역 선언 후 기존 코드에서 새 에러가 생기는지
-npx eslint .          # ProfileScreen:21 warning 해소
+npx eslint .          # ProfileScreen의 handleSignOut catch (e) warning 해소
 ```
 
 시뮬레이터: 로그인(틀린 비밀번호 → 오류 메시지, 맞는 비밀번호 → 진입), 로그아웃. 둘 다 기존과 같아야 한다.
@@ -638,13 +638,13 @@ npx eslint .          # ProfileScreen:21 warning 해소
 
 ### 증상과 위치
 
-- `tests/auth.test.ts`는 하나뿐이다. `:8`의 `await new Promise((r) => setTimeout(r, 4100))`로 실제 4초를 기다린다(`npm test` 약 6초).
-- `groupByTens`(`src/api/posts.ts:140`)는 순수 함수인데 `posts.ts`가 `react-native`, `@react-native-community/netinfo`를 import해서 Node 테스트에서 불러올 수 없다.
-- `withRetryBackoff`(`src/api/network.ts:14`)는 타이머를 쓰는 로직. `network.ts:1`이 `expo-file-system/legacy`를 import한다.
-- `getNextPageParam`은 `posts.ts:108-109`에 인라인이라 직접 호출할 수 없다.
-- 낙관적 롤백 로직은 `useDeletePost`(`posts.ts:118-135`), `FeedDetailScreen.tsx:45-58`, `setMutationDefaults`의 `onError`(`posts.ts:81`)에 훅/컴포넌트와 얽혀 있다.
+- `tests/auth.test.ts`는 하나뿐이다. 첫 테스트 본문의 `await new Promise((r) => setTimeout(r, 4100))`로 실제 4초를 기다린다(`npm test` 약 6초).
+- `groupByTens`(`src/api/posts.ts`)는 순수 함수인데 `posts.ts`가 `react-native`, `@react-native-community/netinfo`를 import해서 Node 테스트에서 불러올 수 없다.
+- `withRetryBackoff`(`src/api/network.ts`)는 타이머를 쓰는 로직. `network.ts` 맨 위 import가 `expo-file-system/legacy`를 import한다.
+- `getNextPageParam`은 `posts.ts`의 `usePostsInfinite` 안에 인라인이라 직접 호출할 수 없다.
+- 낙관적 롤백 로직은 `useDeletePost`(`posts.ts`의 `onMutate`/`onError`), `FeedDetailScreen.tsx`의 `likeMutation`(`onMutate`/`onError`), `setMutationDefaults`의 `onError`(`posts.ts`의 `TOGGLE_LIKE_KEY` 기본값)에 훅/컴포넌트와 얽혀 있다.
 
-테스트 실행 환경: `npm test` = `node --test "tests/*.test.ts"`. Node 22.21.1이 `.ts`를 타입 제거만 해서 실행한다. `tsconfig.json`의 `allowImportingTsExtensions: true`(`:6`) 때문에 TS도 `.ts` 확장자 import를 허용한다. `tests/auth.test.ts:3`이 `"../src/api/auth.ts"`로 확장자를 붙이는 이유다.
+테스트 실행 환경: `npm test` = `node --test "tests/*.test.ts"`. Node 22.21.1이 `.ts`를 타입 제거만 해서 실행한다. `tsconfig.json`의 `allowImportingTsExtensions: true` 때문에 TS도 `.ts` 확장자 import를 허용한다. `tests/auth.test.ts`의 import 줄이 `"../src/api/auth.ts"`로 확장자를 붙이는 이유다.
 
 ### 왜 문제인가
 
@@ -665,7 +665,7 @@ npx eslint .          # ProfileScreen:21 warning 해소
   - 분리한 파일이 타입을 쓸 때 `import { Post } from …`처럼 값 import하면 Node 로드가 실패한다. `import type`.
   - import 경로에 `.ts` 확장자가 없으면 Node가 모듈을 못 찾는다.
   - `MockTimers`는 Node 22에서 experimental이라 실행 시 경고가 출력된다(이상 아님). 가짜 타이머를 진행시킨 뒤에도 Promise 체인이 끝나려면 마이크로태스크를 한 번 비워 줘야 하는 경우가 있다.
-  - `auth.ts`의 만료는 `Date.now()`와 `setTimeout`이 같이 얽혀 있다(`Date`: `:38`, `:62` / `setTimeout`: `:46`, `:58`, `:74`). `Date`도 가짜로 할지, TTL을 바꿀 수 있게 할지는 선택이다. 대기하는 지연이 여러 단계라 tick을 단계마다 줘야 한다.
+  - `auth.ts`의 만료는 `Date.now()`와 `setTimeout`이 같이 얽혀 있다(`Date`: `issueTokens`, `callProtectedApi` / `setTimeout`: `login`, `callProtectedApi`, `refreshAccessToken`). `Date`도 가짜로 할지, TTL을 바꿀 수 있게 할지는 선택이다. 대기하는 지연이 여러 단계라 tick을 단계마다 줘야 한다.
 
 ### 검증
 

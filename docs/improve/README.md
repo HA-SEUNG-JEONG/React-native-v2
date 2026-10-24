@@ -62,12 +62,12 @@ P1~P7 학습 Phase와 이름이 겹치지 않도록 이 미션은 **Tier 1 / 2 /
 
 ### Tier 1 버그
 
-- [ ] 1-1 WebSocket 언마운트 후 재연결 누수, 언마운트 후 setState · 위치: `src/screens/NetworkScreen.tsx:105-143` · 선행: 없음
-- [ ] 1-2 삭제가 무시되면 SwipeableRow가 화면 밖에 남음 (isPending 가드) · 위치: `src/screens/FeedListScreen.tsx:178`, `src/components/SwipeableRow.tsx:36-43` · 선행: 없음
-- [ ] 1-3 LocationScreen의 스타일 없는 Text (다크 배경에서 안 보임) · 위치: `src/screens/LocationScreen.tsx:93` · 선행: 없음
-- [ ] 1-4 딥링크 id 검증/인코딩, 알림 data.url 검증 · 위치: `src/api/posts.ts:42`, `App.tsx:53-58` · 선행: 없음 · 📱 일부 (원격 푸시 end-to-end만 실기기. 로컬 5초 알림은 시뮬레이터 가능)
-- [ ] 1-5 ⚠️ 동작 변경: 로그아웃 상태 cold start 알림 딥링크 유실, 로그인 후 재적용 · 위치: `App.tsx:53-58`, `src/navigation/index.tsx:153` · 선행: 없음 · 📱 일부 (cold start 재현만 실기기)
-- [ ] 1-6 logout()이 loginInFlight, refreshCount를 리셋하지 않음 / 재시작 후 session=null과 user 복원 불일치 · 위치: `src/api/auth.ts:17,30`, `App.tsx:40` · 선행: 없음
+- [ ] 1-1 WebSocket 언마운트 후 재연결 누수, 언마운트 후 setState · 위치: `src/screens/NetworkScreen.tsx`의 언마운트 cleanup `useEffect`와 `openSocket()`의 `onClose` 재연결 분기 · 선행: 없음
+- [ ] 1-2 삭제가 무시되면 SwipeableRow가 화면 밖에 남음 (isPending 가드) · 위치: `src/screens/FeedListScreen.tsx`의 `renderItem` 안 `SwipeableRow` `onDelete`, `src/components/SwipeableRow.tsx`의 `Gesture.Pan().onEnd` 삭제 분기 · 선행: 없음
+- [ ] 1-3 LocationScreen의 스타일 없는 Text (다크 배경에서 안 보임) · 위치: `src/screens/LocationScreen.tsx`의 `scope` 표시 `<Text>` · 선행: 없음
+- [ ] 1-4 딥링크 id 검증/인코딩, 알림 data.url 검증 · 위치: `src/api/posts.ts`의 `fetchPost()`, `App.tsx`의 알림 탭 처리 `useEffect` · 선행: 없음 · 📱 일부 (원격 푸시 end-to-end만 실기기. 로컬 5초 알림은 시뮬레이터 가능)
+- [ ] 1-5 ⚠️ 동작 변경: 로그아웃 상태 cold start 알림 딥링크 유실, 로그인 후 재적용 · 위치: `App.tsx`의 알림 탭 처리 `useEffect`, `src/navigation/index.tsx`의 `linking` 설정 위 주석(로그아웃 상태 링크 무시 주의 문구) · 선행: 없음 · 📱 일부 (cold start 재현만 실기기)
+- [ ] 1-6 logout()이 loginInFlight, refreshCount를 리셋하지 않음 / 재시작 후 session=null과 user 복원 불일치 · 위치: `src/api/auth.ts`의 모듈 변수(`loginInFlight`, `refreshCount`)와 `logout()`, `App.tsx`의 `SecureStore.getItemAsync` 복원 `useEffect` · 선행: 없음
 
 ### Tier 2 품질
 
@@ -87,7 +87,7 @@ P1~P7 학습 Phase와 이름이 겹치지 않도록 이 미션은 **Tier 1 / 2 /
 
 - [ ] 3-1 색상 hex(`#8a92a6` 10줄(주석 포함 11회), `#93c5fd` 9회)를 colors 토큰으로, URL을 상수/설정으로 · 선행: 없음
 - [ ] 3-2 ErrorView, 무한스크롤 footer, PermissionBlockedNotice 추출. ComposeScreen의 Pressable을 Btn으로 대체. Notification 권한 함수 중복 제거 · 선행: 3-1, 2-8 · ⚠️ 동작 변경 (미세: Android ripple)
-- [ ] 3-3 re-render: React Profiler로 먼저 측정한 뒤 renderItem/SwipeableRow memo, 로그 상한, AuthContext 분리. 사용자가 루트 README.md 한계 절의 성능 관련 문구(`:28`)를 갱신 · 선행: 3-2
+- [ ] 3-3 re-render: React Profiler로 먼저 측정한 뒤 renderItem/SwipeableRow memo, 로그 상한, AuthContext 분리. 사용자가 루트 README.md 한계 절의 성능 관련 문구를 갱신 · 선행: 3-2
 - [ ] 3-4 잔여 정리: console.log, AuthContext 기본값, import 순서, Splash, CI 워크플로 · 선행: 없음
 
 ---
