@@ -14,10 +14,10 @@ type Tokens = {
 
 const ACCESS_TTL_MS = 4000; // 데모용 — 실서비스는 보통 수분~수십 분
 
-let session: Tokens | null = null;
-let refreshInFlight: Promise<Tokens> | null = null;
-let loginInFlight: Promise<void> | null = null;
-let refreshCount = 0;
+let session: Tokens | null = null; //  현재 로그인 상태
+let refreshInFlight: Promise<Tokens> | null = null; // 진행 중인 토큰 갱신 Promise. 갱신 중복 호출 막는 용도
+let loginInFlight: Promise<void> | null = null; // 진행 중인 로그인 Promise, 로그인 버튼 연타 방어
+let refreshCount = 0; // 실제 갱신이 몇 번 일어났는지 센 카운터
 
 export function getRefreshCount() {
   return refreshCount;
