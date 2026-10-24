@@ -24,20 +24,20 @@ Tier 3은 기능을 바꾸지 않는 정리 단계다. 중복을 걷어내고(3-
 
 | 값 | 횟수 | 위치 |
 |----|------|------|
-| `#8a92a6` | 10 | `src/navigation/index.tsx:37`, `ComposeScreen.tsx:78,89`, `FeedListScreen.tsx:221`, `NetworkScreen.tsx:216`, `LoginScreen.tsx:77,96`, `src/theme/styles.ts:21,36,83` |
-| `#93c5fd` | 9 (정의 1 + 사용 8) | 정의 `styles.ts:5`, 사용 `navigation/index.tsx:36`, `FeedSectionsScreen.tsx:36,66`, `ComposeScreen.tsx:134`, `FeedListScreen.tsx:115,116,128`, `FeedDetailScreen.tsx:84` |
+| `#8a92a6` | 10 | `src/navigation/index.tsx`의 `tabsScreenOptions`(`tabBarInactiveTintColor`), `ComposeScreen.tsx`의 제목·본문 `TextInput`(`placeholderTextColor`), `FeedListScreen.tsx`의 `BottomSheet`(`handleIndicatorStyle`), `NetworkScreen.tsx`의 WebSocket 메시지 `TextInput`(`placeholderTextColor`), `LoginScreen.tsx`의 아이디·비밀번호 `TextInput`(`placeholderTextColor`), `src/theme/styles.ts`의 `hint`·`rowSub`·`length` 스타일 |
+| `#93c5fd` | 9 (정의 1 + 사용 8) | 정의 `styles.ts`의 `colors.ghostText`, 사용 `navigation/index.tsx`의 `tabsScreenOptions`(`tabBarActiveTintColor`), `FeedSectionsScreen.tsx`의 최초 로딩 `ActivityIndicator`와 footer `ActivityIndicator`, `ComposeScreen.tsx`의 `닫기` 버튼 글자색 덮어쓰기, `FeedListScreen.tsx`의 `RefreshControl`(`tintColor`, `colors`)과 footer `ActivityIndicator`, `FeedDetailScreen.tsx`의 `isPending` 분기 `ActivityIndicator` |
 
-- 이미 `src/theme/styles.ts:4-6`에 `colors` 토큰 객체가 있고, 항목은 `ghostText` 하나뿐이다. 사용처는 `Btn.tsx`와 `styles.ts`의 `sectionHeader`.
+- 이미 `src/theme/styles.ts`에 `colors` 토큰 객체가 있고, 항목은 `ghostText` 하나뿐이다. 사용처는 `Btn.tsx`와 `styles.ts`의 `sectionHeader`.
 - `#fff` 9회, `#2b3446` 7회, `#0f1115` 4회 등 다른 값도 반복된다. 이번 미션의 필수 범위는 위 두 색이고, 나머지는 선택이다.
 - 하드코딩 URL 5곳:
 
 | 위치 | 용도 |
 |------|------|
-| `src/api/posts.ts:20` | `API` 상수 (jsonplaceholder). 이미 상수지만 모듈 내부 전용 |
-| `src/api/network.ts:57` | 업로드 대상 `https://httpbin.org/post` |
-| `src/api/network.ts:92` | WebSocket `wss://ws.postman-echo.com/raw` |
-| `src/screens/ComposeScreen.tsx:22` | `AVATAR_SOURCE` (picsum) |
-| `src/screens/FeedListScreen.tsx:193` | 썸네일 템플릿 문자열 `https://picsum.photos/seed/${item.id}/100/100` |
+| `src/api/posts.ts`의 모듈 상단 `API` 선언 | `API` 상수 (jsonplaceholder). 이미 상수지만 모듈 내부 전용 |
+| `src/api/network.ts`의 `uploadWithProgress()` 안 `FileSystem.createUploadTask` 호출 | 업로드 대상 `https://httpbin.org/post` |
+| `src/api/network.ts`의 `connectEchoSocket()` 안 `new WebSocket(...)` | WebSocket `wss://ws.postman-echo.com/raw` |
+| `src/screens/ComposeScreen.tsx`의 모듈 상단 `AVATAR_SOURCE` 선언 | `AVATAR_SOURCE` (picsum) |
+| `src/screens/FeedListScreen.tsx`의 `renderItem` 안 썸네일 `Image`의 `source.uri` | 썸네일 템플릿 문자열 `https://picsum.photos/seed/${item.id}/100/100` |
 
 재현(변경 전 기준선): `grep -rn "#8a92a6\|#93c5fd" src App.tsx` 결과 줄 수를 기록해 둔다. 이 미션은 화면 모양이 달라지면 안 된다. 시뮬레이터에서 탭바 색, 스피너 색, placeholder 색을 미리 확인해 둔다.
 
@@ -58,10 +58,10 @@ RN에는 CSS 변수/cascade가 없다. 색을 바꾸려면 리터럴을 전부 �
 - **힌트 1 (방향)**: 먼저 `styles.ts`의 `colors`를 읽고, 이름 짓는 규칙을 한 줄로 요약해 본다. 그다음 두 색의 모든 사용처를 style 안/밖으로 나눠 표로 정리한다.
 - **힌트 2 (API·패턴)**: 모듈 상수 객체(`as const` 여부), `StyleSheet.create` 안에서 객체 값 참조, URL은 상수 + 필요한 곳만 함수(`(id) => string` 형태)로 분리.
 - **힌트 3 (함정)**:
-  - `styles.ts` 안의 리터럴(`:21`, `:36`, `:83`)도 대상이다. 토큰 정의가 `StyleSheet.create` 위에 있어야 참조할 수 있다.
-  - `ComposeScreen.tsx:78` 주석의 "(#8a92a6 등)"도 grep에 걸린다. 주석을 같이 고칠지 판단.
+  - `styles.ts` 안의 리터럴(`hint`, `rowSub`, `length` 스타일)도 대상이다. 토큰 정의가 `StyleSheet.create` 위에 있어야 참조할 수 있다.
+  - `ComposeScreen.tsx`의 제목 `TextInput` `placeholderTextColor` 줄 끝 주석의 "(#8a92a6 등)"도 grep에 걸린다. 주석을 같이 고칠지 판단.
   - 값은 같아도 의미가 다른 색(예: `#2b3446`은 썸네일 배경, 테두리, ripple에 섞여 있음)을 한 토큰으로 합치면 나중에 따로 못 바꾼다. 필수 범위 밖이면 건드리지 않는 선택도 맞다.
-  - `FeedListScreen.tsx:193`은 상수 문자열이 아니라 id가 들어가는 템플릿이다.
+  - `FeedListScreen.tsx`의 썸네일 `Image` `source.uri`는 상수 문자열이 아니라 id가 들어가는 템플릿이다.
 
 ### 5. 검증
 
@@ -115,21 +115,21 @@ grep -rn "requestPermissionsAsync" src
 
 | 중복 | 위치 |
 |------|------|
-| 에러 화면 (`에러` 제목 + 메시지 + `다시 시도` Btn) | `FeedListScreen.tsx:89-97`, `FeedSectionsScreen.tsx:40-48`, `FeedDetailScreen.tsx:88-98` |
-| 무한스크롤 footer (`isFetchingNextPage ? <ActivityIndicator/> : null`) | `FeedListScreen.tsx:125-132`, `FeedSectionsScreen.tsx:64-68` |
-| 권한 차단 안내 (`blocked` 문구 + `설정 열기` Btn, `Linking.openSettings()`) | `NotificationScreen.tsx:90-102`, `LocationScreen.tsx:83-92`, `PhotoScreen.tsx:66-78` |
-| Notification 권한 요청 함수 두 개 | `NotificationScreen.tsx:39-42` (`requestPermission`), `NotificationScreen.tsx:44-51` (`requestAndSetPermission`) |
-| `ComposeScreen`의 수제 버튼 | `ComposeScreen.tsx:122-135` |
+| 에러 화면 (`에러` 제목 + 메시지 + `다시 시도` Btn) | `FeedListScreen.tsx`의 `isError` 분기, `FeedSectionsScreen.tsx`의 `isError` 분기, `FeedDetailScreen.tsx`의 `isError` 분기 |
+| 무한스크롤 footer (`isFetchingNextPage ? <ActivityIndicator/> : null`) | `FeedListScreen.tsx`의 `FlatList` `ListFooterComponent`, `FeedSectionsScreen.tsx`의 `SectionList` `ListFooterComponent` |
+| 권한 차단 안내 (`blocked` 문구 + `설정 열기` Btn, `Linking.openSettings()`) | `NotificationScreen.tsx`, `LocationScreen.tsx`, `PhotoScreen.tsx` 각각의 `blocked &&` 렌더 블록 |
+| Notification 권한 요청 함수 두 개 | `NotificationScreen.tsx`의 `requestPermission`과 `requestAndSetPermission` |
+| `ComposeScreen`의 수제 버튼 | `ComposeScreen.tsx`의 footer 안 `닫기` `Pressable` |
 
 차이점도 읽어야 한다.
-- 에러 메시지 추출이 다르다. `FeedListScreen.tsx:93`과 `FeedSectionsScreen.tsx:44`는 `(error as Error).message`, `FeedDetailScreen.tsx:93`은 `error instanceof Error ? ... : String(error)`. (2-4가 이 캐스트를 다룬다.)
+- 에러 메시지 추출이 다르다. `FeedListScreen.tsx`와 `FeedSectionsScreen.tsx`의 `isError` 분기는 `(error as Error).message`, `FeedDetailScreen.tsx`의 `isError` 분기는 `error instanceof Error ? ... : String(error)`. (2-4가 이 캐스트를 다룬다.)
 - 차단 안내 문구는 화면마다 다르고(`알림 권한이...`, `위치 권한이...`, `카메라 권한이...`), 버튼 라벨도 `설정 열기` / `위치 설정 열기`로 다르다.
-- footer는 `ActivityIndicator`를 쓰는 곳이 `FeedDetailScreen.tsx:84`, `FeedSectionsScreen.tsx:36`에도 있지만 이쪽은 최초 로딩 스피너라 footer가 아니다.
-- `ComposeScreen`의 Pressable(`:122-135`)은 `Btn`과 거의 같지만 `hitSlop`(`:131`), `android_ripple`(`:132`), 글자색 덮어쓰기(`:134`)가 있다. `Btn.tsx`는 `kind="ghost"`일 때 이미 같은 글자색을 준다.
+- footer는 `ActivityIndicator`를 쓰는 곳이 `FeedDetailScreen.tsx`의 `isPending` 분기와 `FeedSectionsScreen.tsx`의 `isPending` 분기에도 있지만 이쪽은 최초 로딩 스피너라 footer가 아니다.
+- `ComposeScreen`의 footer 안 `닫기` Pressable은 `Btn`과 거의 같지만 `hitSlop`, `android_ripple`, 글자색 덮어쓰기가 있다. `Btn.tsx`는 `kind="ghost"`일 때 이미 같은 글자색을 준다.
 
 ⚠️ 동작 변경 (미세): `Btn`으로 바꾸면 `android_ripple`이 사라질 수 있다 (Android 한정, iOS 영향 없음). 2-8에서 `Btn`에 `hitSlop`이 들어갔다면 그쪽은 유지된다. 유지/제거를 의식적으로 결정하고 기록한다.
 
-Notification 두 함수는 동작이 다르다. 전자는 무조건 요청하고 결과를 반환하지 않으며, 후자는 이미 허용이면 요청을 건너뛰고 boolean을 반환한다. 합칠 때 이 차이가 어느 호출부(`:86`, `:54`, `:64`)에 어떤 영향을 주는지 먼저 표로 적는다.
+Notification 두 함수는 동작이 다르다. 전자는 무조건 요청하고 결과를 반환하지 않으며, 후자는 이미 허용이면 요청을 건너뛰고 boolean을 반환한다. 합칠 때 이 차이가 어느 호출부(`알림 권한 요청` 버튼의 `onPress`, `scheduleNow`, `scheduleDelayed`)에 어떤 영향을 주는지 먼저 표로 적는다.
 
 ### 2. 왜 문제인가
 
@@ -141,7 +141,7 @@ Notification 두 함수는 동작이 다르다. 전자는 무조건 요청하고
 
 - [Pressable](https://reactnative.dev/docs/0.81/pressable): `hitSlop`, `android_ripple` prop 확인.
 - [FlatList](https://reactnative.dev/docs/0.81/flatlist): `ListFooterComponent`.
-- [Expo SDK 54 linking](https://github.com/expo/expo/blob/sdk-54/docs/pages/versions/v54.0.0/sdk/linking.mdx): 이 프로젝트가 쓰는 `Linking.openSettings()`는 `react-native`의 `Linking`이다 (`NotificationScreen.tsx:2`). `expo-linking`과 어느 쪽 API인지 구분해서 확인. 문서에 `openSettings` 존재 여부는 직접 확인 필요.
+- [Expo SDK 54 linking](https://github.com/expo/expo/blob/sdk-54/docs/pages/versions/v54.0.0/sdk/linking.mdx): 이 프로젝트가 쓰는 `Linking.openSettings()`는 `react-native`의 `Linking`이다 (`NotificationScreen.tsx` 상단의 `Linking` import). `expo-linking`과 어느 쪽 API인지 구분해서 확인. 문서에 `openSettings` 존재 여부는 직접 확인 필요.
 - [Expo SDK 54 notifications](https://github.com/expo/expo/blob/sdk-54/docs/pages/versions/v54.0.0/sdk/notifications.mdx): `getPermissionsAsync`, `requestPermissionsAsync`의 반환 형태(`granted`, `canAskAgain`).
 
 ### 4. 힌트
@@ -151,7 +151,7 @@ Notification 두 함수는 동작이 다르다. 전자는 무조건 요청하고
 - **힌트 3 (함정)**:
   - `error`의 타입이 `Error`가 아닐 수 있다. 추출한 컴포넌트가 `unknown`을 받아 어떻게 메시지를 만들지 정한다 (2-4와 충돌하지 않게).
   - footer를 컴포넌트로 만들 때 `isFetchingNextPage`가 false면 `null`을 반환하는 책임을 컴포넌트가 질지 호출부가 질지 한쪽으로 통일.
-  - `PermissionBlockedNotice`는 `blocked` 조건(`status?.granted === false && !status.canAskAgain`)도 세 곳에 있다 (`NotificationScreen.tsx:37`, `LocationScreen.tsx:37`, `PhotoScreen.tsx:29`). 조건까지 추출할지는 선택이나, 추출하면 `status` 타입이 훅마다 달라 타입 맞추기가 번거롭다.
+  - `PermissionBlockedNotice`는 `blocked` 조건(`status?.granted === false && !status.canAskAgain`)도 세 곳에 있다 (`NotificationScreen.tsx`, `LocationScreen.tsx`, `PhotoScreen.tsx` 각각의 `blocked` 변수). 조건까지 추출할지는 선택이나, 추출하면 `status` 타입이 훅마다 달라 타입 맞추기가 번거롭다.
   - 2-6이 `permissionError` 렌더를 추가했다면 그 위치와 새 컴포넌트가 겹치지 않는지 확인.
   - `Btn`으로 대체할 때 닫기 버튼이 `kind="ghost"` 맞는지, 글자색이 3-1 토큰을 통해 한 곳에서 나오는지.
 
@@ -204,15 +204,15 @@ grep -rn "openSettings" src     # 안내 컴포넌트 안에만
 
 | 후보 | 위치 | 왜 의심하는가 |
 |------|------|---------------|
-| `renderItem` 인라인 함수 | `FeedListScreen.tsx:176-212` | 렌더마다 새 함수. 안에서 `SwipeableRow`에 `onDelete`/`onLongPress` 인라인 콜백을 만들어 넘김 (`:178-179`) |
-| `SwipeableRow` | `src/components/SwipeableRow.tsx:19-68` | `Gesture.Pan()`/`Gesture.LongPress()`/`Gesture.Race()`를 렌더마다 새로 생성 (`:30-51`, `:63`) |
-| 롱프레스 시 목록 전체 재렌더 | `FeedListScreen.tsx:54,58-61` | `setSheetPost`가 화면 상태라 `FlatList`가 있는 `FeedListScreen` 전체가 다시 렌더 |
-| 로그 무제한 증가 | `NetworkScreen.tsx:26-27` (`appendLog`), `:224` (`data={logs}`) | `[새 항목, ...prev]`로 계속 쌓임. 상한 없음 |
-| `AuthContext` 값 전체가 한 덩어리 | `App.tsx:60-95` (`useMemo`), `src/auth/AuthContext.tsx:5-12` | `user`나 `persistError`가 바뀌면 모든 소비자가 재렌더 |
+| `renderItem` 인라인 함수 | `FeedListScreen.tsx`의 `FlatList` `renderItem` | 렌더마다 새 함수. 안에서 `SwipeableRow`에 `onDelete`/`onLongPress` 인라인 콜백을 만들어 넘김 |
+| `SwipeableRow` | `src/components/SwipeableRow.tsx`의 `SwipeableRow` 컴포넌트 본문 | `Gesture.Pan()`/`Gesture.LongPress()`/`Gesture.Race()`를 렌더마다 새로 생성 (`pan`·`longPress` 선언, `GestureDetector`의 `Gesture.Race(pan, longPress)`) |
+| 롱프레스 시 목록 전체 재렌더 | `FeedListScreen.tsx`의 `sheetPost` state와 `openSheet` | `setSheetPost`가 화면 상태라 `FlatList`가 있는 `FeedListScreen` 전체가 다시 렌더 |
+| 로그 무제한 증가 | `NetworkScreen.tsx`의 `appendLog`, 로그 `FlatList`의 `data={logs}` | `[새 항목, ...prev]`로 계속 쌓임. 상한 없음 |
+| `AuthContext` 값 전체가 한 덩어리 | `App.tsx`의 `auth` `useMemo`, `src/auth/AuthContext.tsx`의 `Auth` 타입 | `user`나 `persistError`가 바뀌면 모든 소비자가 재렌더 |
 
-`AuthContext` 소비자는 3곳이다: `navigation/index.tsx:109` (`user`만), `ProfileScreen.tsx:13` (전부), `LoginScreen.tsx:31` (`signIn`, `persistError`). `App.tsx:94`의 `useMemo` 의존성은 `[user, persistError]`라서 이 둘이 안 바뀌면 값 참조는 안정적이다. 즉 "분리해야 한다"가 아니라 "분리하면 실제로 줄어드는 렌더가 있는가"를 먼저 보는 문제다.
+`AuthContext` 소비자는 3곳이다: `navigation/index.tsx`의 `RootNavigator` (`user`만), `ProfileScreen.tsx`의 `ProfileScreen` (전부), `LoginScreen.tsx`의 `LoginScreen` (`signIn`, `persistError`). `App.tsx`의 `auth` `useMemo` 의존성은 `[user, persistError]`라서 이 둘이 안 바뀌면 값 참조는 안정적이다. 즉 "분리해야 한다"가 아니라 "분리하면 실제로 줄어드는 렌더가 있는가"를 먼저 보는 문제다.
 
-현재 `FeedListScreen.tsx:69`의 `posts`는 이미 `useMemo`다. 그 위에서 `memo`를 쌓을 때 참조 안정성이 어디서 깨지는지가 포인트다.
+현재 `FeedListScreen.tsx`의 `posts`는 이미 `useMemo`다. 그 위에서 `memo`를 쌓을 때 참조 안정성이 어디서 깨지는지가 포인트다.
 
 재현 시나리오(측정용, 3개 이상 정해 놓는다):
 1. 피드 목록을 연 직후.
@@ -246,10 +246,10 @@ RN에서 다른 점: 목록은 `FlatList`가 보이는 범위만 렌더하고, J
 - **힌트 1 (방향)**: 코드를 건드리기 전에 시나리오 1~4를 각각 Profiler로 기록하고, 컴포넌트별 렌더 횟수와 커밋 시간을 표로 남긴다. 가장 비싼 항목이 후보 표의 어느 줄과 맞는지 본다. 맞지 않으면 그 후보는 건드리지 않는다.
 - **힌트 2 (API·패턴)**: 측정 도구는 React Native DevTools의 Profiler 패널. 수정 도구는 문제가 확인된 경우에만: `React.memo`, `useCallback`, `renderItem`을 별도 컴포넌트로 분리, 배열 길이 상한(`slice` 등 기존 JS 도구), Context 분리(값/액션 분리 또는 용도별 두 Context).
 - **힌트 3 (함정)**:
-  - `SwipeableRow`에 `memo`를 붙여도 `FeedListScreen.tsx:178-179`의 인라인 콜백이 그대로면 매번 props가 바뀐다. 반대로 콜백을 안정화해도 `children`(JSX)이 매번 새 요소라 얕은 비교가 실패할 수 있다. 어디서 깨지는지 Profiler에서 확인한다.
+  - `SwipeableRow`에 `memo`를 붙여도 `FeedListScreen.tsx`의 `renderItem` 안 인라인 콜백이 그대로면 매번 props가 바뀐다. 반대로 콜백을 안정화해도 `children`(JSX)이 매번 새 요소라 얕은 비교가 실패할 수 있다. 어디서 깨지는지 Profiler에서 확인한다.
   - `Gesture.Pan()` 객체를 렌더마다 새로 만드는 것이 실제로 비싼지는 측정 대상이다. 임의로 `useMemo`를 붙이지 않는다.
   - 로그 상한은 렌더 최적화가 아니라 **메모리 증가 방지**다. 목적이 다르므로 Profiler 없이도 판단할 수 있는 항목이다. 상한 값은 근거와 함께 정한다.
-  - `AuthContext` 분리 후에는 `App.tsx:118`의 Provider 구조와 `useAuth` 소비자 3곳이 모두 영향을 받는다. 분리 결과가 측정에서 이득이 없으면 되돌린다.
+  - `AuthContext` 분리 후에는 `App.tsx`의 `AuthContext.Provider` 구조와 `useAuth` 소비자 3곳이 모두 영향을 받는다. 분리 결과가 측정에서 이득이 없으면 되돌린다.
   - dev 모드의 `StrictMode` 등으로 렌더 횟수가 부풀 수 있다. 이 프로젝트는 `StrictMode`를 쓰지 않는다(`index.ts`, `App.tsx` grep 확인).
   - 최적화 전/후 비교는 같은 시나리오, 같은 순서, 같은 기기 상태로.
 
@@ -283,7 +283,7 @@ npm start    # `i` 키로 iOS 시뮬레이터
 
 ### README 문구 갱신 (사용자 직접 과제)
 
-프로젝트 루트 `README.md:28`의 "한계" 절에 이렇게 적혀 있다.
+프로젝트 루트 `README.md`의 "한계" 절에 이렇게 적혀 있다.
 
 > 성능 최적화(`React.memo`, `getItemLayout`)와 접근성은 다루지 않음.
 
@@ -296,7 +296,7 @@ npm start    # `i` 키로 iOS 시뮬레이터
 
 - Profiler를 켜지 않고 "느릴 것 같아서" 먼저 `memo`/`useCallback`을 도배한다.
 - 의존성 배열이 틀린 `useCallback`으로 오래된 값을 잡는 버그를 만든다.
-- 로그 상한을 두면서 `logIdRef`(`NetworkScreen.tsx:25`) 의미를 깨 key가 겹치게 만든다.
+- 로그 상한을 두면서 `logIdRef`(`NetworkScreen.tsx`) 의미를 깨 key가 겹치게 만든다.
 - 측정 환경(dev, 시뮬레이터)과 실제 체감(release, 실기기)을 같은 것으로 취급한다.
 
 ---
@@ -312,33 +312,33 @@ npm start    # `i` 키로 iOS 시뮬레이터
 | 항목 | 현재 상태 | 위치 |
 |------|-----------|------|
 | console.log | 해당 있음 | 아래 표 |
-| AuthContext 기본값 | 해당 있음 | `src/auth/AuthContext.tsx:14-20` |
-| import 순서 | 해당 있음 (일부 파일) | `src/navigation/index.tsx:19`, `src/screens/LocationScreen.tsx:1-12` |
-| Splash | 해당 있음 (확인 필요 포함) | `app.json:11-15`, `App.tsx:97-103` |
+| AuthContext 기본값 | 해당 있음 | `src/auth/AuthContext.tsx`의 `createContext` 기본값 |
+| import 순서 | 해당 있음 (일부 파일) | `src/navigation/index.tsx`의 `react-native` import, `src/screens/LocationScreen.tsx`의 상단 import 블록 |
+| Splash | 해당 있음 (확인 필요 포함) | `app.json`의 `splash` 설정, `App.tsx`의 `!isReady` 분기 |
 | CI 워크플로 | 해당 있음 (없음을 확인) | `.github/` 디렉터리 자체가 없음 |
 
 **console.\***
 
 | 위치 | 내용 | 비고 |
 |------|------|------|
-| `FeedListScreen.tsx:34-35` | 포커스/블러 로그 | `useFocusEffect` 학습용 (`docs/p3-study-guide.md:16`, `:111` 참고). 지우면 이 effect 자체가 무의미해지는지 확인 |
-| `ComposeScreen.tsx:139` | `저장:` 로그 | 저장 로직이 없어 이 로그가 유일한 동작(뒤이어 `navigation.goBack()`으로 모달만 닫힌다). 줄 끝 주석에 이유가 적혀 있음 |
-| `ComposeScreen.tsx:110` | `console.error(error.error)` | 이미지 로드 실패 |
-| `src/api/posts.ts:69` | `console.warn` | 캐시에 글이 없을 때 |
+| `FeedListScreen.tsx`의 `useFocusEffect` 콜백 | 포커스/블러 로그 | `useFocusEffect` 학습용 (`docs/p3-study-guide.md`의 "0. 웹 라우팅과 다른 5가지" 중 5번 항목과 "5. 화면 생명주기 — useEffect vs useFocusEffect" 절 참고). 지우면 이 effect 자체가 무의미해지는지 확인 |
+| `ComposeScreen.tsx`의 `저장` `Btn` `onPress` | `저장:` 로그 | 저장 로직이 없어 이 로그가 유일한 동작(뒤이어 `navigation.goBack()`으로 모달만 닫힌다). 줄 끝 주석에 이유가 적혀 있음 |
+| `ComposeScreen.tsx`의 `Image` `onError` | `console.error(error.error)` | 이미지 로드 실패 |
+| `src/api/posts.ts`의 `setMutationDefaults(TOGGLE_LIKE_KEY)` `onSuccess` | `console.warn` | 캐시에 글이 없을 때 |
 
 `eslint.config.js`에는 `no-console` 규칙이 없다 (`eslint-config-expo` 기본 설정에도 `no-console`은 없다 — `node_modules/eslint-config-expo` grep 0건). 이 4개를 같은 기준으로 분류하는 것이 과제다. "전부 삭제"가 정답이라는 전제는 없다.
 
-**AuthContext 기본값**: `createContext<Auth>({...})`의 기본값이 no-op 함수들이다. `AuthContext.Provider` 밖에서 `useAuth()`를 호출해도 에러 없이 동작하는 척한다. 실제 Provider는 `App.tsx:118`에 하나만 있다.
+**AuthContext 기본값**: `createContext<Auth>({...})`의 기본값이 no-op 함수들이다. `AuthContext.Provider` 밖에서 `useAuth()`를 호출해도 에러 없이 동작하는 척한다. 실제 Provider는 `App.tsx`의 `AuthContext.Provider` 하나만 있다.
 
 **import 순서**: 두 곳이 다르다.
-- `navigation/index.tsx`는 `react-native` import(`:19`)가 상대경로 import 사이에 끼어 있다.
+- `navigation/index.tsx`는 `react-native` import가 상대경로 import 사이에 끼어 있다.
 - `LocationScreen.tsx`는 `react-native`, 상대경로, `expo-location`, 상대경로, `react`, 상대경로, 서드파티가 섞여 있다.
 - 이 프로젝트의 다른 파일(`FeedListScreen.tsx`, `NetworkScreen.tsx` 등)은 외부 패키지 → 상대경로 순서다. 이 관례를 따른다.
 - `npx eslint src/navigation/index.tsx src/screens/LocationScreen.tsx` 결과는 `LocationScreen.tsx`의 `prettier/prettier` 3건뿐이고, **import 순서 규칙은 걸리지 않는다**. 즉 린터가 잡아 주지 않는 정리다 (prettier 3건은 2-1 범위).
 
 **Splash**
-- `app.json:11-15`: splash 배경이 `#ffffff`이고 `userInterfaceStyle`은 `"light"`(`:9`). 앱 화면 배경은 어두운 `#0f1115`다 (`styles.ts`의 `screen`).
-- `App.tsx:97-103`: `isReady` 전에는 빈 어두운 `View`만 렌더한다. 네이티브 splash(흰색) → 빈 어두운 화면 → 앱 순으로 이어져 흰색 깜빡임이 있는지 시뮬레이터에서 확인한다.
+- `app.json`의 `splash`: 배경이 `#ffffff`이고 `userInterfaceStyle`은 `"light"`. 앱 화면 배경은 어두운 `#0f1115`다 (`styles.ts`의 `screen`).
+- `App.tsx`의 `!isReady` 분기: `isReady` 전에는 빈 어두운 `View`만 렌더한다. 네이티브 splash(흰색) → 빈 어두운 화면 → 앱 순으로 이어져 흰색 깜빡임이 있는지 시뮬레이터에서 확인한다.
 - `package.json`과 `node_modules`에 `expo-splash-screen`이 **없다**. 코드에서 splash를 제어하는 API는 현재 쓰이지 않는다. splash 제어 방법과 SDK 54에서의 정확한 설정은 검증된 링크가 없다 (확인 필요).
 - `app.json`의 `userInterfaceStyle`은 2-9도 다룬다. 같은 줄을 두 미션이 건드리므로 먼저 한 쪽만 정하고 기록한다.
 
@@ -370,8 +370,8 @@ npm start    # `i` 키로 iOS 시뮬레이터
   - Splash: 네이티브 설정(`app.json`)과 JS 쪽 로딩 화면의 색을 일치시키는 방향이 있고, `expo-splash-screen`으로 숨김 시점을 제어하는 방향이 있다. 후자는 의존성 추가이므로 추가할지 먼저 판단.
   - CI: 트리거 종류, 런타임(Node) 설정, 로컬에서 쓰는 검증 명령과 같은 단계를 어떻게 옮길지.
 - **힌트 3 (함정)**:
-  - `useAuth`의 반환 타입을 바꾸면 소비자 3곳(`navigation/index.tsx:109`, `ProfileScreen.tsx:13`, `LoginScreen.tsx:31`)의 `null` 처리가 필요해진다. 타입체크가 어디서 깨지는지 보면서 진행.
-  - `ComposeScreen.tsx:139`의 로그를 지우면 입력값이 어디에도 남지 않고 모달만 닫힌다. 지우는 것이 정리인지 기능 제거인지 의식한다.
+  - `useAuth`의 반환 타입을 바꾸면 소비자 3곳(`navigation/index.tsx`의 `RootNavigator`, `ProfileScreen.tsx`, `LoginScreen.tsx`)의 `null` 처리가 필요해진다. 타입체크가 어디서 깨지는지 보면서 진행.
+  - `ComposeScreen.tsx`의 `저장` 버튼 로그를 지우면 입력값이 어디에도 남지 않고 모달만 닫힌다. 지우는 것이 정리인지 기능 제거인지 의식한다.
   - CI는 현재 `npx eslint .`에 prettier 오류가 남아 있으면 실패한다 (2-1 선행 여부 확인). CI를 먼저 켜면 첫 실행부터 빨간색이다.
   - `npm test`는 약 5초 걸리는 테스트가 있다 (2-11에서 줄일 예정). CI 타임아웃과 무관하지만 알고 있을 것.
   - `.github/workflows`는 저장소에 올라가는 파일이다. 시크릿이나 토큰은 쓰지 않는다.
