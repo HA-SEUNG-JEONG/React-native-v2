@@ -191,7 +191,7 @@ npx eslint .
 ### 1. 증상과 위치
 
 - `src/screens/LocationScreen.tsx`의 `return` JSX 하단, `errorMessage` 줄 바로 위 — `{scope && <Text>권한 범위 : {scope}</Text>}`. `style`이 없다.
-- `getCurrentPosition` — `scope`는 `res.ios?.scope`에서 오므로 **iOS에서만** 값이 생긴다. Android에서는 이 줄이 렌더되지 않는다.
+- `getCurrentPosition` — `scope`의 출처는 플랫폼마다 다르다. 타입 선언(`Location.types.d.ts`)은 `res.ios?.scope`라고 하지만 **런타임 응답은 다르다.** iOS는 최상위 `res.scope`(`"whenInUse"` 등)를 주고 `res.ios`는 없다. Android는 `scope` 없이 `res.android.accuracy`(`"fine"` 같은 문자열)를 준다. 그래서 `res.ios?.scope`로 읽으면 두 플랫폼 모두 `null`이다. 직접 `console.log(res)`로 확인한다.
 - 화면 배경은 `styles.screen`의 `#0f1115`(`src/theme/styles.ts`)로 어둡다. 같은 화면의 다른 `Text`는 스타일을 받는다.
 
 재현 (iOS 시뮬레이터): 홈 → 위치 설정 → "현재 위치 가져오기" → 권한 허용 → 지도 아래에 "권한 범위" 줄이 있어야 하는데 배경에 묻혀 보이지 않는다.
@@ -220,13 +220,13 @@ npm run typecheck
 npx eslint .
 ```
 
-시뮬레이터(iOS): 위 재현 절차 후 "권한 범위" 줄이 읽혀야 한다. Android는 `scope`가 `null`이라 이 줄 자체가 없는 것이 정상이다.
+시뮬레이터(iOS): 위 재현 절차 후 "권한 범위" 줄이 읽혀야 한다. Android는 `scope`가 없으므로 `res.android.accuracy`를 대신 보여 주지 않으면 이 줄이 나오지 않는다. 두 플랫폼에서 값이 나오는지 확인한다.
 
 ### 6. 자기 체크리스트
 
 말로 설명할 수 있다
 - [ ] RN `Text`가 부모 `View`의 글자색을 상속하지 않는 이유
-- [ ] 이 줄이 iOS에서만 나타나는 이유
+- [ ] 타입 선언과 런타임 응답이 다른 이유, 그리고 iOS(`res.scope`)와 Android(`res.android.accuracy`)에서 값이 어디서 오는지
 
 직접 구현했다
 - [ ] 다크 배경에서 읽을 수 있다
