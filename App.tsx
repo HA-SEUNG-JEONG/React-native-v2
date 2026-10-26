@@ -7,7 +7,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import { queryClient } from "./src/api/posts";
 import { asyncStoragePersister } from "./src/api/persist";
-import { logout } from "./src/api/auth";
+import { isLoggedIn, logout } from "./src/api/auth";
 import { AuthContext, type Auth } from "./src/auth/AuthContext";
 import { RootNavigator, linking, LinkingFallback } from "./src/navigation";
 import { styles } from "./src/theme/styles";
@@ -38,6 +38,14 @@ export default function App() {
 
   useEffect(() => {
     SecureStore.getItemAsync(AUTH_KEY)
+      .then((stored) => {
+        // 토큰 세션은 메모리뿐이라 재시작하면 항상 없다 — user만 복원하면 불일치하므로 로그아웃 취급
+        if (stored !== null && !isLoggedIn()) {
+          SecureStore.deleteItemAsync(AUTH_KEY).catch(() => {});
+          return null;
+        }
+        return stored;
+      })
       .then(setUser)
       .catch(() => {
         // 조회 실패는 "로그아웃 상태"로 취급 — 앱을 못 띄우게 하지 않음

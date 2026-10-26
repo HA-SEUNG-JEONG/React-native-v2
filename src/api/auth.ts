@@ -19,6 +19,8 @@ let refreshInFlight: Promise<Tokens> | null = null; // 진행 중인 토큰 갱�
 let loginInFlight: Promise<void> | null = null; // 진행 중인 로그인 Promise, 로그인 버튼 연타 방어
 let refreshCount = 0; // 실제 갱신이 몇 번 일어났는지 센 카운터
 
+let generation = 0; // 로그아웃마다 +1 — 이전 세대에서 시작한 비동기 작업을 무효화
+
 export function getRefreshCount() {
   return refreshCount;
 }
@@ -28,8 +30,11 @@ export function isLoggedIn() {
 }
 
 export function logout() {
-  // TODO(미션 1-6): 로그아웃은 모듈 상태를 어디까지 되돌려야 할까? 선언된 let 변수를 전부 훑어보세요.
-  // session 값을 null로 비워야 할까?
+  generation += 1;
+  session = null;
+  refreshInFlight = null;
+  loginInFlight = null;
+  refreshCount = 0;
 }
 
 function issueTokens(): Tokens {
@@ -42,13 +47,15 @@ function issueTokens(): Tokens {
 
 export async function login(username: string, password: string): Promise<void> {
   if (loginInFlight) return loginInFlight;
+  const myGen = generation;
   loginInFlight = (async () => {
     await new Promise((r) => setTimeout(r, 400));
     if (password !== "1234")
       throw new Error("비밀번호가 틀림 (데모 비밀번호: 1234)");
+    if (myGen !== generation) throw new Error("로그아웃됨 — 로그인 취소");
     session = issueTokens();
   })().finally(() => {
-    loginInFlight = null;
+    if (myGen === generation) loginInFlight = null;
   });
   return loginInFlight;
 }
@@ -70,14 +77,16 @@ async function callProtectedApi(accessToken: string): Promise<string> {
 
 function refreshAccessToken(): Promise<Tokens> {
   if (refreshInFlight) return refreshInFlight;
+  const myGen = generation;
   refreshInFlight = (async () => {
     await new Promise((r) => setTimeout(r, 600));
+    if (myGen !== generation) throw new Error("로그아웃됨 — 갱신 취소");
     if (!session) throw new Error("리프레시 토큰 없음 — 재로그인 필요");
     refreshCount += 1;
     session = issueTokens();
     return session;
   })().finally(() => {
-    refreshInFlight = null;
+    if (myGen === generation) refreshInFlight = null;
   });
   return refreshInFlight;
 }

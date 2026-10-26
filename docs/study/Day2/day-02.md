@@ -4,7 +4,7 @@
 **시작 상태**: `src/api/auth.ts`의 `logout()` 본문이 비어 있다. `session`·`refreshInFlight` 리셋조차 없는 곳에서 시작한다 (10/23 미완분 이월). 순서는 ① 가장 단순한 리셋 복원 → ② 테스트 → ③ 미션 본론(변수 4개 분류, 진행 중 비동기)이다. Tier 1 중 두 번째로 무겁고 설계 결정이 3개 있다. 규칙: [rules.md](./rules.md)
 
 ## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
+- [x] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
 - [ ] 05~15 결정 3개 글로 쓰기: `refreshCount` 리셋 여부, 진행 중 `login`/갱신이 로그아웃을 되살리지 못하게 하는 방식(세대 값 외 대안과 장단 한 줄씩), 재시작 후 `user`는 있는데 `session`이 없는 불일치의 선택지 → 코딩 전에 `reviews/1-6.md` 초안에 적는다
 - [ ] 15~60 구현: B·C 테스트를 초록으로 만든다. `src/api/auth.ts`의 `login()`·갱신 경로(`refreshInFlight` 설정부)에 선택한 방식을 직접 타이핑 → 테스트를 하나씩 통과시킨다
 - [ ] 60~70 검증: `npm test`(약 5초, 새 테스트 포함) · `npm run typecheck` · `npx eslint .` · 경로 D 재현을 선택한 해법의 기대 동작과 대조
