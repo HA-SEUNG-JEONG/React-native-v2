@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Stop hook: format + lint changed TS/JS files. Non-blocking (never fails the turn).
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
+[ -f package.json ] || exit 0  # Day 1 앱 생성 전에는 건너뜀
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use 22.21.1 >/dev/null 2>&1
