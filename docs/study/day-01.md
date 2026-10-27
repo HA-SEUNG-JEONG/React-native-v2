@@ -53,12 +53,14 @@ Daily Log의 출발점인 빈 Expo 앱을 루트에 만든다. 오늘은 화면�
 
 완료 기준:
 
-- [ ] 루트에 `AGENTS.md`, `CLAUDE.md`, `.claude/`, `docs/`가 그대로 있다(`git status`로 삭제 표시가 새로 생기지 않았는지 본다)
-- [ ] `_tmp/` 폴더가 남아 있지 않다
-- [ ] `package.json`과 `app.json`의 이름이 `daily-log`다
-- [ ] `npm ls`에서 expo가 54.0.x, react-native 0.81.5, react 19.1.0, expo-router 6.0.x다
-- [ ] 시뮬레이터에서 템플릿의 탭 화면(Home, Explore)이 보인다
-- [ ] 루트 `app.json`의 `expo.experiments`에서 `reactCompiler`와 `typedRoutes`가 `true`인 것을 눈으로 확인했다(Day 62, 15에서 다룬다)
+
+
+- [x] 루트에 `AGENTS.md`, `CLAUDE.md`, `.claude/`, `docs/`가 그대로 있다(`git status`로 삭제 표시가 새로 생기지 않았는지 본다)
+- [x] `_tmp/` 폴더가 남아 있지 않다
+- [x] `package.json`과 `app.json`의 이름이 `daily-log`다
+- [x] `npm ls`에서 expo가 54.0.x, react-native 0.81.5, react 19.1.0, expo-router 6.0.x다
+- [x] 시뮬레이터에서 템플릿의 탭 화면(Home, Explore)이 보인다
+- [x] 루트 `app.json`의 `expo.experiments`에서 `reactCompiler`와 `typedRoutes`가 `true`인 것을 눈으로 확인했다(Day 62, 15에서 다룬다)
 
 ## 검증(10분)
 
@@ -71,9 +73,9 @@ Daily Log의 출발점인 빈 Expo 앱을 루트에 만든다. 오늘은 화면�
 
 | 예측  | 실제  | 다른 이유 |
 | --- | --- | ----- |
-| 1   |     |       |
-| 2   |     |       |
-| 3   |     |       |
+| 1   | "The directory React-native-v2 has files that might be overwritten:" 목록(`.claude`, `AGENTS.md`, `CLAUDE.md`, `app`, `package.json` 등)을 보여 주고 "Try using a new directory name, or moving these files."로 거부했다. 설치 단계까지 가지 않았고 파일도 건드리지 않았다. | 예측한 "설치 오류"가 아니라 생성 전 사전 검사에서 막혔다. `create-expo-app`은 대상 폴더에 템플릿과 겹칠 수 있는 파일이 있으면 덮어쓰지 않고 중단한다. 그래서 빈 `_tmp`에 만든 뒤 옮긴다. |
+| 2   | 껍데기 앱은 Expo Go(`host.exp.Exponent`)였다. `exp://127.0.0.1:8081`을 열면 Expo Go 안에서 우리 JS 번들이 실행됐다. `dailylog://`은 시뮬레이터가 열지 못했다(`LSApplicationWorkspaceErrorDomain error 115`). | 예측은 "잘 모르겠다"였다. Expo Go는 Expo가 미리 컴파일해 둔 네이티브 앱이라 우리는 JS 번들만 올린다. 그래서 우리 앱의 스킴(`dailylog`)은 Expo Go에 등록돼 있지 않다. |
+| 3   | Explore 탭을 띄운 채 Home 제목을 바꿔 저장했는데 앱은 Explore 탭에 그대로 있었다. 재시작이 아니라 바뀐 부분만 갱신(Fast Refresh)됐다. | 예측이 맞았다. 다만 "왜"는 적지 않았다. 재시작이면 첫 화면(Home)으로 돌아가므로, 현재 탭이 유지된 것이 갱신 범위의 증거다. 구문 오류를 냈을 때도 앱은 죽지 않고 `TransformError SyntaxError` 토스트만 띄웠고, 태그를 되돌려 저장하면 재시작 없이 복구됐다. |
 
 
 ## 이해 점검 질문
@@ -82,7 +84,7 @@ Daily Log의 출발점인 빈 Expo 앱을 루트에 만든다. 오늘은 화면�
 2. 루트에 바로 `create-expo-app`을 실행하지 않고 `_tmp`에 생성한 뒤 옮긴 이유는 무엇인가? `cp -R _tmp/. .`에서 `.`을 뒤에 붙인 이유는?
 3. 코드에 구문 오류를 내고 저장했다가 고쳤더니 앱을 다시 켜지 않아도 복구됐다. 이 동작을 가능하게 하는 기능의 이름과, 상태(state)가 어떻게 되는지 설명하라.
 
-<details class="orca-details">
+<details class="orca-details" open>
 <summary>정답</summary>
 
 1. Expo Go는 Expo가 미리 컴파일해 둔 네이티브 앱이고, 우리는 그 안에 JS 번들만 올린다. development build는 `expo-dev-client`를 포함해 우리 프로젝트의 네이티브 코드까지 직접 컴파일한 앱이라, Expo SDK 밖의 네이티브 라이브러리와 네이티브 설정 변경을 쓸 수 있다. App Store판 Expo Go는 최신 SDK 프로젝트만 열기 때문에(시험으로 확인한 사실) SDK 54 앱은 Expo Go를 자동 설치해 주는 시뮬레이터나 dev build로 실행한다.
@@ -93,9 +95,13 @@ Daily Log의 출발점인 빈 Expo 앱을 루트에 만든다. 오늘은 화면�
 
 ## 기록(5분)
 
-배운 것 3줄:
+배운 것 3줄: 
 
-막힌 점:
+1. create-expo-app 실행시 기존에 존재하는 파일이 있으면 진행하지 않고 중단한다는 사실
+2. Expo Go는 Expo가 미리 컴파일해 둔 앱이고, 우리 코드는 그 안에 JS 번들로만 올라간다. 그래서 우리 앱 스킴(dailylog://)은 Expo Go에서 열리지 않았다.
+3. 저장하면 앱 전체가 재시작되지 않고 바뀐 부분만 갱신된다(Fast Refresh). 구문 오류를 내도 앱이 죽지 않았고, 고치면 재시작 없이 복구됐다.
+
+막힌 점: 1,2번에 대한 질문의 의도를 파악하지 못했다.
 
 ## 커밋 단위 제안
 
