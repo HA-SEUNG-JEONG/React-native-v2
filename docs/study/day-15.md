@@ -1,27 +1,94 @@
-# Day 15 · 11/7 (토) — 미션 2-3 useDeletePost 정리 ⚠️ · 2/2일차: 정석 수정 + 변경 후 기록
-> **오늘의 핵심**: 낙관적 업데이트의 정석 순서(취소 → 스냅샷 → 수정 → 롤백 → 재동기화)를 따르되, 이 앱의 가짜 DELETE 때문에 `onSettled`의 invalidate가 화면을 되돌리므로 트레이드오프를 적고 고른다.
+# Day 15 · 11/16 (월) — expo-router 파일 기반 라우팅
 
-**시작 상태**: 스텁 브랜치에서 `src/api/posts.ts`의 `useDeletePost`에는 `mutationFn`만 있다. `onMutate`·`onError`·`onSettled`가 없어서 "변경 전"이 비어 있다(삭제해도 목록은 그대로, 롤백도 없음). 그래서 순서를 바꾼다. ① 힌트 없이 떠오르는 대로 낙관적 제거 + 실패 시 롤백을 **1차로 구현**한다. ② 아래 4가지를 기록한다. 이것이 "변경 전"이다. ③ 설계 질문을 풀고 정석으로 **2차 수정**한다. ④ 같은 4가지를 "변경 후"에 쓴다. ⚠️의 실체는 1차와 2차의 차이다. 원본 코드를 열어 "변경 전"을 베끼지 않는다.
+## 오늘의 목표
 
-**표시**: ⚠️ 동작 변경 — `docs/improve/reviews/2-3.md` 상단에 `⚠️ 동작 변경`과 변경 전후를 적는다. 11/6(금)은 [Tier 1 종료 절 버퍼](./day-07.md)라 이틀이 연속이 아니다.
+한 화면이던 Daily Log를 `app/` 폴더의 파일 두 개(피드 `index.tsx`, 기록 `write.tsx`)로 나누고, `Link`로 오가는 것을 확인한다.
 
-## 오늘 할 일 (90분)
-- [ ] 00~05 시작 의식: `git status --short --branch` → `nvm use 22.21.1` → 1일차의 "내일 할 일" 확인
-- [ ] 05~25 설계 결정 표: `onSettled` 선택지(성공 시에는 하지 않기 / 감수하기 / 다른 방식)의 트레이드오프를 표로 적고 고른다. `["post", id]`의 `id` 타입, `FeedDetailScreen`의 `onMutate`와 스냅샷 순서 비교도 여기서 정한다. Day 5~6의 "세 번째 선택지 재평가"도 한다
-- [ ] 25~65 2차 수정: 정석 순서로 고친다. 수정 중 확인(빈 페이지 `filter`와 `getNextPageParam`, `signal` 취소와 `cancelQueries`)은 아래 참고
-- [ ] 65~75 검증: `grep -n "any" src/api/posts.ts`에서 삭제 훅의 `any`가 사라졌는지 · `npm run typecheck` · `npx eslint .` · `npm test` · 변경 전 4가지 재확인
-- [ ] 75~90 기록: `reviews/2-3.md` "변경 후" 칸(같은 4가지), 선택한 동작과 버린 대안, 2-11 테스트 후보 메모, 내일 할 일 한 줄
+## 읽기(15분)
 
-## 끝 조건
-1. 변경 후 4가지가 변경 전과 나란히 기록돼 있다
-2. 순서 수정 · `any` 제거 · `onSettled` 처리 · `["post", id]` 처리 · 선택한 동작과 버린 대안 기록. 검증 4종 통과
-3. 말로 설명: `cancelQueries`를 스냅샷 앞에 두는 이유. `onSettled`가 `onSuccess`+`onError`와 다른 점.
+1. Expo Router 핵심 개념: https://docs.expo.dev/router/basics/core-concepts/
+   - 확인할 사실: `app`의 파일은 기본 export가 곧 화면이고, 파일 경로가 URL이 된다(`profile/friends.tsx`는 `/profile/friends`). `index.tsx`는 그 폴더의 기본 화면이다. 루트 `_layout.tsx`는 어떤 화면보다 먼저 렌더되고 예전 `App.jsx` 자리를 대신한다. 이 문서는 `src/app`으로 쓰여 있지만 이 프로젝트는 루트의 `app/`이다.
+2. 라우트 표기법: https://docs.expo.dev/router/basics/notation/
+   - 확인할 사실: `index`, `_layout`, `[param]`, `(group)`, `+not-found`가 각각 무엇을 뜻하는지 표로 정리한다. 특히 `(group)` 폴더 이름은 URL에 포함되지 않는다.
+3. 페이지 사이 이동: https://docs.expo.dev/router/basics/navigation/
+   - 확인할 사실: `<Link href="/about">`이 기본 이동 수단이다. `Link`는 기본적으로 자식을 `Text`로 감싸므로, `View`나 `Pressable`을 자식으로 쓰려면 `asChild`가 필요하다. 명령형 이동은 `router.push`, `router.replace`, `router.back`이다.
 
-## 막히면
-- 1차 구현에서 15분 막힘 → 2-3 힌트 1 요청: `onMutate`에서 줄 순서를 `FeedDetailScreen`의 `onMutate`와 나란히 놓고 비교한다
-- 다시 15분 → 힌트 2 (`InfiniteData<Post[]>` 타입, `getQueryData<T>` / `setQueryData<T>` 제네릭, `onSettled`, `invalidateQueries` / `removeQueries` / `setQueryData`, context 객체의 타입)
-- 다시 15분 → 힌트 3: 가짜 API 때문에 "정석(onSettled invalidate)"이 이 앱에선 화면을 되돌린다. 어떻게 할지는 트레이드오프를 적고 선택한다. 정답이 하나가 아니다
-- 막힘 규칙 전체는 [rules.md](./rules.md)
+## 예측(10분)
 
-## 참고 (아래로 밀어 둠)
-- **전날 이어받기**: [Day 13](./day-13.md)(11/5 (목))의 "내일 할 일" 한 줄을 이어받는다. 미션 전체의 읽을 절·코딩 전에 정할 것·임시 코드·기록 포인트는 [Day 13](./day-13.md)의 `## 참고`에 있다.
+1. `app/write.tsx`를 만들고 어디에서도 import하지 않았을 때, 앱에서 `/write` 화면에 갈 수 있는가?
+
+> 내 예측:
+
+2. `app/` 안에 `Card.tsx`처럼 기본 export가 없는 일반 파일을 두면 어떻게 되는가? (Day 12에서 `components`를 `src/`로 옮긴 이유와 연결해 적는다)
+
+> 내 예측:
+
+3. `Stack`을 쓰는 `_layout.tsx`에서 화면 제목을 따로 지정하지 않았을 때, 헤더에 보이는 제목은 무엇이 될 것 같은가?
+
+> 내 예측:
+
+## 만들기(40분)
+
+지금까지는 `app/index.tsx` 한 화면에 입력 폼과 목록이 같이 있었다. 이를 라우트 두 개로 나눈다.
+
+중요한 변화: 화면을 나누면 기록 화면에서 입력한 글이 피드에 나타나지 않는다. 피드는 `Post`(`MOCK_POSTS`)만 보여 주고 기록(`LogEntry`)과 섞지 않는다. 기록 개수 공유는 Day 22에서 한다. 오늘은 이 상태가 정상이다.
+
+새로 만들 파일:
+- `app/write.tsx` — 기존 `app/index.tsx`의 내용(입력 폼 + 이번에 작성한 글 목록)을 그대로 옮겨 기록 화면으로 쓴다. 기본 export 컴포넌트 이름은 `WriteScreen`으로 바꾼다.
+- `app/_layout.tsx` — 템플릿 초기화 후 이미 있으면 내용을 확인만 한다. 없으면 `Stack`을 렌더하는 기본 export를 만든다.
+
+```tsx
+import { Stack } from 'expo-router';
+
+export default function RootLayout() {
+  return <Stack />;
+}
+```
+
+고칠 파일:
+- `app/index.tsx` — 피드 화면 `FeedScreen`으로 바꾼다. `@/data/mock-posts`의 `MOCK_POSTS`를 `FlatList`와 `PostCard`로 보여 준다(Day 8의 `SectionList`는 `FlatList`로 되돌리고 `refreshing`·`onRefresh`는 유지한다). Day 7의 기록|피드 전환 버튼을 지운다. `now`·`useNow`는 피드에서 빼고 `app/write.tsx`의 `LogItem`에 남긴다. 화면 위쪽에 `<Link href="/write">글쓰기</Link>`를 둔다.
+- `app/write.tsx` — 위쪽에 피드로 돌아가는 `<Link href="/">피드</Link>`를 둔다.
+- `src/data/entries.ts`와 `ENTRIES`가 남아 있으면 모두 지운다.
+
+완료 기준:
+- [ ] `app/`에 `_layout.tsx`, `index.tsx`, `write.tsx`가 있고 `app/` 안에 라우트가 아닌 파일은 없다
+- [ ] 피드에서 `글쓰기`를 누르면 기록 화면으로 이동하고 헤더에 뒤로가기가 보인다
+- [ ] 기록 화면에서 글을 쓰면 그 화면의 목록에는 나타난다(피드에는 나타나지 않는다)
+- [ ] 피드가 `MOCK_POSTS`를 `PostCard`로 보여 준다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
+
+## 검증(10분)
+
+- 시뮬레이터에서 `글쓰기`를 누르고, 기록 화면에서 뒤로 가기를 눌러 피드로 돌아오는 것을 확인한다. 헤더의 제목 문자열을 적는다.
+- 예측 1~3과 실제를 비교해 다른 지점을 적는다.
+- 일부러 깨뜨려 보기: `app/write.tsx` 파일 이름을 `app/compose.tsx`로 바꾸고 `Link`의 `href="/write"`는 그대로 둔다. `npm run typecheck`에서 오류가 나는지, 앱에서 `글쓰기`를 눌렀을 때 무엇이 보이는지 적는다. `app.json`의 `experiments.typedRoutes` 값이 `true`인지도 함께 확인해 오류 여부와 연결해 적는다(타입이 지정된 라우트 문서: https://docs.expo.dev/router/reference/typed-routes/). 확인이 끝나면 이름을 되돌린다.
+
+## 이해 점검 질문
+
+1. `app/profile/index.tsx`, `app/(auth)/login.tsx`, `app/post/[id].tsx`는 각각 어떤 URL이 되는가?
+2. `Link`가 `<a>`와 달리 자식을 `Text`로 감싸는 이유와, 자식으로 `Pressable`을 쓰고 싶을 때 필요한 prop은 무엇인가?
+3. 화면을 둘로 나누자 기록 화면에서 `useState`로 든 글을 다른 화면이 읽을 수 없다. 왜이고, 어떻게 해결하게 되는가?
+
+<details>
+<summary>정답</summary>
+
+1. `/profile`, `/login`, `/post/<id 값>`이다. `index.tsx`는 폴더의 기본 화면이라 URL에 `index`가 붙지 않고, `(auth)`처럼 괄호로 묶인 폴더는 URL에 포함되지 않는 그룹이며, `[id]`는 동적 세그먼트다.
+2. RN에서는 문자열을 `Text` 안에서만 렌더할 수 있고, 링크의 기본 자식은 글자이기 때문이다. `Link`가 기본으로 `Text`로 감싸는 것이다. `View`나 `Pressable`을 자식으로 쓰려면 `asChild`를 붙여 `onPress`를 받는 자식에게 링크 동작을 위임해야 한다.
+3. 상태가 기록 화면 컴포넌트 안의 `useState`에 갇혀 있어, 다른 화면은 그 값에 접근할 수 없기 때문이다. 화면(컴포넌트) 밖에서 상태를 들고 있는 Context를 Day 21~22에서 도입해 해결한다.
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `refactor: 한 화면을 피드와 기록 라우트로 분리`
+- `feat: 샘플 데이터와 화면 이동 링크 추가`
+
+## 웹과 다른 점
+
+파일 경로가 URL이 되는 규칙은 Next.js와 비슷하지만, 앱에서 URL은 주소창이 아니라 화면 스택 이동과 딥링크(Day 18)에 쓰인다.

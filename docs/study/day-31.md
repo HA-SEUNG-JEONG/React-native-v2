@@ -1,52 +1,99 @@
-# Day 31 · 11/23 (월) — 미션 3-3 측정 후 re-render 최적화 (1/2): 측정만
+# Day 31 · 12/8 (화) — 낙관적 업데이트와 롤백
 
-> **오늘의 핵심**: 측정 없이 `memo`를 붙이지 않는다 — 오늘은 최적화 코드를 한 줄도 쓰지 않고 Profiler 수치로 "전" 표만 만든다.
+> 전제: Day 30의 `src/hooks/useCreatePost.ts`와 `src/api/posts.ts`, Day 28의 `src/hooks/usePosts.ts`(키 `['posts', { userId }]`, 데이터는 `Post[]`)와 피드(`app/(tabs)/index.tsx`)가 있다.
 
-**시작 상태**: 스텁이 건드리지 않은 미션이다. 선행 3-2([Day 30](./day-30.md))가 끝나 있어야 한다. 의심 지점 5개(`renderItem` 인라인, `SwipeableRow` 제스처 객체, 롱프레스 시 목록 전체 재렌더, 로그 무제한 증가, `AuthContext` 분리)는 "의심 지점"이지 "고칠 지점"이 아니다. 루트 `README.md`의 git 상태도 이번 주에 한 번 확인한다 (아래 참고 "한 번만 확인할 것").
+## 오늘의 목표
 
-## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch`(루트 `README.md` 상태도 본다), `nvm use 22.21.1`, 어제 "내일 할 일" 확인
-- [ ] 05~30 준비: React Native DevTools 여는 방법, Profiler 패널, Expo Go에서 연결되는지를 직접 알아낸다 → 적을 것: 되는 것/안 되는 것. 안 열리면 안 열린다는 사실을 기록하고 대체 수단(코드로 `<Profiler>` 감싸기)을 쓸지 판단
-- [ ] 30~55 측정(1): 시나리오 ① 피드 목록을 연 직후 ② 행 하나를 롱프레스해 시트를 열고 닫기 → 컴포넌트별 렌더 횟수·커밋 시간 기록
-- [ ] 55~75 측정(2): 시나리오 ③ 스크롤로 다음 페이지 로드 ④ 네트워킹 화면에서 재시도 데모/WebSocket 송신을 여러 번 눌러 로그를 쌓은 뒤 스크롤 → 같은 순서, 같은 상태로 기록
-- [ ] 75~90 기록: `docs/improve/reviews/3-3.md`의 "전" 표(시나리오 · 컴포넌트 · 렌더 횟수 · 커밋 시간 · 후보 표의 어느 줄과 맞나)를 먼저 쓰고 끝낸다, 내일 할 일 한 줄
+피드에서 글을 삭제할 때 서버 응답을 기다리지 않고 목록에서 먼저 지우고, 실패하면 원래대로 되돌린다.
 
-## 끝 조건
-1. 시나리오 4개의 "전" 표가 채워져 있고, 각 행이 의심 후보 5개 중 어느 줄과 맞는지(또는 맞지 않는지) 적혀 있다.
-2. `git diff`에 최적화 코드가 한 줄도 없고(대체 수단으로 `<Profiler>`를 감쌌다면 되돌렸다), 검증 4종이 통과한다.
-3. 말로 설명: dev 모드 측정값을 어떻게 읽어야 하는가 (절대값이 아니라 상대 비교).
+## 읽기(15분)
 
-## 막히면
-- React Native DevTools가 안 열리거나 Expo Go에서 연결이 안 되면: 그 사실을 기록한다. 문서도 열기 절차·연결 여부를 "확인 필요"로 남겼으니, 준비 25분을 넘기지 않고 대체 수단 사용 여부를 정해 측정으로 넘어간다.
-- 표를 어떻게 채울지 막히면: `3-3 힌트 1`(방향)을 요청한다. 정답 코드나 어느 후보를 고칠지는 요청하지 않는다.
+- https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates
+  - 방법이 두 가지다. `variables`를 이용해 UI에서만 임시 항목을 그리는 방법(캐시를 건드리지 않음)과, `onMutate`에서 캐시를 직접 고치는 방법이다. 여러 화면이 같은 데이터를 보면 캐시 방식을 쓴다.
+  - 캐시 방식의 순서는 `cancelQueries` → `getQueryData`로 이전 값 저장 → `setQueryData`로 낙관적 값 쓰기 → `onMutate`가 이전 값을 반환 → `onError`에서 그 값으로 복원 → `onSettled`에서 `invalidateQueries`다.
+  - `cancelQueries`는 진행 중인 재요청이 낙관적 값을 덮어쓰지 못하게 막는다.
+- https://tanstack.com/query/v5/docs/framework/react/guides/mutations
+  - `onMutate`가 반환한 값이 `onError`, `onSuccess`, `onSettled`의 `onMutateResult`(세 번째 인자)로 전달된다. 롤백용 스냅샷을 여기에 담는다.
+- https://tanstack.com/query/v5/docs/reference/QueryClient
+  - 우리 피드는 칩마다 캐시가 따로(`['posts', { userId: 1 }]`, `['posts', { userId: null }]` 등) 있다. `getQueriesData(filters)`는 일치하는 캐시 전부를 `[queryKey, data]` 쌍의 배열로 돌려주고, `setQueriesData(filters, updater)`는 일치하는 기존 캐시 전부를 한 번에 고친다(새 캐시는 만들지 않는다). updater는 불변으로 새 값을 만들어야 하고, 현재 값은 `undefined`일 수 있다.
 
-## 참고 (아래로 밀어 둠)
+확인할 버전: 최신 문서의 `onMutate(variables, context)`는 `context.client`를 주지만, 이 카드는 `useQueryClient()`로 얻은 `queryClient`를 클로저로 쓴다. 이 방식은 버전과 무관하게 동작한다. 콜백 인자 순서는 설치된 버전의 타입 정의로 확인한다.
 
-**읽을 학습 가이드 절**: 없음. 미션 문서 [3-3](../improve/tier3-cleanup.md)의 공식 문서 절 (React Native DevTools의 "React Profiler" 절). 문서의 Profiling 페이지는 네이티브 CPU 중심이고 React 렌더 측정을 다루지 않는다는 점에 주의한다.
+## 예측(10분)
 
-**읽는 법**: dev 모드 숫자는 절대값이 아니라 "어떤 컴포넌트가 몇 번 다시 그려지는가"의 **상대 비교**로만 쓴다. Performance 문서는 dev 모드에서 JS 성능이 크게 나빠지므로 release에서 확인하라고 한다.
+1. 삭제 버튼을 누른 직후, 서버 응답이 오기 전에 목록에서 그 글이 사라질까? 사라진다면 어떤 코드 때문인가?
 
-**준비에서 정할 것**: React Native DevTools 열기 방법, Profiler 패널, Expo Go에서 연결되는지는 문서도 **모두 "확인 필요"**로 남겼다. 오늘 이것부터 직접 알아내고 기록한다. 안 열리면 안 열린다는 사실을 기록하고 대체 수단(코드로 `<Profiler>` 감싸기)을 쓸지 판단한다.
+> 내 예측:
 
-**측정 시나리오 (같은 순서, 같은 상태로 기록)**
-1. 피드 목록을 연 직후
-2. 행 하나를 롱프레스해 시트를 열고 닫기
-3. 스크롤로 다음 페이지 로드
-4. 네트워킹 화면에서 재시도 데모/WebSocket 송신을 여러 번 눌러 로그를 쌓은 뒤 스크롤
+2. 서버가 실패했을 때 롤백(`setQueryData`)을 하지 않고 `invalidateQueries`만 호출하면 화면은 어떻게 보일까? 롤백을 하면 무엇이 달라질까?
 
-**표 (전)**
+> 내 예측:
 
-| 시나리오 | 컴포넌트 | 렌더 횟수 | 커밋 시간 | 후보 표의 어느 줄과 맞나 |
-| ---- | ---- | ----- | ----- | -------------- |
+3. JSONPlaceholder는 DELETE를 저장하지 않는다. 삭제 성공 뒤 `onSettled`에서 `['posts']`를 무효화하면 삭제한 글은 어떻게 될까? (https://jsonplaceholder.typicode.com/guide/ 의 "Write requests" 부분을 다시 본다.)
 
-내일 수정은 이 표가 정당화하는 것만 한다.
+> 내 예측:
 
-**한 번만 확인할 것**
-- 루트 `README.md`가 staged(`A`) 상태다 (10/21 기준). 미션 3-3 문서는 이 파일을 "untracked"라고 적었으니 **문서와 현재 상태가 어긋나 있다.** 3-3 때 다시 확인한다. 그 전까지는 미션 커밋에 섞이지 않게 `git add`를 파일 단위로 한다. (내일 README "한계" 문구 갱신 과제와 이어진다.)
-- 가이드 문서(`docs/2026-10-21-*.md` 두 개)는 스텁 커밋 `d09f659`에 포함돼 이제 tracked다.
+## 만들기(40분)
 
-**수정 중 확인**: 오늘은 수정이 없다. dev 모드의 `StrictMode` 등으로 렌더 횟수가 부풀 수 있다 (이 프로젝트는 `StrictMode`를 쓰지 않는다).
+피드 항목에 삭제 버튼을 달고 낙관적 삭제를 구현한다.
 
-**임시 코드 되돌릴 곳**: 대체 수단으로 `<Profiler>`를 감쌌다면 감싼 화면 파일 전부.
+새로 만들거나 고칠 파일:
+- `src/api/posts.ts`: `deletePost(id: number)` 추가(`DELETE /posts/:id`, Day 30처럼 `request`에 `method` 옵션이 필요하다). 낙관적 업데이트가 눈에 보이도록 요청 전에 800ms 지연(`await new Promise(r => setTimeout(r, 800))`)을 임시로 넣고, `id % 5 === 0`이면 지연 후 `throw new Error('삭제 실패')` 하게 한다. 둘 다 오늘 검증 후 지운다.
+- `src/hooks/useDeletePost.ts`: Day 30의 `useCreatePost`와 같은 모양의 훅. 낙관적 업데이트는 여기서 한다.
+- Day 11에서 분리한 피드 항목 컴포넌트(`src/components/PostCard.tsx`): 삭제 `Pressable`을 추가한다. `accessibilityLabel`로 "글 삭제"를 준다.
+- `app/(tabs)/index.tsx`: `useDeletePost()`를 쓰고 항목 컴포넌트에 `onDelete(id)`를 내려 준다.
 
-**기록 포인트**: DevTools가 열렸는지·Expo Go에서 연결되는지, "전" 표, 후보 표와 맞지 않는 행(= 건드리지 않을 후보).
+핵심 호출 형태:
+
+```ts
+onMutate: async (id: number) => {
+  await queryClient.cancelQueries({ queryKey: ['posts'] });
+  const previous = queryClient.getQueriesData<Post[]>({ queryKey: ['posts'] });
+  queryClient.setQueriesData<Post[]>({ queryKey: ['posts'] }, (old) => old?.filter((p) => p.id !== id));
+  return { previous };
+},
+onError: (_e, _id, onMutateResult) =>
+  onMutateResult?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data)),
+```
+
+완료 기준:
+- [ ] 삭제를 누르면 지연 시간(800ms) 전에 항목이 사라진다.
+- [ ] 칩 "전체"에서 `id` 1 글을 삭제한 직후 칩 "1"로 바꾸면, 캐시가 먼저 보이는 순간에는 그 글이 없다(칩별 캐시를 모두 고쳤기 때문). 곧이어 stale 재요청이 끝나면 서버가 삭제를 저장하지 않으므로 글이 다시 나타난다. 이 두 순간을 모두 관찰했다.
+- [ ] `id`가 5의 배수인 글을 삭제하면 사라졌다가 실패 후 원래 자리로 돌아온다.
+- [ ] 실패 시 사용자에게 "삭제하지 못했습니다" 문구를 보여 준다(`Alert.alert` 또는 화면 `Text`).
+- [ ] JSONPlaceholder가 삭제를 저장하지 않으므로, `onSettled`에서 무효화하면 삭제된 글이 되살아나는 현상을 직접 확인했다.
+- [ ] 위 현상을 피하려고 이 학습 앱에서는 무효화를 `onError` 안으로 옮기고, "실제 서버라면 `onSettled`에서 무효화해 서버 확정값과 맞춘다"는 이유를 주석 한 줄로 남겼다.
+
+## 검증(10분)
+
+1. 시뮬레이터 피드에서 `id`가 1인 글을 삭제한다. 지연 시간 전에 사라지는지 본다.
+2. `id`가 5인 글을 삭제한다. 사라졌다가 되돌아오는지, 실패 문구가 뜨는지 본다.
+3. 예측 3을 확인한다. `onSettled`에 무효화를 둔 상태에서 `id` 1 글을 삭제하고 되살아나는지 본다.
+4. 깨뜨려 보기: `onError`의 롤백(`setQueryData`) 줄만 주석 처리하고(무효화는 둔다) `id` 5를 삭제한다. 글이 롤백 없이 사라진 상태로 남는 시간과, 그 뒤 무효화로 돌아오는 시점을 비교한 뒤 되돌린다. 롤백이 하는 일이 "서버 재요청을 기다리지 않는 즉시 복구"임을 확인한다.
+
+> 다른 지점:
+
+## 이해 점검 질문
+
+1. `onMutate` 맨 앞에서 `cancelQueries`를 호출하는 이유는?
+2. 롤백에 쓸 스냅샷을 `onMutate`의 반환값에 담는 이유는? 컴포넌트 상태 변수에 담으면 어떤 문제가 있는가?
+3. 낙관적 업데이트를 "캐시 방식"과 "`variables` 방식" 중 어느 쪽으로 할지는 무엇으로 정하는가?
+
+<details><summary>정답</summary>
+
+1. 삭제 직전에 이미 진행 중이던 목록 재요청이 있으면, 그 응답이 나중에 도착해 방금 지운 항목을 다시 캐시에 써 넣을 수 있다. `cancelQueries`로 그 요청을 취소해 낙관적 값이 덮어써지지 않게 한다.
+2. `onMutate`의 반환값은 같은 mutation 호출의 `onError`, `onSettled`에 그대로 전달되므로 호출마다 자기 스냅샷을 갖는다. 컴포넌트 변수나 `useRef`에 담으면 빠르게 연달아 삭제할 때 앞 호출의 스냅샷을 뒤 호출이 덮어써서 엉뚱한 값으로 되돌릴 수 있다.
+3. 그 데이터를 화면 한 곳에서만 쓰면 캐시를 건드리지 않는 `variables` 방식이 코드가 짧고 롤백도 필요 없다. 여러 화면(목록과 상세, 칩별 목록 등)이 같은 데이터를 보면 캐시를 직접 고쳐야 모두 즉시 바뀐다. 오늘 피드 삭제는 칩마다 따로 있는 목록 캐시를 함께 고쳐야 하므로 캐시 방식으로 연습한다.
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `feat: 피드 글 삭제 낙관적 업데이트와 롤백 추가`
+- `chore: 삭제 지연·실패 재현용 임시 코드 제거`

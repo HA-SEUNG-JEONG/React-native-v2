@@ -1,37 +1,89 @@
-# Day 23 · 11/15 (일) — 미션 2-10 타입 보강
+# Day 23 · 11/26 (목) — 인증 흐름과 보호된 라우트(모의 로그인)
 
-> **오늘의 핵심**: 문서 버전(7.x와 6.x)을 섞지 않고 루트 타입 등록 방식을 실험으로 확인하며, 효과가 없으면 "이 코드에선 불필요"도 근거가 있으면 정답이다.
+## 오늘의 목표
 
-**시작 상태**: 2-10은 스텁이 손대지 않은 미션(원본 그대로)이다. 현재 코드는 `useNavigation`을 안 쓰므로(grep 0건) 이득이 "미래 확장"에 가깝다.
+모의 로그인으로 토큰 문자열을 `AuthContext`에 넣고, `Stack.Protected`로 로그인 전에는 로그인 화면만, 로그인 후에는 탭 화면만 보이게 만든다.
 
-## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch` → `nvm use 22.21.1` → 어제 기록의 "내일 할 일" 확인
-- [ ] 05~20 읽기: `src/navigation/types.ts`, `src/navigation/index.tsx`의 네비게이터 정의, React Navigation 7.x TypeScript 문서와 6.x 문서, 설치된 `@react-navigation/core`의 타입 정의(`lib/typescript/src/types.d.ts`의 `RootNavigator` 인터페이스 선언부 주변) → 적을 것: 7.x와 6.x의 루트 타입 등록 방식 차이
-- [ ] 20~35 문서 대조 + 먼저 실험: 전역 선언을 넣기 **전에** `useNavigation()` 호출 하나를 임시로 써서 잘못된 화면 이름에 `npm run typecheck`가 에러를 내는지 본다
-- [ ] 35~70 수정: 루트 네비게이터 등록, `tabsScreenOptions` 타입, `ProfileScreen`의 `await signOut()` 필요 여부, 죽은 `try/catch` 정리, `import type` 누락 수정. 선언 후 같은 실험으로 차이를 확인하고 임시 `useNavigation()` 호출을 지운다
-- [ ] 70~80 검증: `npm run typecheck`(전역 선언 후 기존 코드에서 새 에러가 생기는지) · `npx eslint .`(`ProfileScreen` 경고 해소) · `npm test` · 시뮬레이터: 틀린 비밀번호 → 오류 메시지, 맞는 비밀번호 → 진입, 로그아웃이 기존과 같다
-- [ ] 80~90 기록: `docs/improve/reviews/2-10.md`, 실험 전/후 결과와 결론, 내일 할 일 한 줄
+## 읽기(15분)
 
-## 끝 조건
-1. 틀린 비밀번호 → 오류 메시지, 맞는 비밀번호 → 진입, 로그아웃이 기존과 같다. 선언 전/후 실험 결과가 기록돼 있다 (결론이 "이 코드에선 불필요"여도 근거가 있으면 정답)
-2. 검증 4종 통과(`ProfileScreen` 경고 해소), 임시 `useNavigation()` 호출 제거
-3. 말로 설명: 7.x와 6.x의 루트 타입 등록 방식 차이와 이 프로젝트가 따르는 쪽. `import type`이 런타임에 주는 차이.
+1. https://docs.expo.dev/router/advanced/authentication/ — Context 세션 + `Stack.Protected` 예제.
+   - 확인할 사실: 모든 라우트는 항상 정의되어 있고, 런타임에 인증 상태로 접근을 막는다. `RootNavigator` 안에서 `<Stack.Protected guard={!!session}>`와 `<Stack.Protected guard={!session}>`로 화면 묶음을 나눈다.
+   - 확인할 사실: 로그아웃 화면에서는 `signOut()`만 호출하면 가드가 리다이렉트를 처리한다.
+2. https://docs.expo.dev/router/advanced/protected/ — 가드가 `false`가 될 때의 동작.
+   - 확인할 사실: 가드가 `true`에서 `false`로 바뀌면 그 화면의 history 항목이 모두 제거되고, 사용자는 anchor 라우트(보통 `index`) 또는 사용 가능한 첫 화면으로 보내진다.
+   - 확인할 사실: 보호된 화면은 클라이언트에서만 평가되며 서버 접근 제어를 대체하지 못한다.
+   - 주의: 이 두 페이지는 최신 문서다. `redirectTo` prop은 SDK 58+라고 적혀 있으니 쓰지 않는다. `Stack.Protected`가 SDK 54에서 그대로 동작하는지는 직접 실행해서 확인하고, 안 되면 "문서에서 확인 필요"로 막힌 점에 적는다.
 
-## 막히면
-- 15분 막힘 → 2-10 힌트 1 요청: 먼저 두 문서(7.x와 6.x)에서 "루트 타입을 어떻게 등록하는가"를 비교한다. 방식이 다르다
-- 다시 15분 → 힌트 2 (`BottomTabNavigationOptions`, `satisfies` 연산자의 장단 비교, `import type { … }`), 다시 15분 → 힌트 3
-- `tsc`가 조용하다고 효과가 있다고 믿지 않는다. 실험으로 확인한다. 막힘 규칙 전체는 [rules.md](./rules.md)
+## 예측(10분)
 
-## 참고
-- **읽을 학습 가이드 절**: [p3-study-guide.md](../p3-study-guide.md) 타입 절, [p1-study-guide.md](../p1-study-guide.md)의 TypeScript 절.
-- **먼저 실험 (효과가 있는지)**: 전역 선언을 넣기 **전에** `useNavigation()` 호출 하나를 임시로 써서 잘못된 화면 이름에 `tsc`가 에러를 내는지 본다. 현재 코드는 `useNavigation`을 안 쓰므로(grep 0건) 이득이 "미래 확장"에 가깝다. 선언 후 같은 실험으로 차이를 확인한다. `tsc`가 조용하다고 효과가 있다고 믿지 않는다. 결론이 "이 코드에선 불필요"여도 근거가 있으면 정답이다.
-- **코딩 전에 정할 것**
-  - 어느 네비게이터를 "루트"로 등록하나. 이 프로젝트는 루트가 로그인 여부로 두 갈래다.
-  - `tabsScreenOptions` 타입: 주석(타입 표기)과 `satisfies`의 장단 비교.
-  - `ProfileScreen`의 `await signOut()`이 정말 필요한가.
-- **수정 중 확인 (주의)**
-  - 죽은 `try/catch`는 **안쪽만** 지운다. `LoginScreen`의 바깥 `catch`(`login` 실패 처리)는 살아 있는 경로다.
-  - `import type` 누락 대상: `LocationScreen`의 `HomeStackParamList`, `NativeStackScreenProps`.
-  - 2-1에서 `LoginScreen`의 prettier 에러가 죽은 try/catch 안에 있었다는 점을 기억한다.
-- **임시 코드 되돌릴 곳**: 실험용 `useNavigation()` 호출 (원본 부록 C 표에는 없으나 본문에 "임시로 쓴다"고 적혀 있다). 끝낼 때 `git diff`로 확인한다.
-- **기록 포인트**: 선언 전/후 `tsc` 실험 결과, 루트 네비게이터 선택 이유, `satisfies` 비교.
+1. 로그인 성공 직후 `signIn()`만 호출하고 `router.replace`는 호출하지 않는다. 탭 화면으로 넘어가는가?
+   > 내 예측:
+2. 로그인한 상태에서 설정 탭의 "로그아웃"을 누르면 어느 화면이 보이는가? 그 상태에서 Android 하드웨어 뒤로가기(또는 iOS 스와이프 뒤로)를 하면 탭 화면이 다시 나오는가?
+   > 내 예측:
+3. 로그아웃한 뒤 다시 로그인하면, Day 22에서 저장한 내 기록은 남아 있는가 사라지는가? 그 이유는 `LogsProvider`가 어디에 있기 때문인가?
+   > 내 예측:
+
+## 만들기(40분)
+
+Daily Log에 로그인 화면을 추가하고, 탭 3개와 상세 화면은 로그인 후에만 보이게 한다. 서버는 없다. 토큰은 메모리(state)에만 있고 앱을 다시 켜면 사라진다. 저장은 Day 36에서 한다.
+
+**새 파일**
+- `src/contexts/AuthContext.tsx`: `AuthProvider`, `useAuth()`(Provider 밖이면 throw). 값은 `{ token: string | null; signIn: (email: string, password: string) => Promise<void>; signOut: () => void }`. `signIn`은 `setTimeout` 600ms로 서버 응답을 흉내 낸 뒤, 이메일이 비었거나 비밀번호가 4자 미만이면 `throw new Error('...')`, 아니면 `` `mock-${Date.now()}` `` 같은 문자열을 token으로 저장한다.
+- `app/sign-in.tsx`: 이메일·비밀번호 `TextInput`(Day 5, `secureTextEntry`), "로그인" 버튼. 제출 중에는 버튼을 비활성화하고 `ActivityIndicator`를 보이며, `signIn`이 던진 에러 메시지를 화면에 표시한다.
+
+**고칠 파일**
+- `app/_layout.tsx`: `AuthProvider`를 `ProfileProvider`, `LogsProvider`와 같은 높이(`Stack` 위)에 둔다. `Stack`은 `RootNavigator` 컴포넌트로 빼서 안에서 `useAuth()`를 쓴다.
+
+```tsx
+<Stack.Protected guard={!!token}>
+  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+  <Stack.Screen name="post/[id]" />
+  <Stack.Screen name="about" options={{ presentation: 'modal' }} />
+</Stack.Protected>
+<Stack.Protected guard={!token}>
+  <Stack.Screen name="sign-in" />
+</Stack.Protected>
+```
+
+Day 16·18에서 `app/_layout.tsx`의 `Stack`에 달았던 `Stack.Screen` 옵션(`post/[id]`의 기본 제목, `about`의 `presentation: 'modal'`)은 `RootNavigator` 안의 이 `Stack.Screen`들로 옮긴다.
+
+- 설정 탭 `app/(tabs)/settings/index.tsx`: "로그아웃" 버튼에서 `signOut()` 호출. 현재 로그인 토큰의 앞부분을 작게 보여 주는 `Text`를 하나 둔다(디버깅용).
+
+완료 기준
+- [ ] 앱을 켜면 로그인 화면이 먼저 보이고 탭 바는 없다.
+- [ ] 잘못된 입력(빈 이메일, 4자 미만 비밀번호)이면 에러 문구가 보이고 화면이 안 넘어간다.
+- [ ] 로그인 성공 시 `router.replace`를 직접 호출하지 않았는데도 탭 화면이 나온다.
+- [ ] 로그아웃하면 로그인 화면이 나오고, 뒤로가기로 탭 화면에 돌아갈 수 없다.
+- [ ] 제출 중에는 버튼이 눌리지 않는다(연타해도 `signIn`이 한 번만 실행된다).
+
+## 검증(10분)
+
+- 위 완료 기준 순서대로 시뮬레이터에서 눌러 본다. 예측 1·2의 실제 결과를 적는다.
+- 내 기록을 2개 만든 뒤 로그아웃 → 다시 로그인한다. 기록이 남아 있는지 확인한다(예측 3). 남아 있다면 다른 계정이 로그인해도 보인다는 문제가 있다. `LogsProvider`를 `app/(tabs)/_layout.tsx`로 옮기고 같은 순서를 반복해서 기록이 사라지는지 확인한다(가드가 `false`가 되면 보호된 화면이 제거되므로 그 안의 Provider state도 사라지는지 실험으로 판단한다). 최종 위치는 직접 결정하고 이유를 기록 칸에 적는다.
+- 일부러 깨뜨리기: 두 `Stack.Protected` 가드를 모두 `true`로 바꿔 보고 어떤 화면이 첫 화면으로 보이는지 확인한다.
+
+## 이해 점검 질문
+
+1. 로그인 후 `router.replace('/')` 없이 화면이 바뀌는 이유는 무엇인가?
+2. 가드가 `false`가 될 때 해당 화면들의 history가 제거되는 것이 로그아웃 후 보안/UX에 왜 중요한가?
+3. 이 방식의 보호가 하지 못하는 일은 무엇인가? (서버, 토큰 보관 측면에서)
+
+<details><summary>정답</summary>
+
+1. `token`이 바뀌면 `AuthProvider`가 다시 렌더되어 `RootNavigator`의 가드 값(`!!token`, `!token`)이 바뀐다. 라우터는 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 사용 가능하게 한 뒤, 현재 위치가 막히면 anchor 또는 첫 사용 가능 화면으로 보낸다. 상태가 화면을 결정하므로 이동을 명령할 필요가 없다.
+2. 가드가 `false`가 되면 history 항목이 지워지므로 로그아웃 뒤 뒤로가기로 이전 로그인 화면(탭, 상세)에 돌아갈 수 없다. history가 남아 있으면 다른 사용자가 이전 사용자의 화면을 볼 수 있다.
+3. `Stack.Protected`는 클라이언트에서만 화면 접근을 막을 뿐 서버 접근 제어를 대체하지 못한다. 실제 데이터 보호는 서버가 토큰을 검증해야 한다. 또 오늘의 토큰은 메모리에만 있어서 앱을 재시작하면 로그인이 풀린다(Day 36 SecureStore에서 보관한다).
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `feat: AuthContext와 모의 로그인 화면 추가`
+- `feat: Stack.Protected로 로그인 전후 라우트 분리`
+- `feat: 설정 탭에 로그아웃 추가`

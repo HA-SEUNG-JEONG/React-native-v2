@@ -1,45 +1,95 @@
-# Day 13 · 11/5 (목) — 미션 2-3 useDeletePost 정리 ⚠️ · 1/2일차: 1차 구현 + 변경 전 기록
-> **오늘의 핵심**: 낙관적 업데이트의 정석 순서(취소 → 스냅샷 → 수정 → 롤백 → 재동기화)를 따르되, 이 앱의 가짜 DELETE 때문에 `onSettled`의 invalidate가 화면을 되돌리므로 트레이드오프를 적고 고른다.
+# Day 13 · 11/12 (목) — 커스텀 훅과 useEffect 기초, cleanup
 
-**시작 상태**: 스텁 브랜치에서 `src/api/posts.ts`의 `useDeletePost`에는 `mutationFn`만 있다. `onMutate`·`onError`·`onSettled`가 없어서 "변경 전"이 비어 있다(삭제해도 목록은 그대로, 롤백도 없음). 그래서 순서를 바꾼다. ① 힌트 없이 떠오르는 대로 낙관적 제거 + 실패 시 롤백을 **1차로 구현**한다. ② 아래 4가지를 기록한다. 이것이 "변경 전"이다. ③ 설계 질문을 풀고 정석으로 **2차 수정**한다. ④ 같은 4가지를 "변경 후"에 쓴다. ⚠️의 실체는 1차와 2차의 차이다. 원본 코드를 열어 "변경 전"을 베끼지 않는다.
+## 오늘의 목표
 
-**표시**: ⚠️ 동작 변경 — `docs/improve/reviews/2-3.md` 상단에 `⚠️ 동작 변경`과 변경 전후를 적는다. 11/6(금)은 [Tier 1 종료 절 버퍼](./day-07.md)라 이틀이 연속이 아니다.
+`useEffect`로 타이머와 키보드 이벤트를 구독하고 cleanup으로 해제하는 커스텀 훅 `useNow`, `useKeyboardVisible`을 만들어 Daily Log에 붙인다.
 
+## 읽기(15분)
 
-## 오늘 할 일 (90분)
-- [ ] 00~05 시작 의식: `git status --short --branch` → `nvm use 22.21.1` → 어제 기록의 "내일 할 일" 확인
-- [ ] 05~20 읽기: `src/api/posts.ts`의 `useDeletePost` 전체, `src/screens/FeedDetailScreen.tsx`의 `onMutate`(비교 기준), Infinite Queries 문서의 `data.pages` 구조. Day 5~6의 1-2 기록을 다시 읽어 **그때 고른 선택지**를 확인한다 (가드를 제거하는 쪽을 골랐다면 오늘 작업의 전제가 달라진다)
-- [ ] 20~55 1차 구현: 힌트 없이 떠오르는 대로 낙관적 제거 + 실패 시 롤백을 구현한다
-- [ ] 55~80 변경 전 동작 기록(코딩 금지): 아래 참고의 4가지를 `docs/improve/reviews/2-3.md` 상단 "변경 전" 칸에 적는다. Day 5~6에서 미룬 확인(삭제 성공 시 행이 목록에서 사라지는가, 20% 실패 시 롤백)도 여기서 한다
-- [ ] 80~90 메모: 2일차에 풀 질문(아래 참고의 "결정할 것"), 내일 할 일 한 줄
+1. React 공식 문서, Effect 동기화: https://react.dev/learn/synchronizing-with-effects
+   - 확인할 사실: Effect가 시작한 일을 되돌려야 하면 함수를 반환한다. 그 cleanup은 Effect가 다시 실행되기 직전과 컴포넌트가 사라질 때 호출된다. 의존성 배열이 `[]`이면 마운트 때 한 번, `[a, b]`이면 값이 바뀔 때마다 다시 실행된다. cleanup이 필요 없는 Effect도 있다.
+2. React 공식 문서, 커스텀 훅: https://react.dev/learn/reusing-logic-with-custom-hooks
+   - 확인할 사실: 훅 이름은 `use`로 시작해야 한다. 커스텀 훅은 상태 로직을 공유하지만 상태 자체를 공유하지 않는다. 같은 훅을 두 번 호출하면 서로 독립된 상태가 생긴다.
+3. `Keyboard` 문서: https://reactnative.dev/docs/0.81/keyboard
+   - 확인할 사실: `Keyboard.addListener(eventName, callback)`은 구독 객체를 돌려주고, 문서 예제는 정리할 때 `.remove()`를 호출한다. Android에서는 `keyboardDidShow`, `keyboardDidHide`만 쓸 수 있다. `keyboardWillShow`류는 iOS 전용이다.
 
-## 끝 조건
-1. 스와이프 삭제 → 즉시 사라지고, 실패(20%)를 만나면 원복되는 1차 구현이 있다
-2. 변경 전 4가지가 `reviews/2-3.md` "변경 전" 칸에 적혀 있다 (원본 코드를 열지 않고)
+## 예측(10분)
 
+1. `setInterval`을 시작하는 Effect에 cleanup을 쓰지 않고, 그 컴포넌트를 화면에서 사라지게(언마운트) 하면 타이머는 멈추는가?
 
-## 막히면
-- 1차 구현에서 15분 막힘 → 2-3 힌트 1 요청: `onMutate`에서 줄 순서를 `FeedDetailScreen`의 `onMutate`와 나란히 놓고 비교한다
-- 다시 15분 → 힌트 2 (`InfiniteData<Post[]>` 타입, `getQueryData<T>` / `setQueryData<T>` 제네릭, `onSettled`, `invalidateQueries` / `removeQueries` / `setQueryData`, context 객체의 타입)
-- 다시 15분 → 힌트 3: 가짜 API 때문에 "정석(onSettled invalidate)"이 이 앱에선 화면을 되돌린다. 어떻게 할지는 트레이드오프를 적고 선택한다. 정답이 하나가 아니다
-- 막힘 규칙 전체는 [rules.md](./rules.md)
+> 내 예측:
 
-## 참고
-- **읽을 학습 가이드 절**: Infinite Queries 문서의 `data.pages` 구조, Optimistic Updates, Query Cancellation (TanStack). 미션 문서 [tier2-quality.md](../improve/tier2-quality.md)의 2-3 절.
-- **변경 전 동작을 먼저 기록 (코딩 금지)**
-  1. 스와이프 삭제 → 즉시 사라지는가.
-  2. 실패(20%)를 만날 때까지 반복 → 원복되는가.
-  3. 성공 후 목록 새로고침·재진입 시 그 글이 보이는가.
-  4. 글 상세를 한 번 열어 둔 뒤 같은 글을 삭제하고 그 글의 상세를 다시 열면 어떻게 보이는가.
+2. 서로 다른 두 컴포넌트가 각각 `useNow(1000)`을 호출하면 두 컴포넌트가 받는 `now` 값은 같은 상태를 공유하는가, 각자 따로인가?
 
-  이 4가지를 `reviews/2-3.md` 상단 "변경 전" 칸에 적는다. 수정 후 같은 4가지를 "변경 후"에 쓴다. 이 비교가 ⚠️의 실체다.
-- **코딩 전에 정할 것**
-  - `onSettled`에서 `["posts"]`를 invalidate하면 서버를 다시 조회한다. 가짜 DELETE는 실제로 지우지 않으므로 삭제가 성공해도 글이 되돌아온다. 선택지(성공 시에는 하지 않기 / 감수하기 / 다른 방식)의 **트레이드오프를 표로 적고 고른다.** 정답은 하나가 아니다.
-  - `["post", id]`의 `id` 타입. 삭제 쪽은 숫자, 상세 쪽은 문자열이다. 쿼리 키에서 `3`과 `"3"`은 다르다.
-  - 스냅샷 순서를 `FeedDetailScreen`의 `onMutate`와 나란히 놓고 비교한다.
-- **수정 중 확인**
-  - 빈 페이지를 `filter`로 제거하면 `allPages.length`가 줄어 `getNextPageParam`이 이미 받은 페이지를 다시 가리킬 수 있다. 마지막 로드 페이지가 한 글 삭제로 10개 미만이 되면 `hasNextPage`가 `false`가 된다. 코드 추론이니 시뮬레이터로 확인하고, 결과를 2-11 테스트 후보로 메모한다.
-  - 어제(Day 12) 메모한 `signal` 취소 시 롤백 동작과 `cancelQueries`가 어떻게 만나는지 확인한다.
-- **임시 코드 되돌릴 곳**: 없음 (단 ⚠️ 변경 전후 기록).
-- **기록 포인트**: 변경 전/후 4가지, 선택한 동작과 버린 대안(트레이드오프 표), 2-11 테스트 후보(삭제 후 `getNextPageParam`).
-- **다음 날**: [Day 15](./day-15.md) (11/7 (토)) — 이어서.
+> 내 예측:
+
+3. Effect의 의존성 배열에 `intervalMs`를 빼고 `[]`로 두었는데 코드 안에서 `intervalMs`를 쓰고 있다면 `npx expo lint`가 어떤 반응을 보이는가?
+
+> 내 예측:
+
+## 만들기(40분)
+
+Day 12에서 정리한 `src/` 구조에 훅 폴더를 만들고, 글 목록에 "방금 전 / N분 전" 표시를 얹는다.
+
+새로 만들 파일:
+- `src/hooks/useNow.ts` — `useNow(intervalMs: number): number`. 현재 시각(`Date.now()`)을 상태로 들고, `setInterval`로 `intervalMs`마다 갱신하고, cleanup에서 `clearInterval`한다.
+- `src/hooks/useKeyboardVisible.ts` — `useKeyboardVisible(): boolean`. `keyboardDidShow`와 `keyboardDidHide`를 구독하고 cleanup에서 두 구독을 모두 `remove()`한다. Day 6에서 화면에 직접 쓴 `Keyboard` 코드가 있으면 이 훅으로 옮긴다.
+- `src/utils/formatRelative.ts` — `formatRelative(createdAt: number, now: number): string`. 1분 미만이면 `방금 전`, 이후는 `N분 전`, 60분 이상은 `N시간 전`. 순수 함수다.
+
+핵심 형태:
+
+```tsx
+useEffect(() => {
+  const id = setInterval(() => setNow(Date.now()), intervalMs);
+  return () => clearInterval(id);
+}, [intervalMs]);
+```
+
+고칠 파일:
+- `app/index.tsx` — 화면에서 `useNow(10_000)`을 한 번만 호출하고 `now`를 `LogItem`에 props로 내려 준다. `FlatList`에는 `extraData={now}`를 준다. 입력창이 있는 영역에는 `useKeyboardVisible()`이 `true`일 때만 "키보드 닫기" `AppButton`을 보여 주고, 누르면 `Keyboard.dismiss()`를 호출한다.
+- `src/components/LogItem.tsx` — props에 `now: number`를 추가하고 작성 시각 줄에 `formatRelative(entry.createdAt, now)`를 쓴다.
+
+항목마다 `useNow`를 따로 호출하면 항목 수만큼 타이머가 생긴다. 그래서 화면에서 한 번만 호출해 내려 준다(점검 질문 2번).
+
+완료 기준:
+- [ ] `useNow`와 `useKeyboardVisible`이 `src/hooks/`에 있고 이름이 `use`로 시작한다
+- [ ] 두 훅의 Effect가 모두 cleanup을 반환한다
+- [ ] 글 항목에 "방금 전"이 보이고, 시간이 지나면 "1분 전"으로 바뀐다(테스트용으로 `createdAt`을 5분 전 값으로 만들어 확인해도 된다)
+- [ ] 입력창을 누르면 "키보드 닫기" 버튼이 나타나고, 누르면 키보드와 버튼이 같이 사라진다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다(의존성 배열 경고 포함)
+
+## 검증(10분)
+
+- 시뮬레이터에서 글을 추가하고 "방금 전"이 바뀌는 것을 본다. 키보드를 올렸다 내리며 버튼이 따라오는지 본다.
+- 예측 1~3과 실제를 비교해 다른 지점을 적는다.
+- 일부러 깨뜨려 보기: 화면에 `visible` 상태로 토글되는 임시 컴포넌트를 만들어, 그 안에서 `useNow` 대신 Effect에 `console.log('tick')`을 찍는 `setInterval`을 쓰되 cleanup을 뺀다. 컴포넌트를 껐다 켜며 로그가 어떻게 되는지 보고, cleanup을 넣은 뒤 다시 비교한다. 확인이 끝나면 임시 컴포넌트를 지운다.
+
+## 이해 점검 질문
+
+1. cleanup 없이 `setInterval`을 쓴 컴포넌트가 사라지면 어떤 문제가 생기고, cleanup은 언제 호출되는가?
+2. 같은 커스텀 훅 `useNow`를 두 컴포넌트에서 각각 호출하면 상태를 공유하는가? 이 때문에 `useNow`를 화면에서 한 번만 호출해 내려 주는가?
+3. `useKeyboardVisible`에서 `keyboardWillShow` 대신 `keyboardDidShow`를 쓰는 이유는 무엇인가?
+
+<details>
+<summary>정답</summary>
+
+1. 컴포넌트가 사라져도 타이머는 JS 런타임에 남아 계속 실행되며 낭비와 중복 실행을 낳는다. 다시 마운트될 때마다 타이머가 하나씩 더 쌓인다. cleanup은 의존성이 바뀌어 Effect가 다시 실행되기 직전과 컴포넌트가 언마운트될 때 호출된다.
+2. 공유하지 않는다. 커스텀 훅은 로직만 공유하고 상태는 호출마다 독립적이다. 그래서 항목마다 호출하면 항목 수만큼 상태와 타이머가 생긴다. 화면에서 한 번 호출해 `props`로 내려 주면 타이머가 하나이고 모든 항목이 같은 `now`를 본다.
+3. `keyboardWillShow`는 iOS에서만 발생하고 Android에서는 `keyboardDidShow`와 `keyboardDidHide`만 발생한다. 양쪽 플랫폼에서 같은 훅이 동작하려면 공통으로 지원되는 Did 이벤트를 써야 한다.
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `feat: useNow 훅과 상대 시간 표시 추가`
+- `feat: useKeyboardVisible 훅과 키보드 닫기 버튼 추가`
+
+## 웹과 다른 점
+
+브라우저처럼 `window.addEventListener('resize')`에 쓰는 DOM 이벤트가 없다. RN은 `Keyboard`, `AppState` 같은 모듈에 `addListener`로 구독하고, 반환된 구독 객체의 `remove()`로 해제한다.

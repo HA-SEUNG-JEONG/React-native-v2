@@ -1,30 +1,50 @@
-# React-native-v2
+# Welcome to your Expo app 👋
 
-Expo SDK 54 / React Native 0.81 학습 프로젝트. 서버는 jsonplaceholder + 메모리 세션 **모의 구현**이고, 실서비스 앱이 아니다. 프로덕션 패턴(race, 오프라인, 롤백)을 모의 서버 위에서 개념 검증하는 것이 목적.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## 실행
+## Get started
+
+1. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+2. Start the app
+
+   ```bash
+   npx expo start
+   ```
+
+In the output, you'll find options to open the app in a
+
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
 
 ```bash
-npm ci
-npx expo start     # Expo Go로 실행
-npm run typecheck
-npm test           # 토큰 갱신 dedup (약 5초)
+npm run reset-project
 ```
 
-## 핵심 소재
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-| 소재 | 코드 |
-| --- | --- |
-| 동시 401 토큰 갱신 dedup (`refreshInFlight` Promise 공유) | `src/api/auth.ts`, `tests/auth.test.ts` |
-| 오프라인 뮤테이션 큐 + 재시작 후 재생 (`setMutationDefaults`) | `src/api/posts.ts`, `App.tsx` |
-| 낙관적 업데이트 + 롤백 (무한스크롤 2차원 캐시 포함) | `src/screens/FeedDetailScreen.tsx`, `src/api/posts.ts` |
-| 알림 탭 딥링크 (cold start는 `useLastNotificationResponse`) | `App.tsx` |
-| 제스처 충돌 (`Gesture.Race` + `activeOffsetX`) | `src/components/SwipeableRow.tsx` |
-| 재시도 backoff + jitter, WebSocket 재연결 | `src/api/network.ts` |
+## Learn more
 
-## 한계
+To learn more about developing your project with Expo, look at the following resources:
 
-- 알림은 로컬 알림만 (원격 푸시 없음), 인증은 모의 세션.
-- 성능 최적화(`React.memo`, `getItemLayout`)와 접근성은 다루지 않음.
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-학습 기록과 리뷰 수정 내역은 `docs/` 참고.
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

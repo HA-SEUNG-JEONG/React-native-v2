@@ -1,34 +1,90 @@
-# Day 7 · 10/30 (금) — 버퍼 · P1 재복습 · 흐름 A 구술
+# Day 7 · 11/4 (수) — FlatList 기본: data·renderItem·keyExtractor
 
-> **오늘의 핵심**: 금요일 버퍼는 새 미션 없이 밀린 것을 흡수하고, P1 재복습(퀴즈 4·5·8·9·10번)과 흐름 A 구술을 보지 않고 답하는 날이다.
+## 오늘의 목표
 
-**시작 상태**: 새 미션은 없다. [Day 5~6](./day-05.md)(1-2)까지 끝내지 못한 것이 있으면 이 날 흡수한다. 규칙: [rules.md](./rules.md)
+JSONPlaceholder 모양의 목 데이터로 피드 목록을 `FlatList`로 그리고, 화면 상단에 기록/피드 전환 버튼을 만든다.
 
-## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
-- [ ] 05~35 밀린 미션 마무리: 힌트 3까지 갔는데 못 끝낸 미션을 정리한다. 이 날로 끝낼 수 없는 것은 "열린 항목" 목록으로 `docs/improve/reviews/` 맨 아래에 남긴다
-- [ ] 35~60 P1 재복습: `docs/2026-08-28-p1-quiz-review.md`의 재복습 일정에서 1차(3일 내) 항목이 지났다
-  - [ ] `p1-study-guide.md` §2-1, §3-1, §4, §6만 훑는다
-  - [ ] 퀴즈 4·5·8·9·10번을 보지 않고 말로 답한다. 막힌 문항은 퀴즈 기록의 "정답"과 "암기 고리"로 확인한다
-  - [ ] 오늘 못 답한 문항은 [Day 14](./day-14.md)(11/6)의 재복습 칸으로 넘긴다
-- [ ] 60~85 흐름 A 구술(보지 않고 말하기): 아래 질문 4개
-  - [ ] `isReady`가 없으면 부팅 때 무슨 화면이 잠깐 보이나?
-  - [ ] 로그인 여부를 `if (!user) redirect`가 아니라 네비게이터 교체로 하는 이유는?
-  - [ ] `login()`(`api/auth.ts`)과 `signIn()`(`App.tsx`)은 각각 무엇을 어디에 저장하나? (같은 저장소인가?)
-  - [ ] `signOut`이 하는 일 4가지를 순서대로.
-- [ ] 85~90 기록: 열린 항목 목록, 못 답한 문항, 내일 할 일 한 줄
+## 읽기(15분)
 
-## 끝 조건
-1. 밀린 미션을 끝냈거나, 못 끝낸 것을 열린 항목에 적었다.
-2. P1 퀴즈 4·5·8·9·10번과 흐름 A 질문 4개에 보지 않고 답했다. 못 답한 문항은 Day 14로 넘겼다.
-3. 말로 설명: 위 흐름 A 질문 4개 중 막혔던 것 하나를 한두 문장으로.
+1. https://reactnative.dev/docs/0.81/flatlist
+   - 확인할 사실: `data`와 `renderItem`이 필수다. `renderItem`은 `{ item, index, separators }` 객체를 받는다. `keyExtractor`를 주지 않으면 `item.key`, 그다음 `item.id`, 마지막으로 index를 쓴다. `ItemSeparatorComponent`는 항목 사이에만, `ListEmptyComponent`는 데이터가 빌 때, `ListHeaderComponent`는 목록 맨 위에 렌더된다. `initialNumToRender` 기본값은 10이다.
+2. https://reactnative.dev/docs/0.81/scrollview
+   - 확인할 사실: `ScrollView`는 모든 자식을 한 번에 렌더하고, `FlatList`는 곧 보일 항목만 렌더하며 멀리 벗어난 항목을 제거한다. 긴 목록에는 `FlatList`를 쓰라는 문장을 찾는다.
+3. https://jsonplaceholder.typicode.com/posts
+   - 확인할 사실: 응답은 100개의 글 배열이고 각 글은 `userId`, `id`, `title`, `body` 필드를 가진다. 오늘은 네트워크를 쓰지 않고 이 모양을 흉내 낸 목 데이터를 쓴다. 실제 fetch는 Day 25에서 한다.
 
-## 막히면
-- 퀴즈 문항이 막히면 퀴즈 기록의 "정답"과 "암기 고리"로 확인하고, 그래도 답이 안 나오면 Day 14 재복습 칸으로 넘긴다.
-- 밀린 미션이 힌트 3까지 가도 안 풀리면 그날은 멈추고 열린 항목에 적는다 ([rules.md](./rules.md)의 막힘 규칙).
+## 예측(10분)
 
-## 참고 (아래로 밀어 둠)
-- **링크**: [p1-study-guide.md](../p1-study-guide.md) · [p1 퀴즈 기록](../2026-08-28-p1-quiz-review.md)
-- **임시 코드 되돌릴 곳**: 없음.
-- **기록 포인트**: 열린 항목 목록(`reviews/` 맨 아래), 못 답한 문항.
-- **다음**: [Day 8](./day-08.md) 1-4 (10/31 토).
+1. 30개짜리 목록을 `FlatList`로 그릴 때, `renderItem` 안의 `console.log`는 첫 렌더에서 몇 번쯤 찍힐까? 30번일까, 그보다 적을까?
+   > 내 예측:
+2. `FlatList`를 세로 `ScrollView` 안에 넣으면 어떻게 될까? 개발 중 터미널이나 화면에 경고가 뜰까?
+   > 내 예측:
+3. `data`를 빈 배열로 바꾸고 `ListEmptyComponent`를 주지 않으면 화면에 무엇이 보일까?
+   > 내 예측:
+
+## 만들기(40분)
+
+피드 화면의 목록 부분을 만든다. 탭 구조는 Day 15~17에서 expo-router로 만들므로, 지금은 `app/index.tsx` 안에서 state로 화면을 바꾸는 임시 버튼을 쓴다.
+
+1. 새 파일 `data/mock-posts.ts`를 만든다(`app/` 밖에 둔다. `app/` 아래 파일은 모두 라우트가 되기 때문이다). `Post` 타입(`userId`, `id`, `title`, `body`)을 내보내고, 30개를 `Array.from`으로 생성해 `MOCK_POSTS`로 내보낸다. `id`는 1부터 숫자로 하고 `userId`는 10개마다 1씩 오른다.
+   ```ts
+   export const MOCK_POSTS: Post[] = Array.from({ length: 30 }, (_, i) => ({
+     id: i + 1,
+     userId: Math.floor(i / 10) + 1,
+     title: `글 제목 ${i + 1}`,
+     body: `글 본문 ${i + 1} ...`,
+   }));
+   ```
+2. `app/index.tsx` 최상단에 `tab` state(`'log'` 또는 `'feed'`)와 "기록 | 피드" `Pressable` 두 개를 둔다. `tab === 'log'`이면 Day 6까지 만든 기록 화면(작성 폼과 기록 목록)을, `'feed'`이면 피드 목록을 보여 준다. 이 버튼은 Day 17에서 탭으로 교체되는 임시 구조다.
+3. 피드 목록은 `FlatList`로 만든다. `data={MOCK_POSTS}`, `keyExtractor`는 `String(item.id)`를 쓴다. 각 항목은 제목 `Text`(`numberOfLines={1}`)와 본문 `Text`(`numberOfLines={2}`)를 가진 카드다.
+4. `ItemSeparatorComponent`로 얇은 구분선을, `ListHeaderComponent`로 "피드 30개" 같은 개수 `Text`를, `ListEmptyComponent`로 "글이 없습니다"를 단다.
+5. `renderItem`에 임시로 `console.log(item.id)`를 넣어 몇 번 호출되는지 센다.
+
+완료 기준:
+- [ ] "기록 | 피드" 버튼으로 두 화면이 바뀌고, 기록 화면은 Day 6 상태 그대로 동작한다
+- [ ] 피드에 30개 글이 스크롤로 모두 보인다
+- [ ] 항목 사이에만 구분선이 있고, 맨 위에 개수 헤더가 있다
+- [ ] 제목은 한 줄, 본문은 두 줄에서 말줄임표로 잘린다
+- [ ] `MOCK_POSTS`를 빈 배열로 바꾸면 "글이 없습니다"가 보인다
+
+## 검증(10분)
+
+- 예측 1번: 첫 렌더에서 `renderItem`이 찍은 로그 수를 세고, 스크롤하면 어떻게 달라지는지 본다. `initialNumToRender`와 비교한다.
+- 예측 3번: `ListEmptyComponent`를 지웠다가 되돌려 보고 차이를 적는다.
+- 실험: 피드의 `FlatList`를 임시로 `ScrollView` 안에 넣고 저장한다. 터미널이나 화면에 뜬 경고 원문을 옮겨 적는다. 확인 후 되돌린다.
+  > 경고 원문:
+
+| 예측 | 실제 | 다른 이유 |
+|---|---|---|
+| 1 |  |  |
+| 2 |  |  |
+| 3 |  |  |
+
+## 이해 점검 질문
+
+1. `FlatList`와 `ScrollView` + `map`은 렌더 방식이 어떻게 다르고, 목 데이터가 3천 개로 늘면 어떤 차이가 생기는가?
+2. `keyExtractor`는 무엇을 위한 것이고, 기본 동작은 무엇인가? index를 key로 쓰면 어떤 문제가 생길 수 있는가?
+3. `renderItem={({ item }) => ...}`에서 인자를 객체로 구조 분해하는 이유는 무엇인가?
+
+<details><summary>정답</summary>
+
+1. `ScrollView` + `map`은 모든 항목을 한 번에 렌더해 항목이 많을수록 첫 렌더가 느려지고 메모리를 더 쓴다. `FlatList`는 화면에 곧 보일 항목만 렌더하고 멀리 벗어난 항목은 제거한다(가상화). 3천 개면 `ScrollView`는 3천 개를 모두 만들지만 `FlatList`는 초기 약 10개(`initialNumToRender` 기본값)와 스크롤 창 안의 항목만 만든다.
+2. 항목을 구별하는 안정적인 문자열 key를 만들어 캐시와 React의 `key`로 쓰기 위한 것이다. 기본 동작은 `item.key`, 그다음 `item.id`, 둘 다 없으면 index다. index key는 항목이 삽입·삭제·재정렬되면 같은 위치의 다른 항목이 이전 항목의 key를 물려받아 상태가 엉키거나 불필요하게 다시 그려질 수 있다.
+3. `FlatList`는 `renderItem`에 `{ item, index, separators }` 객체 하나를 넘긴다. 필요한 필드만 구조 분해로 꺼내 쓴다. `item`은 `data` 배열의 한 요소다.
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `feat: JSONPlaceholder 모양의 목 데이터 추가`
+- `feat: 피드 목록을 FlatList로 구현하고 기록/피드 임시 전환 추가`
+
+## 웹과 다른 점
+
+웹은 긴 목록도 DOM에 그냥 `map`으로 그리는 일이 흔하지만, RN은 화면 밖 항목을 만들지 않고 제거하는 가상화 목록(`FlatList`)을 기본으로 쓴다.

@@ -1,44 +1,92 @@
-# Day 24 · 11/16 (월) — 미션 2-11 테스트 확장 (1/2): 순수 로직 분리
+# Day 24 · 11/27 (금) — 버퍼 + 5주차 점검
 
-> **오늘의 핵심**: "Node에서 import되는가"를 기준으로 코드를 분류하고, 동작을 바꾸지 않고 순수 부분만 분리해 단위 테스트를 단다.
+## 오늘의 목표
 
-**시작 상태**: 2-11은 스텁이 손대지 않은 미션이지만 테스트 대상(2-3·2-5 결과)이 스텁 영향을 받는다. 선행 2-3([Day 13·15](./day-13.md)), 2-5([Day 17~18](./day-17.md)) 완료가 전제다. 오늘은 순수 함수 중심이다.
+5주차(Day 20~23: router API, Context, reducer, 보호된 라우트) 내용을 정답을 가리고 풀어 보고, 밀린 Day와 질문 목록을 정리한다.
 
-## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch` → `nvm use 22.21.1` → 어제 기록의 "내일 할 일" 확인
-- [ ] 05~15 읽기: `tests/auth.test.ts`, `package.json`의 `test` 스크립트, `tsconfig.json`의 `allowImportingTsExtensions`, Node 22 test runner 문서
-- [ ] 15~30 인벤토리(코딩 전): 아래 참고의 표를 채운다. 각 항목에 "예/아니오"를 쓰기 전에 **실제로 `node`로 import해서 확인**한다
-- [ ] 30~65 분리: 동작을 바꾸지 않고 순수 부분만 새 파일로 분리한다 (규칙은 아래 참고)
-- [ ] 65~85 테스트 작성: `groupByTens`와 `getNextPageParam`. 입력/출력 표를 먼저 쓰고 그대로 단언한다. Day 13·15에서 메모해 둔 후보(삭제 후 `allPages.length`가 줄어 `getNextPageParam`이 이미 받은 페이지를 가리키는 경우)를 테스트로 만들 수 있는지 본다
-- [ ] 85~90 검증: `npm test` 통과 · **일부러 대상 로직을 깨뜨리면 빨개지는지** 확인한 뒤 되돌린다 · `npm run typecheck` · `npx eslint .` · 내일 할 일 한 줄
+## 주간 점검 퀴즈(30분)
 
-## 끝 조건
-1. `npm test`가 통과하고, 대상 로직을 일부러 깨뜨리면 빨개진다 (확인 후 되돌림)
-2. 분리한 파일이 `react-native` 등을 import하지 않고, 동작이 바뀌지 않았다. 검증 4종 통과
-3. 말로 설명: 왜 `posts.ts`를 그대로 테스트에서 import할 수 없는가.
+정답은 접힌 상태에서 먼저 자기 답을 적은 뒤 연다. 결과는 `docs/quiz/2026-11-27-day-24.md`에 `AGENTS.md`의 상세 구조(문항별 내 답 → 문제점 → 정답 → 암기 고리 → 근거 절, 종합 약점 패턴, 재복습 일정)로 기록한다.
 
-## 막히면
-- 15분 막힘 → 2-11 힌트 1 요청: 테스트 대상마다 "이 함수가 Node에서 import되는가"부터 확인한다. 안 된다면 순수 부분만 새 파일로 분리한다
-- 다시 15분 → 힌트 2 (`node:test`, `assert.deepEqual`, `groupByTens`·`getNextPageParam`은 입력/출력 표만 있으면 되는 순수 함수), 다시 15분 → 힌트 3 (값 import 대신 `import type`, `.ts` 확장자, 순수 부분 분리)
-- 막힘 규칙 전체는 [rules.md](./rules.md)
+**Q1 (Day 20).** 피드 → 글 1 → `router.push('/post/2')` → `router.push('/post/3')` 순서로 이동했다. 마지막 화면에서 `router.replace('/post/4')`를 하면 스택은 어떻게 되고, 피드로 돌아가려면 back이 몇 번 필요한가?
+> 내 답:
 
-## 참고
-- **읽을 학습 가이드 절**: [p6-study-guide.md](../p6-study-guide.md)의 테스트 절.
-- **인벤토리 (코딩 전)**
+<details><summary>정답</summary>
 
-| 테스트 대상             | 지금 Node에서 import되나? | 안 되면 이유 | 분리할 부분 |
-| ------------------ | ------------------- | ------- | ------ |
-| `groupByTens`      |                     |         |        |
-| `getNextPageParam` |                     |         |        |
-| `withRetryBackoff` |                     |         |        |
-| 낙관적 롤백             |                     |         |        |
+`push` 두 번으로 스택은 [피드, 글1, 글2, 글3]이고, `replace('/post/4')`는 맨 위(글3)를 글4로 바꿔서 [피드, 글1, 글2, 글4]가 된다. 피드까지 back이 3번 필요하다. `replace`는 history를 추가하지 않는다.
 
-- **규칙 (이 환경에서 확인된 제약)**
-  - 분리한 파일은 `react-native`, `@react-native-community/netinfo` 등을 import하지 않는다.
-  - 타입은 `import type`. 값 import하면 Node 로드가 실패한다.
-  - import 경로에 `.ts` 확장자를 붙인다.
-  - 분리하면서 **동작을 바꾸지 않는다.** 2-3·2-5에서 정한 정책과 다른 함수를 만들면 안 된다.
-- **오늘 쓸 테스트**: `groupByTens`와 `getNextPageParam`. 입력/출력 표를 먼저 쓰고 그대로 단언한다. 테스트가 구현을 그대로 복사한 기대값이 되지 않게 한다.
-- **Day 13·15에서 메모해 둔 후보**: 삭제 후 `allPages.length`가 줄어 `getNextPageParam`이 이미 받은 페이지를 가리키는 경우. 테스트로 만들 수 있는지 본다.
-- **임시 코드 되돌릴 곳**: 검증용으로 일부러 깨뜨린 대상 로직. 확인 후 되돌린다.
-- **기록 포인트**: 인벤토리 표(예/아니오와 이유), 분리한 파일 목록, 깨뜨렸을 때 빨개졌는지.
+</details>
+
+**Q2 (Day 20).** 탭 화면에서 "탭이 보일 때마다" 데이터를 새로고침하려고 한다. `useEffect(() => {...}, [])` 대신 무엇을 쓰고, 그 콜백에 꼭 필요한 처리는 무엇인가?
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+`expo-router`의 `useFocusEffect`를 쓴다. 탭 화면은 탭을 옮겨도 언마운트되지 않아 `useEffect(..., [])`는 처음 한 번만 실행되기 때문이다. 콜백은 `React.useCallback`으로 감싸 안정시켜야 한다(감싸지 않으면 매 렌더마다 effect가 다시 실행될 수 있다). cleanup은 포커스를 잃을 때 실행된다.
+
+</details>
+
+**Q3 (Day 21).** `useProfile()`을 Provider 밖에서 불렀을 때 `throw new Error`로 막는 이유와, Context `value`가 바뀔 때 다시 렌더되는 컴포넌트를 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+`createContext(null)` 기본값을 그대로 돌려주면 `nickname`을 읽는 순간 원인과 멀리 떨어진 곳에서 TypeError가 난다. `throw`하면 "Provider를 감싸지 않았다"는 원인을 바로 알려 주고, 반환 타입에서 `null`을 제거할 수 있다. `value`가 바뀌면 그 context를 `useContext`로 읽는 컴포넌트만 다시 렌더된다.
+
+</details>
+
+**Q4 (Day 22).** reducer가 `state.push(action.log); return state;`를 하면 어떤 문제가 생기는가? 이유를 `Object.is`와 Strict Mode 두 가지로 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+React는 이전 state와 다음 state를 `Object.is`로 비교하는데, 같은 배열을 변경해 반환하면 참조가 같아 업데이트가 무시되어 화면이 안 바뀐다. 또 개발 환경 Strict Mode는 reducer를 두 번 호출하므로, 직접 변경하는 reducer는 항목이 두 번 들어간다. 해결은 `[...state, action.log]`처럼 새 배열을 반환하는 것이다.
+
+</details>
+
+**Q5 (Day 23).** 로그인 성공 후 `router.replace`를 호출하지 않아도 탭 화면으로 넘어가는 이유와, 로그아웃 후 뒤로가기로 이전 화면에 못 돌아가는 이유를 한 문장씩 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+토큰이 바뀌면 `RootNavigator`의 `Stack.Protected guard` 값이 바뀌고, 라우터가 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 열면서 anchor 또는 첫 사용 가능 화면으로 보내기 때문이다. 가드가 `true`에서 `false`로 바뀌면 그 화면들의 history 항목이 모두 제거되므로 뒤로가기로 돌아갈 화면이 없다.
+
+</details>
+
+## 구술 1주제(15분)
+
+주제: "앱을 켠 순간부터 로그인해서 탭 화면이 보이기까지, 상태와 라우터가 어떻게 연결되는지 소리 내어 설명한다."
+
+포함할 핵심어: `AuthProvider`, `token`, `Stack.Protected`, `guard`, history 제거
+
+설명 후 빠뜨린 핵심어를 적는다:
+
+## 질문 목록 처리(15분)
+
+`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 에러 원문과 시도한 것을 다시 읽고, 공식 문서에서 해당 절을 찾아 답을 적는다. 답을 못 찾은 질문은 다음 주 금요일로 넘기고 표시한다.
+
+- [ ] 이번 주 질문 전부 읽었다
+- [ ] 해결한 질문에 답과 근거 문서 링크를 적었다
+- [ ] 못 푼 질문 개수:
+
+## 밀린 Day 흡수
+
+달력이 아니라 Day 번호 기준이다. 1~2일 밀렸으면 여기서 하나만 한다(한 번에 Day 둘 금지).
+
+- [ ] Day 20 router API·중첩 라우트·not-found·`useFocusEffect`
+- [ ] Day 21 Context
+- [ ] Day 22 reducer + Context
+- [ ] Day 23 인증 흐름과 보호된 라우트
+- [ ] 이전 주에서 밀린 Day:
+
+## 기록(5분)
+
+이번 주 가장 헷갈린 개념:
+
+틀린 퀴즈와 이유:
+
+다음 주(6주차 데이터 1) 전에 고칠 것:

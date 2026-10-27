@@ -1,50 +1,86 @@
-# Day 27 · 11/19 (목) — 미션 3-4 잔여 정리
+# Day 27 · 12/2 (수) — API 클라이언트 모듈과 에러 모델
 
-> **오늘의 핵심**: "정리" 5개 항목은 `해당 있음 / 해당 없음 / 의도된 것`으로 먼저 분류하고, 분류가 끝난 뒤에만 손댄다.
+## 오늘의 목표
 
-**시작 상태**: 스텁이 건드리지 않은 미션이다 (원본 그대로). 어제 이어받을 것은 [Day 26](./day-26.md)(3-1)의 "내일 할 일" 한 줄이다. `userInterfaceStyle`은 [Day 22](./day-22.md)(2-9)에서 이미 결정했으므로 그 기록을 먼저 읽는다.
+화면마다 흩어진 `fetch` 코드를 `api/` 모듈로 모으고, 네트워크 실패와 HTTP 오류를 구분하는 `ApiError`로 피드와 상세 화면이 에러 문구를 다르게 보여 주게 한다.
 
-## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
-- [ ] 05~30 분류: 아래 참고의 분류표(console 4건 · `AuthContext` 기본값 · import 순서 2파일 · Splash · CI 워크플로)를 먼저 만든다 → 적을 것: 항목마다 현재 상태(내가 직접 확인), 분류, 처리/사유. console은 로그마다 "지우면 무엇이 안 보이게 되나"
-- [ ] 30~45 수정(1): 분류표에서 "해당 있음"이 된 console과 import 순서(`type` import·사이드이펙트 import 순서는 깨뜨리지 않는다)만 손댄다
-- [ ] 45~65 수정(2): "해당 있음"이 된 `src/auth/AuthContext.tsx` 기본값(`useAuth` 소비자 3곳에서 타입체크가 어디서 깨지는지 보면서), Splash, CI 워크플로(로컬에서 같은 명령 3개가 통과해야 한다)
-- [ ] 65~75 검증: `npm run typecheck` · `npm test` · `npx eslint .` · `grep -rn "console\." src App.tsx` 결과를 분류표와 대조
-- [ ] 75~90 기록: `docs/improve/reviews/3-4.md`에 분류표 전체와 "해당 없음/의도된 것"의 사유, 내일 할 일 한 줄
+## 읽기(15분)
 
-## 끝 조건
-1. `grep -rn "console\." src App.tsx`에 남은 결과가 분류표의 "의도된 것"과 정확히 일치한다.
-2. 검증 4종이 통과하고, 일부러 Provider를 뺀 임시 코드(`App.tsx`)가 남지 않았다.
-3. 말로 설명: 기본값 있는 Context와 없는 Context의 실패 방식 차이. 네이티브 splash와 JS 로딩 화면이 서로 다른 단계라는 것.
+1. https://reactnative.dev/docs/0.81/network — `fetch`의 두 번째 인자(`method`, `headers`, `body`)와 에러 처리 예시.
+   - 확인할 사실: 요청 옵션에 `headers`의 `Accept`, `Content-Type`을 주는 형태가 예시로 있다. 이 모양을 `request()` 함수에 한 번만 쓰면 된다.
+   - 확인할 사실: 이 페이지의 알려진 문제 목록에 "같은 이름의 헤더는 Android에서 마지막 하나만 남는다"가 있다. 공통 헤더를 한 곳에서 관리하는 이유로 기억해 둔다.
+2. https://jsonplaceholder.typicode.com/guide/ — `/posts`, `/posts/1`, `/posts/1/comments` 등 엔드포인트.
+   - 확인할 사실: 없는 id(예: `/posts/99999`)는 404를 돌려주는지 오늘 `curl`이나 앱에서 직접 확인한다. 이 가이드에는 404 동작이 적혀 있지 않다(문서에서 확인 필요).
+3. https://react.dev/learn/synchronizing-with-effects — Day 25~26에서 읽은 "Fetching data"를 다시 훑는다. 오늘 만들 모듈은 Effect 밖으로 나가는 `fetch` 부분이고, Effect(취소 처리)는 화면에 남는다는 점을 구분한다.
 
-## 막히면
-- 항목이 "해당 있음"인지 판단이 안 서면: 코드를 고치지 말고 분류표의 "현재 상태(내가 확인)" 칸부터 채운다. 15분 막히면 `3-4 힌트 1`(분류표)을 요청한다.
-- `AuthContext` 기본값을 없앴을 때 소비자 3곳에서 타입 에러가 나는 위치가 헷갈리면: 에러가 나는 곳을 하나씩 목록으로 적은 뒤 다음 힌트 단계를 요청한다 (정답 코드는 요청하지 않는다).
-- CI 워크플로의 실제 Actions 실행: 푸시 후 GitHub에서 확인하는 것이라, 푸시는 하기 전에 확인을 받는다.
+## 예측(10분)
 
-## 참고 (아래로 밀어 둠)
+1. `class ApiError extends Error`를 만들어 `throw new ApiError(...)`한 뒤 `catch`에서 `error instanceof ApiError`를 쓰면 `true`가 나오는가?
+   > 내 예측:
+2. 비행기 모드일 때와 `/posts/99999`(404)일 때, 각각 `fetch`가 던지는 것/돌려주는 것은 무엇이고 `ApiError`의 `kind`를 어떻게 정해야 두 경우를 구분할 수 있는가?
+   > 내 예측:
+3. 요청 함수가 `signal`을 받아 `fetch`에 넘겼다가 abort되면, 이 `AbortError`도 `ApiError`로 감싸야 하는가?
+   > 내 예측:
 
-**읽을 학습 가이드 절**: 없음. 미션 문서 [3-4](../improve/tier3-cleanup.md) 전체와 Day 22(2-9)의 `userInterfaceStyle` 결정 기록.
+## 만들기(40분)
 
-**분류표 (코딩 전, 힌트 1)**
+**새 파일**
+- `src/api/client.ts`: 공통 `request<T>(path: string, options?: { signal?: AbortSignal }): Promise<T>`.
+  - `BASE_URL = 'https://jsonplaceholder.typicode.com'`을 한 곳에 둔다.
+  - `fetch` 자체가 reject되면(`catch`) `new ApiError('network', ...)`를 던진다. 단, `error.name === 'AbortError'`이면 감싸지 않고 그대로 다시 던진다.
+  - `!response.ok`이면 `new ApiError('http', ..., response.status)`를 던진다.
+  - 성공하면 `response.json()`을 `T`로 반환한다.
+- `src/api/client.ts` 안의 `ApiError`: `class ApiError extends Error`, 필드는 `kind: 'network' | 'http'`와 `status?: number`.
 
-| 항목              | 현재 상태(내가 확인) | 분류  | 처리 / 사유 |
-| --------------- | ------------ | --- | ------- |
-| console 4건      |              |     |         |
-| AuthContext 기본값 |              |     |         |
-| import 순서 2파일   |              |     |         |
-| Splash          |              |     |         |
-| CI 워크플로         |              |     |         |
+```ts
+export class ApiError extends Error {
+  constructor(public kind: 'network' | 'http', message: string, public status?: number) {
+    super(message);
+  }
+}
+```
 
-**코딩 전에 정할 것**
-- console: **"전부 삭제"가 정답이 아니다.** 각 로그에 대해 "지우면 무엇이 안 보이게 되나"를 쓴다. `ComposeScreen`의 `저장:` 로그는 저장 로직이 없어 유일한 동작이다. 지우는 것이 정리인지 기능 제거인지 의식한다. `FeedListScreen`의 포커스/블러 로그는 `useFocusEffect` 학습용이다.
-- AuthContext 기본값: Provider 누락을 컴파일러도 런타임도 못 잡는 문제. `useAuth` 반환 타입을 바꾸면 소비자 3곳에서 타입체크가 어디서 깨지는지 보면서 진행한다. 의도적으로 Provider를 빼서 어떻게 실패하는지 임시로 확인하고 되돌린다.
-- import 순서: 린터가 잡아 주지 않는 정리다. 이 프로젝트 관례는 외부 패키지 → 상대경로. `type` import와 사이드이펙트 import의 순서를 깨뜨리지 않는다.
-- Splash: 네이티브 splash(흰색) → 빈 어두운 화면 → 앱 순으로 이어져 깜빡임이 있는지 **cold start로 관찰**한다. `userInterfaceStyle`은 Day 22(2-9)에서 이미 결정했으므로 그 기록을 먼저 읽는다. 네이티브 설정은 Expo Go에서 반영되지 않을 수 있다. `expo-splash-screen` 추가는 의존성 추가이므로 하기 전에 판단하고 기록한다.
-- CI: 최소 단계(설치 · typecheck · test · lint)부터. 시크릿·토큰을 쓰지 않는다. **로컬에서 같은 명령 3개가 통과해야 한다.** 실제 Actions 실행은 푸시 후 GitHub에서 확인하는 것이라, 푸시는 하기 전에 확인을 받는다.
+- `src/api/posts.ts`: `getPosts({ userId, signal })`와 `getPost(id, { signal })`. 둘 다 `request`를 호출하고 `Post` 타입(Day 25의 `src/types/post.ts`)을 반환한다.
 
-**수정 중 확인**: 분류표의 "해당 없음/의도된 것"은 손대지 않는다. 각 수정 뒤 `npm run typecheck`.
+**고칠 파일**
+- `app/(tabs)/index.tsx`: Day 25~26의 `fetch` 직접 호출을 `getPosts`로 교체한다. `ignore`/`AbortController` 구조는 그대로 둔다. 에러 문구를 `ApiError`로 고른다: `kind === 'network'`이면 "인터넷 연결을 확인해 주세요", `status`가 404이면 "글을 찾을 수 없어요", `status`가 500 이상이면 "서버에 문제가 있어요", 그 외는 "알 수 없는 오류".
+- `app/post/[id].tsx`(Day 16의 상세): `id` 파라미터로 `getPost`를 호출해 제목과 본문을 보여 준다. 로딩·에러·성공 3상태는 Day 25 피드와 같은 구조로 만든다. 에러 문구 선택은 피드와 같은 함수를 쓰도록 `src/api/messages.ts`의 `getErrorMessage(error: unknown): string`에 한 번만 쓴다.
 
-**임시 코드 되돌릴 곳**: `App.tsx`의 Provider (실패 관찰을 위해 뺐다면 반드시 되돌린다).
+완료 기준
+- [ ] 화면 파일에 `fetch(`와 `BASE_URL` 문자열이 없다(grep으로 확인).
+- [ ] 비행기 모드에서 "인터넷 연결을 확인해 주세요", 존재하지 않는 글 id(임시로 하드코딩한 `99999`)에서 "글을 찾을 수 없어요"가 보인다.
+- [ ] 필터 칩 연타 시 `AbortError`가 에러 화면으로 새지 않는다(Day 26 동작 유지).
+- [ ] `request`의 반환 타입이 `Promise<T>`이고 `getPosts`/`getPost`의 반환이 `Post[]`/`Post`로 추론된다(`npx tsc --noEmit`에 에러 없음).
+- [ ] 에러 문구 선택 로직이 피드와 상세에 중복되어 있지 않다.
 
-**기록 포인트**: 분류표 전체, "해당 없음/의도된 것"의 사유, Splash와 `userInterfaceStyle` 결정의 연결.
+## 검증(10분)
+
+- 예측 1을 확인한다. `catch`에서 `error instanceof ApiError`를 콘솔에 찍는다. `false`가 나오면 `error.kind`나 `error.name === 'ApiError'`처럼 필드로 판별하도록 `ApiError`에 `name`을 지정하거나 판별 함수 `isApiError`를 만든다. 결과를 적는다(문서에서 확인 필요한 동작이라 실험으로 판단한다).
+- 상세 화면에서 존재하는 글과 존재하지 않는 글(임시 id 99999) 둘을 열어 본다. 404일 때 `ApiError.status` 값을 찍어 확인한다.
+- 일부러 깨뜨리기: `request`에서 `AbortError` 예외 처리를 지우고(모든 `catch`를 `network`로 감싼다) 칩을 연타한다. "인터넷 연결을 확인해 주세요"가 잘못 뜨는지 확인한 뒤 원복한다.
+
+## 이해 점검 질문
+
+1. 에러에 `kind`와 `status`를 두는 이유는 무엇인가? 문자열 `message`만으로 구분하면 어떤 문제가 생기는가?
+2. 왜 `AbortError`는 `ApiError`로 감싸지 않고 그대로 던지는가?
+3. 화면에서 `fetch`를 직접 부르는 방식과 `api/` 모듈을 거치는 방식을 비교하면 무엇이 좋아지는가? (Day 28의 TanStack Query와 연결해서 한 가지 이상)
+
+<details><summary>정답</summary>
+
+1. 화면이 "연결 문제"와 "서버가 거부한 요청"을 다르게 안내하려면 원인 종류와 상태 코드가 필요하다. `message` 문자열은 번역이나 문구 수정으로 바뀌고 파싱이 취약해서 분기 기준으로 쓸 수 없다. `kind`와 `status`는 코드가 의존할 수 있는 안정적인 값이다.
+2. abort는 사용자에게 알릴 오류가 아니라 의도된 취소이므로, `ApiError`로 감싸면 호출한 쪽이 일반 오류로 처리해 에러 화면을 띄운다. 그대로 던져서 호출하는 쪽에서 `error.name === 'AbortError'`로 걸러야 한다.
+3. 기본 URL, 헤더, `response.ok` 검사, JSON 파싱, 에러 변환이 한 곳에 모이므로 바꿀 곳이 하나다. 화면은 `getPosts()`가 성공 시 `Post[]`를 주고 실패 시 `ApiError`를 던진다는 계약만 알면 된다. Day 28의 `useQuery`는 `queryFn`에 이 `getPosts`를 그대로 넘기면 되므로 모듈을 분리해 둔 덕에 화면 쪽 변경이 작다.
+
+</details>
+
+## 기록(5분)
+
+배운 것 3줄:
+
+막힌 점:
+
+## 커밋 단위 제안
+
+- `refactor: fetch를 api 클라이언트 모듈로 분리`
+- `feat: ApiError로 네트워크·HTTP 오류 구분`
+- `feat: 상세 화면이 getPost로 글 불러오기`
