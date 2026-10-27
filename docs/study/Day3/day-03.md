@@ -5,14 +5,14 @@
 **시작 상태**: 환경·P1 재복습·흐름 A 읽기와 퀴즈는 완료(10/22~23). 오늘은 잔여분 2-1, 1-3과 `reviews/1-3.md` Q3/Q4 보강만 한다. 2-1은 스텁 브랜치 기준선이 3 errors / 2 warnings다. 규칙: [rules.md](./rules.md)
 
 ## 오늘 할 일 (총 90분)
-- [ ] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
-- [ ] 05~30 2-1 eslint 워밍업: `git diff --stat`을 비워 둔 상태에서 `npx eslint . --fix` → `git diff --stat`으로 포맷만 바뀌었는지 확인 → 남은 warning 2건(`NotificationScreen`의 `permissionError`, `ProfileScreen`의 `e`)을 오늘 고칠지 2-6·2-10으로 넘길지 이유 한 줄과 함께 정한다 → 포맷 변경만 `style:` 커밋으로 분리 (`npm run format`은 쓰지 않는다)
-- [ ] 30~40 1-3 가설: `src/screens/LocationScreen.tsx`에서 "권한 범위"(`scope`)를 보여 주는 `Text`와 그 주변 `Text`들을 비교해 스타일이 어떻게 다른지 적는다. 그리고 `getCurrentPosition`에서 `console.log(res)`로 iOS·Android 응답을 찍어 본다 → 적을 것: `scope`가 플랫폼별로 응답의 어디에 있는지(타입 선언의 `res.ios.scope`와 실제가 같은지) 한 줄
-- [ ] 40~50 1-3 재현(iOS): 홈 → 위치 설정 → 현재 위치 가져오기 → 권한 허용 → "권한 범위" 줄이 보이는지 확인 → 안 보이면 실제 글자색이 무엇이었는지 메모
-- [ ] 50~70 1-3 수정·검증: 이 줄의 역할이 "보조 안내"인가 "값 표시"인가를 정하고 `LocationScreen.tsx`의 `styles`에 이미 있는 스타일 중 맞는 것을 고른다 (새 hex 인라인 금지) → 다크 배경에서 읽히는지 확인
-- [ ] 70~75 `docs/improve/reviews/1-3.md` Q3 보강: login()·signIn()이 무엇을 어디에 저장하는지 보강 (현재 답안: `login`은 `auth.ts` 메모리, `signIn`은 SecureStore의 user 이름). "같은 저장소인가?"에 한 문장으로 직접 답하고, 저장 값(토큰 / user 이름)과 저장소(`src/api/auth.ts`의 모듈 변수 `session` / `AUTH_KEY` SecureStore)를 짝지어 적는다
-- [ ] 75~80 `docs/improve/reviews/1-3.md` Q4 보강: `App.tsx`의 `signOut` 4가지를 코드 호출 순서대로 다시 적고(현재 답안은 "기기 저장소에 있던 것들을 다 지움"으로 뭉뚱그림) 이 브랜치에서 코드에 빠진 것이 무엇인지(`logout()` 본문이 비어 있음 = Day 3의 출발점) 같이 적는다
-- [ ] 80~90 기록: `docs/improve/reviews/2-1.md`(전/후 숫자, 경고 처리 결정과 이유)와 1-3 기록, 내일 할 일 한 줄
+- [x] 00~05 시작 의식: `git status --short --branch`, `nvm use 22.21.1`, 어제 "내일 할 일" 확인
+- [x] 05~30 2-1 eslint 워밍업: `git diff --stat`을 비워 둔 상태에서 `npx eslint . --fix` → `git diff --stat`으로 포맷만 바뀌었는지 확인 → 남은 warning 2건(`NotificationScreen`의 `permissionError`, `ProfileScreen`의 `e`)을 오늘 고칠지 2-6·2-10으로 넘길지 이유 한 줄과 함께 정한다 → 포맷 변경만 `style:` 커밋으로 분리 (`npm run format`은 쓰지 않는다)
+- [x] 30~40 1-3 가설: `src/screens/LocationScreen.tsx`에서 "권한 범위"(`scope`)를 보여 주는 `Text`와 그 주변 `Text`들을 비교해 스타일이 어떻게 다른지 적는다. 그리고 `getCurrentPosition`에서 `console.log(res)`로 iOS·Android 응답을 찍어 본다 → 적을 것: `scope`가 플랫폼별로 응답의 어디에 있는지(타입 선언의 `res.ios.scope`와 실제가 같은지) 한 줄
+- [x] 40~50 1-3 재현(iOS): 홈 → 위치 설정 → 현재 위치 가져오기 → 권한 허용 → "권한 범위" 줄이 보이는지 확인 → 안 보이면 실제 글자색이 무엇이었는지 메모
+- [x] 50~70 1-3 수정·검증: 이 줄의 역할이 "보조 안내"인가 "값 표시"인가를 정하고 `LocationScreen.tsx`의 `styles`에 이미 있는 스타일 중 맞는 것을 고른다 (새 hex 인라인 금지) → 다크 배경에서 읽히는지 확인
+- [x] 70~75 `docs/improve/reviews/1-3.md` Q3 보강: login()·signIn()이 무엇을 어디에 저장하는지 보강 (현재 답안: `login`은 `auth.ts` 메모리, `signIn`은 SecureStore의 user 이름). "같은 저장소인가?"에 한 문장으로 직접 답하고, 저장 값(토큰 / user 이름)과 저장소(`src/api/auth.ts`의 모듈 변수 `session` / `AUTH_KEY` SecureStore)를 짝지어 적는다
+- [x] 75~80 `docs/improve/reviews/1-3.md` Q4 보강: `App.tsx`의 `signOut` 4가지를 코드 호출 순서대로 다시 적고(현재 답안은 "기기 저장소에 있던 것들을 다 지움"으로 뭉뚱그림) 이 브랜치에서 코드에 빠진 것이 무엇인지(`logout()` 본문이 비어 있음 = Day 3의 출발점) 같이 적는다
+- [x] 80~90 기록: `docs/improve/reviews/2-1.md`(전/후 숫자, 경고 처리 결정과 이유)와 1-3 기록, 내일 할 일 한 줄
 
 ## 끝 조건
 1. `npx eslint .`가 errors 0, warnings 2 (또는 오늘 처리한 만큼). `git diff`에 로직 변경 없음. 1-3은 다크 배경에서 읽히고 새 하드코딩 색 0.
