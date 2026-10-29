@@ -6,21 +6,27 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/text
+1. [https://reactnative.dev/docs/0.81/text](https://reactnative.dev/docs/0.81/text)
    - 확인할 사실: 모든 문자열은 `<Text>` 안에 있어야 하고 `<View>` 바로 아래에 둘 수 없다는 문장. 중첩 `Text`의 스타일 상속이 "텍스트 하위 트리 안에서만" 일어난다는 문장. `numberOfLines`가 줄 수 제한 후 말줄임표를 붙인다는 설명.
-2. https://reactnative.dev/docs/0.81/image
+2. [https://reactnative.dev/docs/0.81/image](https://reactnative.dev/docs/0.81/image)
    - 확인할 사실: 네트워크 이미지는 `width`와 `height`를 직접 줘야 하고 로컬 `require` 이미지는 파일에서 크기를 알 수 있다는 문장. `resizeMode`의 기본값이 `cover`라는 점. `alt`가 스크린 리더용 설명이라는 점.
-3. https://reactnative.dev/docs/0.81/pressable
+3. [https://reactnative.dev/docs/0.81/pressable](https://reactnative.dev/docs/0.81/pressable)
    - 확인할 사실: `onPress`는 손가락을 뗀 뒤 `onPressOut` 다음에 호출된다. `onLongPress`는 기본 500ms 이상 누르면 호출된다. `style`에 `({ pressed }) => ...` 함수를 줄 수 있다.
 
 ## 예측(10분)
 
 1. `<View>오늘의 기록</View>`처럼 `Text` 없이 문자열을 `View` 바로 아래에 두면 어떻게 될까?
-   > 내 예측:
+   > 내 예측: 런타임 에러가 난다. View 태그 안에는 **문자열**을 Text로 감싸야 한다.
 2. `<Image source={{ uri: 'https://reactnative.dev/img/tiny_logo.png' }} />`에 `style`로 크기를 주지 않으면 화면에 보일까?
-   > 내 예측:
+   > 내 예측: 안보인다. 반드시 width,height를 명시해야 한다.
+   >
+   > 정답 : 에러 없이 0x0으로 그려짐. 에러 없이 조용히 안보임.
+   >
+   > 실제 측정 결과 : style prop을 아예 명시하지 않거나 style을 {{}}로 두면 이미지가 엄청 커지는 듯한 현상이 나타났음
 3. 세로 `ScrollView` 안의 카드를 손가락으로 끌어 스크롤하면 그 카드의 `Pressable`의 `onPress`가 호출될까?
-   > 내 예측:
+   > 내 예측: 호출되지 않는다. 끌기가 시작되면 ScrollView가 responder를 가져가고, `Pressable`은 `onResponderTerminate`로 `RESPONDER_TERMINATED`를 받는다. `onPress`는 `RESPONDER_RELEASE`에서만 호출되므로 `onPressOut`만 불리고 `onPress`는 불리지 않는다.
+   >
+   > 정답  : 끌어서 스크롤 할 때도 손가락은 눌렀다가 떨어짐. 실제 이유는 ScrollView가 끌기 제스처를 감지하면 터치 responder를 가져가고, Pressable의 press가 취소됨
 
 ## 만들기(40분)
 
@@ -37,7 +43,7 @@ Daily Log의 기록 화면 첫 버전이다. 이 Day부터 Day 14까지 화면�
    - 한 카드는 로컬 이미지 `require('../assets/images/icon.png')`, 다른 카드는 네트워크 이미지(위 읽기 2번 예시 URI + 크기 지정)를 쓴다.
    - `Pressable`의 `onPress`에서 `console.log`로 카드 id를 찍고, `style`을 함수로 줘서 누르는 동안 `opacity`를 낮춘다.
 4. 스타일은 오늘 인라인 객체로 최소한만 준다. `StyleSheet`는 Day 3에서 정리한다.
-5. ScrollView 상세는 https://reactnative.dev/docs/0.81/scrollview 에서 `contentContainerStyle`을 확인한다.
+5. ScrollView 상세는 [https://reactnative.dev/docs/0.81/scrollview](https://reactnative.dev/docs/0.81/scrollview) 에서 `contentContainerStyle`을 확인한다.
 
 ```tsx
 <Pressable
@@ -49,33 +55,44 @@ Daily Log의 기록 화면 첫 버전이다. 이 Day부터 Day 14까지 화면�
 ```
 
 완료 기준:
-- [ ] `npm run reset-project`를 실행했고 `app/`에 `index.tsx`, `_layout.tsx`만 있다
-- [ ] `package.json`에 `reset-project` 스크립트가 없다
-- [ ] 시뮬레이터에 제목과 카드 3개가 보이고 세로로 스크롤된다
-- [ ] 로컬 이미지와 네트워크 이미지가 모두 보인다
-- [ ] 카드를 탭하면 터미널에 id가 찍히고, 누르는 동안 카드가 흐려진다
-- [ ] 본문이 두 줄을 넘으면 말줄임표가 붙는다(본문 하나를 길게 써서 확인)
+
+- [x] `npm run reset-project`를 실행했고 `app/`에 `index.tsx`, `_layout.tsx`만 있다
+- [x] `package.json`에 `reset-project` 스크립트가 없다
+- [x] 시뮬레이터에 제목과 카드 3개가 보이고 세로로 스크롤된다
+- [x] 로컬 이미지와 네트워크 이미지가 모두 보인다
+- [x] 카드를 탭하면 터미널에 id가 찍히고, 누르는 동안 카드가 흐려진다
+- [x] 본문이 두 줄을 넘으면 말줄임표가 붙는다(본문 하나를 길게 써서 확인)
 
 ## 검증(10분)
 
 - 시뮬레이터에서 카드를 짧게 탭할 때와 끌어서 스크롤할 때, 터미널 로그가 찍히는지 비교한다(예측 3번).
 - 네트워크 이미지의 `width`·`height`를 지우고 저장해 본다(예측 2번).
 - 실험: `View` 바로 아래에 문자열을 넣어 저장하고, 화면에 뜬 오류 메시지 원문을 아래에 옮겨 적는다. 원문을 그대로 검색창에 넣어 보는 것이 막힘 규칙 1번 연습이다.
-  > 오류 원문:
+  > 오류 원문: Text strings must be rendered within a &lt;Text&gt; component
 
-| 예측 | 실제 | 다른 이유 |
-|---|---|---|
-| 1 |  |  |
-| 2 |  |  |
-| 3 |  |  |
+
+| 예측  | 실제                                                                 | 다른 이유  |
+| --- | ------------------------------------------------------------------ | ------ |
+| 1   | Text strings must be rendered within a &lt;Text&gt; component      | 예측과 같음 |
+| 2   | style prop을 아예 명시하지 않거나 style을 아예 빈 상태롤 두면 이미지가 엄청 커지는 듯한 현상이 나타났음 |        |
+| 3   |                                                                    |        |
+
 
 ## 이해 점검 질문
 
-1. 웹의 `div`, `p`, `img`, `input`, `button`은 각각 어떤 RN 컴포넌트에 대응하는가? 문자열을 반드시 `Text` 안에 둬야 하는 이유는?
+1. 웹의 `div`, `p`, `img`, `input`, `button`은 각각 어떤 RN 컴포넌트에 대응하는가? 문자열을 반드시 `Text` 안에 둬야 하는 이유는? 일반 문자열만 렌더링 시 오류 메시지로 명확하게 고치는 가이드를 설명하고 있으나 근본적인 원인은 모르겠음
+   1. div -&gt; View
+   2. p -&gt; Text
+   3. img -&gt; Iamge
+   4. input -&gt; Input / Input이 아니라 TextInput
+   5. button -&gt; Button / Pressable을 쓰거나 Button
 2. `ScrollView`와 `FlatList`의 렌더링 방식 차이는 무엇이고, 각각 어떤 상황에 쓰는가?
+   1. ScrollView 사용 중 데이터가 많을 시 성능상 이슈가 발생한다. 이를 해결하기 위해 FlatList를 사용한다.
 3. `Pressable`의 `style`에 함수를 주는 이유는 무엇이며, `onPress`가 호출되는 시점은 언제인가?
+   1. 함수를 주는 이유는 모르겠음, onPress가 호출되는 시점은 손가락을 뗀 후
 
-<details><summary>정답</summary>
+<details class="orca-details" open>
+<summary>정답</summary>
 
 1. `div`는 `View`, `p`는 `Text`, `img`는 `Image`, `input`은 `TextInput`이 가깝다. `button`은 `Pressable`로 직접 만들거나 `Button`을 쓴다(RN 컴포넌트 소개 문서의 대응표는 View/div, Text/p, Image/img, TextInput/input type="text"를 든다). RN은 브라우저 DOM이 아니라 iOS의 `UILabel` 같은 네이티브 뷰를 만든다. 텍스트는 별도의 네이티브 텍스트 뷰가 그리기 때문에 문자열을 담당하는 `Text`가 있어야 한다. 그래서 `View` 바로 아래 문자열은 오류다.
 2. `ScrollView`는 자식을 한 번에 전부 렌더하므로 항목이 많으면 느려지고 메모리를 더 쓴다. `FlatList`는 화면에 곧 보일 항목만 렌더하고 멀리 벗어난 항목은 제거한다(Day 7). 적은 고정 콘텐츠는 `ScrollView`, 긴 목록은 `FlatList`가 맞다.
@@ -85,7 +102,7 @@ Daily Log의 기록 화면 첫 버전이다. 이 Day부터 Day 14까지 화면�
 
 ## 기록(5분)
 
-배운 것 3줄:
+배운 것 3줄: View 태그 안에는 일반 문자열을 그대로 렌더링 하면 안되고 Text로 일반 문자열을 감싸야 한다는 것,  ScrollView와 FlatList 차이점, Pressable에 대한 것.
 
 막힌 점:
 
