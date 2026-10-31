@@ -6,8 +6,8 @@
 
 ## 읽기(15분)
 
-1. [RNTL — Async utilities](https://callstack.github.io/react-native-testing-library/docs/api/misc/async)
-   - 이 카드의 RNTL 링크(`callstack.github.io/react-native-testing-library/...`)는 301로 `oss.callstack.com/react-native-testing-library/...`로 이동한다(2026-10-27 확인). 이동한 주소에서 읽는다.
+1. [RNTL — Async utilities](https://oss.callstack.com/react-native-testing-library/docs/api/misc/async)
+   - RNTL 문서는 `callstack.github.io`에서 `oss.callstack.com/react-native-testing-library/...`로 이동했다(2026-10-27 확인). 이 카드의 링크는 이동한 주소로 적어 두었다.
    - `findBy*`가 "비동기 동작의 결과로 나중에 나타나는 요소"를 찾는 쿼리라는 설명을 찾는다.
    - `waitFor`의 기본 `timeout`(1000ms)과 `interval`(50ms)을 확인한다.
    - `waitFor` 콜백은 기대가 충족되지 않을 때 **에러를 던져야** 하고, `() => false`처럼 던지지 않으면 즉시 통과한다는 예시를 찾는다.
@@ -15,7 +15,7 @@
 2. [Jest — Mock Functions API](https://jestjs.io/docs/mock-function-api)
    - `mockResolvedValue`/`mockRejectedValue`가 각각 `Promise.resolve`/`Promise.reject`를 돌려주는 shorthand라는 점과 `...Once` 변형이 한 번의 호출에만 적용된다는 점을 확인한다.
    - `mockClear`(호출 기록만 삭제), `mockReset`(기록과 구현 삭제), `mockRestore`(원본 복원, `jest.spyOn`으로 만든 mock에서만 동작)의 차이를 표로 정리한다.
-3. [TanStack Query v5 — Testing](https://tanstack.com/query/v5/docs/framework/react/guides/testing)
+3. [TanStack Query v5 — Testing](https://tanstack.com/query/latest/docs/framework/react/guides/testing)
    - 테스트용 `QueryClientProvider` wrapper를 만드는 이유를 찾는다.
    - 기본 `retry`가 3회 지수 백오프이기 때문에 실패 쿼리 테스트가 타임아웃될 수 있고, `defaultOptions.queries.retry: false`로 끈다는 문장을 찾는다.
    - Jest가 끝난 뒤 "did not exit" 메시지를 막기 위해 `gcTime: Infinity`를 쓴다는 문장을 찾는다.

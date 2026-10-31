@@ -8,14 +8,14 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54에 고정되는 패키지는 `expo-sharing ~14.0`이다. 오늘 쓰는 `File`, `Paths`는 Day 42에서 쓴 `expo-file-system ~19.0`의 새 API다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-sharing ~14.0`이다. 오늘 쓰는 `File`, `Paths`는 Day 42에서 쓴 `expo-file-system ~19.0`의 새 API다.
 
-1. [Sharing](https://docs.expo.dev/versions/v54.0.0/sdk/sharing/)
+1. [Sharing](https://docs.expo.dev/versions/latest/sdk/sharing/)
    - `Sharing.shareAsync(url, options)`의 `url`이 "로컬 파일 URL"이라는 설명을 찾는다. 문자열을 바로 넘기는 API가 아니다.
    - `options`의 세 가지를 구분해서 적는다: `mimeType`(Android·iOS), `dialogTitle`(Android·웹), `UTI`(iOS 전용이고, iOS가 파일 확장자로 매핑할 수 있으면 `mimeType`보다 우선한다).
    - `Sharing.isAvailableAsync()`가 `Promise<boolean>`이고, 웹은 Web Share API가 제한적이라 먼저 확인하라는 안내를 확인한다.
    - 상단 안내에서 이 라이브러리가 "내 앱에서 다른 앱으로" 보내는 용도만 지원하고, 다른 앱의 공유를 받는 기능은 없다는 점을 확인한다.
-2. [Share (React Native 0.81)](https://reactnative.dev/docs/0.81/share)
+2. [Share (React Native)](https://reactnative.dev/docs/share)
    - RN 내장 `Share.share({ message })`가 텍스트·URL을 공유하는 API라는 점과 `expo-sharing`이 파일을 공유한다는 차이를 문장으로 적는다.
 
 ## 예측(10분)

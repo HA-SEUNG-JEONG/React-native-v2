@@ -10,10 +10,10 @@ Daily Log에 버그 3개를 일부러 넣고, React Native DevTools(Console·Sou
    - 터미널 단축키에서 `M`은 개발자 메뉴, `J`는 React Native DevTools(Hermes 앱)를 연다는 점을 확인한다.
    - DevTools 탭 구성에 Network가 "Expo 전용"으로 들어 있고, `expo-dev-client`가 설치되어 있거나 Expo Go를 쓸 때만 동작한다는 문장을 찾는다.
    - iOS 시뮬레이터에서 개발자 메뉴를 여는 단축키(`Cmd + D` 또는 `Ctrl + Cmd + Z`)를 찾는다.
-2. [React Native — Debugging](https://reactnative.dev/docs/0.81/debugging)
+2. [React Native — Debugging](https://reactnative.dev/docs/debugging)
    - LogBox 표를 읽고 Fatal Error, Console Error, Console Warning이 각각 어떻게 표시되는지 정리한다.
    - "DevTools가 열려 있으면 fatal error를 제외한 모든 에러가 LogBox에 표시되지 않는다"는 문장을 찾는다.
-   - DevTools가 Hermes에서만 동작하고 Chrome 또는 Edge가 필요하다는 요구 사항을 찾는다.
+   - DevTools가 Hermes에서만 동작하고 Chrome 또는 Edge가 필요하다는 요구 사항은 RN 0.81 문서에 있던 문장이고 최신(0.88) 문서에서는 삭제됐다. 이 프로젝트(Hermes, RN 0.81.5)에서 `J`로 DevTools가 실제로 열리는지 확인하고, 안 열리면 그 조건을 막힌 점에 적는다.
 3. [Expo — Debugging runtime issues](https://docs.expo.dev/debugging/runtime-issues/)
    - 네이티브 로그를 보는 방법을 찾는다. Android는 `adb logcat`, iOS는 macOS의 Console 앱에서 기기 또는 시뮬레이터를 고르고 Start streaming이다.
    - 프로덕션 오류를 다룰 때 가장 먼저 "로컬에서 재현"하고, 어려우면 `npx expo start --no-dev --minify`로 프로덕션 모드를 실행해 본다는 순서를 찾는다.

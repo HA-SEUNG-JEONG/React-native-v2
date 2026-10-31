@@ -8,14 +8,14 @@
 
 ## 읽기(15분)
 
-1. https://tanstack.com/query/v5/docs/framework/react/overview — 설치 직후의 기본 예제.
+1. https://tanstack.com/query/latest/docs/framework/react/overview — 설치 직후의 기본 예제.
    - 확인할 사실: `const queryClient = new QueryClient()`를 만들고 `<QueryClientProvider client={queryClient}>`로 앱을 감싼다. `useQuery({ queryKey, queryFn })`가 `{ isPending, error, data }`를 돌려준다.
    - 확인할 사실: 예제 `queryFn`은 `response.ok`를 확인하고 아니면 `Error`를 던진다(Day 27에서 이미 `src/api/client.ts`에 만든 로직과 같다).
-2. https://tanstack.com/query/v5/docs/framework/react/guides/queries — query의 상태.
+2. https://tanstack.com/query/latest/docs/framework/react/guides/queries — query의 상태.
    - 확인할 사실: `status`는 `pending`(데이터 없음) / `error` / `success`이고, `fetchStatus`는 `fetching` / `paused` / `idle`이다. 둘은 서로 다른 질문이다. 데이터가 없는데 가져오지 않는(`pending`이면서 `idle` 또는 `paused`) 쿼리도 있을 수 있다.
-3. https://tanstack.com/query/v5/docs/framework/react/guides/important-defaults — 기본값.
+3. https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults — 기본값.
    - 확인할 사실: 쿼리는 기본적으로 "stale"로 취급되고, 실패한 쿼리는 에러가 화면에 나오기 전에 3번 자동 재시도(지수 백오프)된다. 비활성 쿼리는 5분 뒤에 가비지 컬렉션된다(`gcTime`).
-   - 참고: 설치 절차는 https://tanstack.com/query/v5/docs/framework/react/installation 에서 `npm i @tanstack/react-query`를 확인했다. React Native용 추가 설정은 거기에 없다. 포커스·온라인 연동은 Day 33에서 다룬다.
+   - 참고: 설치 절차는 https://tanstack.com/query/latest/docs/framework/react/installation 에서 `npm i @tanstack/react-query`를 확인했다. React Native용 추가 설정은 거기에 없다. 포커스·온라인 연동은 Day 33에서 다룬다.
 
 ## 예측(10분)
 

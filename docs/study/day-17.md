@@ -8,9 +8,9 @@
 
 1. Tabs 레이아웃: https://docs.expo.dev/router/advanced/tabs/
    - 확인할 사실: `(tabs)` 폴더 안의 `_layout.tsx`가 `Tabs`를 렌더하고, 탭 하나마다 `Tabs.Screen`의 `name`이 같은 폴더의 파일 이름과 일치한다. `title`이 탭 글자가 된다. 루트 Stack에서 `<Stack.Screen name="(tabs)" options={{ headerShown: false }} />`로 Stack 헤더를 숨겨 헤더가 두 겹이 되는 것을 막는다.
-2. `react-native-safe-area-context` Expo 문서: https://docs.expo.dev/versions/v54.0.0/sdk/safe-area-context/
+2. `react-native-safe-area-context` Expo 문서: https://docs.expo.dev/versions/latest/sdk/safe-area-context/
    - 확인할 사실: `SafeAreaView`는 안전 영역 가장자리를 padding으로 적용하는 `View`이고 `edges` 배열(`'top'` 등)로 적용할 가장자리를 고른다. `useSafeAreaInsets()`는 `top`, `bottom` 같은 숫자를 돌려준다. 웹에서는 값이 0이다. 이 패키지는 템플릿에 이미 들어 있다.
-3. RN `SafeAreaView` 문서: https://reactnative.dev/docs/0.81/safeareaview
+3. RN `SafeAreaView` 문서: https://reactnative.dev/docs/safeareaview
    - 확인할 사실: RN 0.81에서 `react-native`의 `SafeAreaView`는 deprecated이고 `react-native-safe-area-context`를 쓰라고 한다. import 출처가 어디인지 확인한다.
 
 ## 예측(10분)

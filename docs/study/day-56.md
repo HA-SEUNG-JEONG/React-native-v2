@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/usewindowdimensions
-   - 확인할 사실: 반환 필드는 `width`, `height`, `scale`, `fontScale`이다. 화면 크기나 글자 크기 설정이 바뀌면 값이 자동으로 갱신된다. `Dimensions.get`이 호출 시점의 스냅샷인 것과 달리 이 훅은 구독해 리렌더한다는 차이를 `Dimensions` 문서(https://reactnative.dev/docs/0.81/dimensions)와 비교해 확인한다.
-2. https://reactnative.dev/docs/0.81/flatlist
+1. https://reactnative.dev/docs/usewindowdimensions
+   - 확인할 사실: 반환 필드는 `width`, `height`, `scale`, `fontScale`이다. 화면 크기나 글자 크기 설정이 바뀌면 값이 자동으로 갱신된다. `Dimensions.get`이 호출 시점의 스냅샷인 것과 달리 이 훅은 구독해 리렌더한다는 차이를 `Dimensions` 문서(https://reactnative.dev/docs/dimensions)와 비교해 확인한다.
+2. https://reactnative.dev/docs/flatlist
    - 확인할 사실: `numColumns`는 `horizontal={false}`일 때만 쓸 수 있고, 모든 항목이 같은 높이여야 한다(masonry 불가). `columnWrapperStyle`은 `numColumns > 1`인 행에 주는 스타일이다. `numColumns`를 실행 중에 바꿀 때의 제약은 이 페이지에 적혀 있지 않다. 이 제약은 직접 만들기에서 에러 메시지로 확인한다.
-3. https://docs.expo.dev/versions/v54.0.0/sdk/safe-area-context/
+3. https://docs.expo.dev/versions/latest/sdk/safe-area-context/
    - 확인할 사실: Expo Router는 `SafeAreaProvider`를 자동으로 설정한다. `SafeAreaView`는 안전 영역을 패딩으로 적용한 `View`이고 문서가 가능하면 이쪽을 우선하라고 한다. `useSafeAreaInsets()`는 `top`·`right`·`bottom`·`left`를 돌려주는 더 세밀한 선택지다.
 
 ## 예측(10분)

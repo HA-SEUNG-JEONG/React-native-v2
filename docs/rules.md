@@ -22,7 +22,7 @@
 ## 막힘 규칙
 
 1. 15분 막히면 에러 메시지 원문을 그대로 검색한다.
-2. 다시 15분 막히면 공식 문서(`docs.expo.dev/versions/v54.0.0/`, `reactnative.dev`)의 해당 절을 읽는다.
+2. 다시 15분 막히면 공식 문서(`docs.expo.dev/versions/latest/`, `reactnative.dev`)의 해당 절을 읽는다.
 3. 그래도 안 되면 질문 목록(`docs/questions.md`)에 에러 원문과 시도한 것을 적고 다음으로 넘어간다. 질문 목록은 금요일 버퍼에서 처리한다.
 
 ## 복습

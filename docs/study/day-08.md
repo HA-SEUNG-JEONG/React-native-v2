@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/sectionlist
+1. https://reactnative.dev/docs/sectionlist
    - 확인할 사실: `sections`의 각 요소는 `data` 배열을 가진 객체이고 `key`는 선택이다. `renderSectionHeader`는 섹션 맨 위에 렌더된다. `stickySectionHeadersEnabled`는 iOS에서만 기본으로 켜진다. `keyExtractor`는 항목 key를 만들 뿐 섹션 자체에도 key가 필요하다는 문장.
-2. https://reactnative.dev/docs/0.81/refreshcontrol
+2. https://reactnative.dev/docs/refreshcontrol
    - 확인할 사실: 스크롤이 맨 위일 때 아래로 당기면 `onRefresh`가 호출된다. `refreshing`은 제어되는 prop이라 `onRefresh`에서 `true`로 바꾸지 않으면 인디케이터가 바로 사라진다. iOS는 `tintColor`, Android는 `colors`·`progressBackgroundColor`로 색을 바꾼다.
-3. https://reactnative.dev/docs/0.81/optimizing-flatlist-configuration
+3. https://reactnative.dev/docs/optimizing-flatlist-configuration
    - 확인할 사실: `windowSize` 기본값 21(화면 높이 단위), `initialNumToRender` 기본값 10, `maxToRenderPerBatch` 기본값 10. 값을 키우면 빈 영역(blank areas)은 줄지만 메모리를 더 쓴다. 항목은 `memo()`로 감싸고 `renderItem`은 `useCallback`으로 고정하라는 팁.
 
 ## 예측(10분)

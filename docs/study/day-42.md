@@ -8,14 +8,14 @@ Day 40에서 고른 사진을 캐시 경로에서 앱 문서 폴더로 복사해
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. 이 카드는 SDK 54의 `expo-file-system ~19.0`을 기준으로 한다. SDK 54에는 두 API가 공존한다: 클래스 기반 새 API(`import { File, Directory, Paths } from 'expo-file-system'`)와 함수 기반 legacy API(`import * as FileSystem from 'expo-file-system/legacy'`). **오늘은 새 API만 쓴다.**
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. 이 카드는 SDK 54의 `expo-file-system ~19.0`을 기준으로 한다. SDK 54에는 두 API가 공존한다: 클래스 기반 새 API(`import { File, Directory, Paths } from 'expo-file-system'`)와 함수 기반 legacy API(`import * as FileSystem from 'expo-file-system/legacy'`). **오늘은 새 API만 쓴다.**
 
-1. [FileSystem](https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/)
+1. [FileSystem](https://docs.expo.dev/versions/latest/sdk/filesystem/)
    - Usage 절에서 `File`, `Directory`, `Paths` import 형태를 확인한다. `File`과 `Directory`는 존재하지 않는 경로도 가리킬 수 있고, 이미 있는 디렉터리 경로로 `File`을 만들 때처럼 클래스가 틀렸을 때만 생성자에서 에러가 난다는 문장을 찾는다.
    - "Writing and reading text files" 예제에서 `file.create()`가 파일이 이미 있으면 에러를 던질 수 있다는 주석, `file.write(...)`, `file.textSync()` 흐름을 확인한다.
    - "Moving and copying files" 예제에서 `file.copy(대상)`의 대상이 `File`일 때와 `file.move(Directory)`일 때 `uri`가 어떻게 바뀌는지 읽는다.
    - `Paths.cache`는 시스템이 저장 공간이 부족할 때 지울 수 있고 `Paths.document`는 지워지지 않는다는 설명을 API 절의 `Paths`에서 찾는다.
-2. [FileSystem (legacy)](https://docs.expo.dev/versions/v54.0.0/sdk/filesystem-legacy/)
+2. [FileSystem (legacy)](https://docs.expo.dev/versions/latest/sdk/filesystem-legacy/)
    - 상단 안내에서 legacy 버전이 같은 패키지 안에 호환성 때문에 함께 들어 있다는 문장을 찾는다.
    - 예전 튜토리얼에 나오는 `documentDirectory`, `readAsStringAsync`, `writeAsStringAsync`, `getInfoAsync` 같은 이름이 여기 있고, 새 API에서는 각각 `Paths.document`, `file.text()`, `file.write()`, `file.info()`로 대응된다는 점을 확인한다.
 

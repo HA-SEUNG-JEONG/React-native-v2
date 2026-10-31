@@ -8,9 +8,9 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54에 고정되는 패키지는 `expo-location ~19.0`이다. 함수 이름과 반환 타입은 설치된 패키지의 타입 정의로 한 번 더 확인한다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-location ~19.0`이다. 함수 이름과 반환 타입은 설치된 패키지의 타입 정의로 한 번 더 확인한다.
 
-1. [Location](https://docs.expo.dev/versions/v54.0.0/sdk/location/)
+1. [Location](https://docs.expo.dev/versions/latest/sdk/location/)
    - Usage 예제에서 순서를 확인한다: `requestForegroundPermissionsAsync()` -> `status !== 'granted'` 분기 -> `getCurrentPositionAsync({})`.
    - API 절에서 `getCurrentPositionAsync`가 현재 위치를 얻는 데 몇 초 걸릴 수 있어서 빠른 응답이 필요하면 `getLastKnownPositionAsync`를 고려하라는 설명, 그리고 `getLastKnownPositionAsync`가 `null`을 돌려줄 수 있다는 점을 찾는다.
    - `LocationObject`가 `coords`(`latitude`, `longitude` 등)와 `timestamp`를 가진다는 점, `Location.Accuracy`의 단계(`Lowest`부터 `BestForNavigation`)를 확인한다.
@@ -18,7 +18,7 @@
    - "Background permissions" 안내의 Collapsible에서 `Allow Once`를 고르면 그 앱 세션에서만 유효하고, iOS는 `Allow Once`와 `Allow While Using the App`을 구분해 알려 주지 않는다는 문장을 읽는다.
    - "Enable emulator location" 절에서 Android 에뮬레이터와 iOS 시뮬레이터에서 위치를 켜는 방법을 확인한다.
    - `reverseGeocodeAsync`가 `{ latitude, longitude }`를 받아 `city`, `district`, `region` 등을 가진 주소 배열을 돌려주며, 한꺼번에 너무 많이 호출하면 에러가 날 수 있다는 주의를 확인한다.
-2. [AppState (React Native 0.81)](https://reactnative.dev/docs/0.81/appstate)
+2. [AppState (React Native)](https://reactnative.dev/docs/appstate)
    - 앱이 `active`로 돌아올 때 이벤트를 받는 방법을 확인한다. 사용자가 설정 앱에서 권한을 바꾸고 돌아왔을 때 설정 탭 표시를 갱신하는 데 쓴다.
 
 ## 예측(10분)

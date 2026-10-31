@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/keyboardavoidingview
+1. https://reactnative.dev/docs/keyboardavoidingview
    - 확인할 사실: `behavior`는 `'height'`, `'position'`, `'padding'` 중 하나이며 iOS와 Android 모두 지정하는 것이 권장된다. `keyboardVerticalOffset`은 화면 위쪽에서 이 뷰까지의 거리(예: 헤더가 있을 때)다. `contentContainerStyle`은 `behavior='position'`일 때만 쓴다.
-2. https://reactnative.dev/docs/0.81/keyboard
+2. https://reactnative.dev/docs/keyboard
    - 확인할 사실: `Keyboard.dismiss()`는 활성 키보드를 닫고 포커스를 없앤다. `addListener`는 구독 객체를 돌려준다. `keyboardWillShow`·`keyboardWillHide`는 iOS용이고 Android에서는 `keyboardDidShow`·`keyboardDidHide`만 쓸 수 있다는 주의 문장을 찾는다. 구독 해제는 이 페이지에 `remove()`가 따로 문서화돼 있지 않으니 문서에서 확인 필요하다. 코드에서는 `subscription.remove()`로 쓴다.
-3. https://reactnative.dev/docs/0.81/textinput
+3. https://reactnative.dev/docs/textinput
    - 확인할 사실: `returnKeyType`의 공통 값은 `done`, `go`, `next`, `search`, `send`다. `onSubmitEditing`은 키보드의 제출 키를 눌렀을 때 호출된다. 한 줄 입력에서 `submitBehavior`가 정해지지 않으면 제출 시 포커스가 해제(`blurAndSubmit`)된다. `keyboardType`으로 키보드 종류를 정한다. 포커스는 `focus()`로 옮긴다.
 
 ## 예측(10분)

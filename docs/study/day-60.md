@@ -11,11 +11,11 @@ Daily Log에 `jest-expo`와 `@testing-library/react-native` 환경을 만들고,
    - `package.json`에 `"jest": { "preset": "jest-expo" }`와 `"test": "jest --watchAll"` 스크립트를 넣는다는 점, TypeScript면 `tsconfig.json`의 `types`에 `"jest"`를 추가한다는 점을 찾는다.
    - `react-test-renderer`가 React 19 이상을 지원하지 않아 deprecated이고, 그 자리를 `@testing-library/react-native`가 대신한다는 문장을 찾는다.
    - UI 검증에는 스냅샷 단위 테스트보다 E2E(Maestro)를 권장한다는 문장을 찾는다.
-2. [React Native Testing Library — Quick Start](https://callstack.github.io/react-native-testing-library/docs/start/quick-start)
+2. [React Native Testing Library — Quick Start](https://oss.callstack.com/react-native-testing-library/docs/start/quick-start)
    - `test-renderer`가 peer dependency이고 따로 설치해야 한다는 부분을 찾는다.
    - Jest matcher(`toBeOnTheScreen` 등)는 `@testing-library/react-native`를 import하면 자동으로 붙는다는 문장을 찾는다.
    - 확인할 버전: 최신 14.x 기준이다. 14.x는 React 19 이상과 Node.js `^22.13.0 || >=24`를 요구하고 `render`·`fireEvent`·`act`가 비동기다. 같은 사이트의 `Migration to 14.x` 문서에서 확인한다.
-3. [RNTL — How should I query?](https://callstack.github.io/react-native-testing-library/docs/guides/how-to-query)
+3. [RNTL — How should I query?](https://oss.callstack.com/react-native-testing-library/docs/guides/how-to-query)
    - `getBy*`, `queryBy*`, `findBy*`가 각각 "정확히 1개 단언", "0개 또는 1개", "비동기로 1개"라는 표를 찾는다.
    - `queryBy*`는 "없어야 하는 요소"를 확인할 때만 쓰고 `not.toBeOnTheScreen()`과 함께 쓴다는 문장을 찾는다.
 

@@ -14,7 +14,7 @@ API 기본 주소를 `EXPO_PUBLIC_` 환경 변수로 옮기고, `app.config.ts`�
    - `EXPO_PUBLIC_` 접두사가 붙은 변수만 JS 코드에서 `process.env.EXPO_PUBLIC_NAME`으로 읽을 수 있다는 규칙을 확인한다.
    - 값이 점 표기법(dot notation)으로 **정적으로** 참조될 때만 빌드 시 치환되고 `process.env['KEY']`나 구조분해는 치환되지 않는다는 문장을 찾는다.
    - 이 값이 컴파일된 앱에 평문으로 들어가므로 비밀 정보를 넣으면 안 된다는 경고와 `.env` 파일 우선순위(개발 모드는 `.env.development.local` → `.env.local` → `.env.development` → `.env`)를 찾는다.
-3. [Expo SDK 54 — SplashScreen](https://docs.expo.dev/versions/v54.0.0/sdk/splash-screen/)
+3. [Expo SDK 54 — SplashScreen](https://docs.expo.dev/versions/latest/sdk/splash-screen/)
    - `app.json`의 `expo-splash-screen` config plugin 옵션(`image`, `imageWidth`, `backgroundColor`, `dark`)을 확인한다.
    - config plugin 속성은 런타임에 바꿀 수 없어 새 바이너리가 필요하고, development build에서는 모두 반영되지 않으므로 release build 확인이 권장된다는 문장을 찾는다.
 
@@ -65,7 +65,7 @@ API 기본 주소를 `EXPO_PUBLIC_` 환경 변수로 옮기고, `app.config.ts`�
 - 선택: 클라우드 빌드에도 API 주소를 주입하려면 `eas env:set --name EXPO_PUBLIC_API_BASE_URL --value https://jsonplaceholder.typicode.com --environment preview --visibility plaintext`를 쓴다([EAS 환경 변수](https://docs.expo.dev/eas/environment-variables/manage/)). 이 값도 앱 번들에 포함되는 공개 값이다.
 
 **3. 아이콘과 스플래시 교체 (15분)**
-- 1024x1024 정사각 PNG 아이콘을 만들어 `assets/images/icon.png`를 교체한다. 단색 배경에 글자 "DL"처럼 단순해도 된다. 둥근 모서리와 투명 픽셀 없이 정사각형 전체를 채운다([App icons](https://docs.expo.dev/develop/user-interface/app-icons/)).
+- 1024x1024 정사각 PNG 아이콘을 만들어 `assets/images/icon.png`를 교체한다. 단색 배경에 글자 "DL"처럼 단순해도 된다. 둥근 모서리와 투명 픽셀 없이 정사각형 전체를 채운다([App icons](https://docs.expo.dev/develop/user-interface/splash-screen-and-app-icon/)).
 - Android 어댑티브 아이콘은 `android.adaptiveIcon`의 `foregroundImage`(전경 PNG)와 `backgroundColor`를 Daily Log 색으로 바꾼다.
 - 스플래시는 `app.json`의 `expo-splash-screen` 플러그인 항목에서 `image`, `backgroundColor`, `dark.backgroundColor`를 바꾼다.
 - 아이콘과 스플래시는 새 바이너리가 필요하므로 `npx eas-cli@latest build --platform ios --profile development`를 걸어 두고, 기다리는 동안 아래 검증을 한다. 빌드 결과는 오늘 끝나지 않아도 되고 다음 시작 때 확인해도 된다.

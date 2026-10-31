@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. [https://reactnative.dev/docs/0.81/text](https://reactnative.dev/docs/0.81/text)
+1. [https://reactnative.dev/docs/text](https://reactnative.dev/docs/text)
    - 확인할 사실: 모든 문자열은 `<Text>` 안에 있어야 하고 `<View>` 바로 아래에 둘 수 없다는 문장. 중첩 `Text`의 스타일 상속이 "텍스트 하위 트리 안에서만" 일어난다는 문장. `numberOfLines`가 줄 수 제한 후 말줄임표를 붙인다는 설명.
-2. [https://reactnative.dev/docs/0.81/image](https://reactnative.dev/docs/0.81/image)
+2. [https://reactnative.dev/docs/image](https://reactnative.dev/docs/image)
    - 확인할 사실: 네트워크 이미지는 `width`와 `height`를 직접 줘야 하고 로컬 `require` 이미지는 파일에서 크기를 알 수 있다는 문장. `resizeMode`의 기본값이 `cover`라는 점. `alt`가 스크린 리더용 설명이라는 점.
-3. [https://reactnative.dev/docs/0.81/pressable](https://reactnative.dev/docs/0.81/pressable)
+3. [https://reactnative.dev/docs/pressable](https://reactnative.dev/docs/pressable)
    - 확인할 사실: `onPress`는 손가락을 뗀 뒤 `onPressOut` 다음에 호출된다. `onLongPress`는 기본 500ms 이상 누르면 호출된다. `style`에 `({ pressed }) => ...` 함수를 줄 수 있다.
 
 ## 예측(10분)
@@ -43,7 +43,7 @@ Daily Log의 기록 화면 첫 버전이다. 이 Day부터 Day 14까지 화면�
    - 한 카드는 로컬 이미지 `require('../assets/images/icon.png')`, 다른 카드는 네트워크 이미지(위 읽기 2번 예시 URI + 크기 지정)를 쓴다.
    - `Pressable`의 `onPress`에서 `console.log`로 카드 id를 찍고, `style`을 함수로 줘서 누르는 동안 `opacity`를 낮춘다.
 4. 스타일은 오늘 인라인 객체로 최소한만 준다. `StyleSheet`는 Day 3에서 정리한다.
-5. ScrollView 상세는 [https://reactnative.dev/docs/0.81/scrollview](https://reactnative.dev/docs/0.81/scrollview) 에서 `contentContainerStyle`을 확인한다.
+5. ScrollView 상세는 [https://reactnative.dev/docs/scrollview](https://reactnative.dev/docs/scrollview) 에서 `contentContainerStyle`을 확인한다.
 
 ```tsx
 <Pressable

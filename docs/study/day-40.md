@@ -8,9 +8,9 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54에 고정되는 패키지는 `expo-image-picker ~17.0`이다. 문서와 설치된 패키지의 타입 정의(에디터에서 `ImagePicker`를 따라가 열린 `.d.ts`)가 다르면 타입 쪽이 맞다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-image-picker ~17.0`이다. 문서와 설치된 패키지의 타입 정의(에디터에서 `ImagePicker`를 따라가 열린 `.d.ts`)가 다르면 타입 쪽이 맞다.
 
-1. [ImagePicker](https://docs.expo.dev/versions/v54.0.0/sdk/imagepicker/)
+1. [ImagePicker](https://docs.expo.dev/versions/latest/sdk/imagepicker/)
    - 사용 예제 주석 "No permissions request is necessary for launching the image library"를 찾는다. 앨범 열기는 대부분 권한 요청이 필요 없다는 사실이다. 예외(iOS에서 비디오 선택 시 권한 팝업)가 무엇인지도 문장으로 적는다.
    - `launchCameraAsync`는 카메라 권한이 항상 필요하다는 문장과 `requestCameraPermissionsAsync`, `getCameraPermissionsAsync`의 반환 타입(`PermissionResponse`)을 확인한다.
    - 반환값이 `{ canceled, assets }`이고 취소하면 `assets`가 `null`이라는 점, 각 asset에 `uri`, `width`, `height`가 있다는 점을 확인한다.
@@ -18,7 +18,7 @@
 2. [Permissions 가이드](https://docs.expo.dev/guides/permissions/)
    - Expo Go에서는 네이티브 권한 설정 없이 런타임 요청이 되지만, dev build와 배포 빌드는 빌드 시점 설정이 필요하다는 문장을 찾는다.
    - iOS는 권한마다 사용 목적 설명이 필요하고, 설명이 부실하면 심사에서 거절될 수 있다는 경고를 확인한다.
-3. [Linking.openSettings](https://reactnative.dev/docs/0.81/linking)
+3. [Linking.openSettings](https://reactnative.dev/docs/linking)
    - `Linking.openSettings()`가 앱의 설정 화면을 여는 API라는 설명을 찾는다.
 
 ## 예측(10분)

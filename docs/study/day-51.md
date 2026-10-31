@@ -6,7 +6,7 @@ shared value, `useAnimatedStyle`, `withSpring`/`withTiming`으로 좋아요 하�
 
 ## 읽기(15분)
 
-이 카드는 SDK 54가 고정하는 `react-native-reanimated` 4.1 계열과 `react-native-worklets` 0.5 기준이다. Reanimated 문서 사이트는 최신 버전(4.4 이상 기능 포함)을 보여 주므로, 문서에서 "4.x.0부터"라고 적힌 기능은 쓰지 않는다. 설치 명령(`npx expo install react-native-reanimated react-native-worklets`)과 "Babel 플러그인은 `babel-preset-expo`에 자동 설정된다"는 설명은 https://docs.expo.dev/versions/v54.0.0/sdk/reanimated/ 에 있다. 이 템플릿은 이미 설치되어 있으니 `package.json`에서 두 패키지의 버전만 확인한다.
+이 카드는 SDK 54가 고정하는 `react-native-reanimated` 4.1 계열과 `react-native-worklets` 0.5 기준이다. Reanimated 문서 사이트는 최신 버전(4.4 이상 기능 포함)을 보여 주므로, 문서에서 "4.x.0부터"라고 적힌 기능은 쓰지 않는다. 설치 명령(`npx expo install react-native-reanimated react-native-worklets`)과 "Babel 플러그인은 `babel-preset-expo`에 자동 설정된다"는 설명은 https://docs.expo.dev/versions/latest/sdk/reanimated/ 에 있다. 이 템플릿은 이미 설치되어 있으니 `package.json`에서 두 패키지의 버전만 확인한다.
 
 1. https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/your-first-animation
    - 확인할 사실: 값은 `useSharedValue`로 만들고 읽고 쓸 때는 항상 `.value`를 쓴다(`sv = 100`이 아니라 `sv.value = 100`). 애니메이션은 값을 `withSpring(목표값)`으로 감싸서 대입하면 시작된다.

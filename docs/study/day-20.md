@@ -8,7 +8,7 @@
 
 ## 읽기(15분)
 
-1. https://docs.expo.dev/versions/v54.0.0/sdk/router/ — `useRouter()`가 돌려주는 메서드 표(`push`, `replace`, `navigate`, `back`, `canGoBack`, `dismiss`)와 `useFocusEffect` 항목.
+1. https://docs.expo.dev/versions/latest/sdk/router/ — `useRouter()`가 돌려주는 메서드 표(`push`, `replace`, `navigate`, `back`, `canGoBack`, `dismiss`)와 `useFocusEffect` 항목.
    - 확인할 사실: `replace`는 "history에 추가하지 않고" 이동한다. `back`은 history를 거슬러 간다. `canGoBack()`은 boolean을 돌려준다.
    - 확인할 사실: `useFocusEffect`의 effect는 화면이 포커스를 얻을 때마다 실행되고, 반환한 cleanup은 포커스를 잃을 때 실행된다(언마운트 때가 아니다). 콜백은 `React.useCallback`으로 감싸라고 적혀 있다.
 2. https://docs.expo.dev/router/basics/navigation/ — `Link`, `router.navigate`, `router.push`, `router.replace`, `router.back`, `Redirect` 비교.

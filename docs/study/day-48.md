@@ -8,11 +8,11 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/...` 링크는 지금 열면 최신 문서(SDK 58 기준)로 넘어간다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`다. 푸시 관련 사실은 SDK 54 문서 원문에서 확인했지만, 최신 문서와 경고 문구가 다를 수 있다.
+> 확인할 버전: `docs.expo.dev/...` 링크는 최신 문서(SDK 58 기준)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`다. 푸시 관련 사실은 SDK 54 문서 원문에서 확인했지만, 최신 문서와 경고 문구가 다를 수 있다.
 
-1. [Notifications — Handle push notifications with navigation](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/)
+1. [Notifications — Handle push notifications with navigation](https://docs.expo.dev/versions/latest/sdk/notifications/)
    - Expo Router 탭의 예제에서 `Notifications.getLastNotificationResponse()`(앱이 알림 탭으로 막 시작됐을 때의 응답)와 `Notifications.addNotificationResponseReceivedListener`(실행 중 탭)를 한 `useEffect` 안에서 함께 쓰는 형태를 확인한다. 반환된 구독의 `remove()`를 cleanup에서 호출하는 줄도 확인한다.
-   - 예제 주석 두 개를 찾는다: "Push the URL. You may want to verify the format before navigating"과 "Ensure this layout never returns null or the navigation will go unhandled".
+   - 예제의 `redirect` 함수를 찾는다: `data?.url`이 문자열일 때만 `router.push(url)`을 부르고 `Notifications.clearLastNotificationResponse()`로 처리한 응답을 비운다. 같은 `useEffect`가 앱이 알림으로 켜진 경우(`getLastNotificationResponse`)와 실행 중 알림을 탭한 경우(`addNotificationResponseReceivedListener`)를 모두 처리한다. SDK 54 문서에 있던 주석 두 개("Push the URL. You may want to verify the format before navigating", "Ensure this layout never returns null or the navigation will go unhandled")는 최신 문서에서 빠졌다. URL 형식을 확인하라는 주의는 최신 예제의 `typeof url === 'string'` 검사로 남아 있다.
    - 상단 경고에서 Android Expo Go의 원격 푸시 제한을 다시 읽는다.
 2. [푸시 알림 설정 가이드](https://docs.expo.dev/push-notifications/push-notifications-setup/)
    - Prerequisites 경고: Android 에뮬레이터와 iOS 시뮬레이터에서는 푸시가 지원되지 않고 실기기가 필요하다.

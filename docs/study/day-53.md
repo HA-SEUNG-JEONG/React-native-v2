@@ -8,10 +8,10 @@
 
 1. https://docs.expo.dev/develop/user-interface/color-themes/
    - 확인할 사실: `app.json`의 `userInterfaceStyle`은 `automatic`(시스템을 따름), `light`, `dark` 중 하나이고, 속성이 없으면 라이트로 동작한다. 기본 템플릿은 `automatic`이다. Android 개발 빌드에서는 `expo-system-ui`가 설치되어 있어야 이 속성이 적용된다. 이 가이드 페이지는 SDK 버전별 주소가 아니므로, 이 프로젝트의 `app.json`(`userInterfaceStyle`)과 `package.json`(`expo-system-ui`)을 직접 열어 위 내용이 맞는지 확인한다.
-2. https://reactnative.dev/docs/0.81/usecolorscheme
-   - 확인할 사실: 반환값은 `'light'`, `'dark'`, `null`(사용자가 선호를 밝히지 않음) 셋 중 하나다. 이 훅은 색상표 변경을 구독하므로 앱이 켜져 있는 동안 값이 바뀌면 컴포넌트가 다시 렌더된다.
-3. https://reactnative.dev/docs/0.81/appearance
-   - 확인할 사실: `Appearance.setColorScheme('light' | 'dark' | null)`은 앱이 쓰는 색상표를 강제하고, `null`이면 시스템 설정을 따른다. 시스템 설정 자체를 바꾸지는 않으며, 앱과 앱이 띄우는 네이티브 요소(알럿·피커 등)에 적용된다.
+2. https://reactnative.dev/docs/usecolorscheme
+   - 확인할 사실: 반환값은 `'light'`, `'dark'`, `null` 셋 중 하나다. `null`의 뜻은 문서마다 다르다: RN 0.81 문서는 "사용자가 선호를 밝히지 않음", 최신(0.88) 문서는 "네이티브 Appearance 모듈이 없을 때 반환될 수 있음"이다. 어느 쪽이든 타입에 `null`이 있으니 기본값을 정해 둔다. 이 훅은 색상표 변경을 구독하므로 앱이 켜져 있는 동안 값이 바뀌면 컴포넌트가 다시 렌더된다.
+3. https://reactnative.dev/docs/appearance
+   - 확인할 사실: `Appearance.setColorScheme('light' | 'dark' | null)`은 앱이 쓰는 색상표를 강제하고, `null`이면 시스템 설정을 따른다(이 프로젝트의 RN 0.81.5 기준). 최신(0.88) 문서는 인자를 `'light' | 'dark' | 'auto' | 'unspecified'`로 적고 강제를 푸는 값이 `'auto'`다. 이 카드의 코드는 0.81.5 타입에 맞춰 `null`을 쓴다. 시스템 설정 자체를 바꾸지는 않으며, 앱과 앱이 띄우는 네이티브 요소(알럿·피커 등)에 적용된다.
 
 ## 예측(10분)
 
@@ -71,8 +71,8 @@ Daily Log 전체(피드·기록·설정·상세)에 다크 모드를 입힌다.
 <details>
 <summary>정답</summary>
 
-1. 사용자가 선호를 밝히지 않았거나 플랫폼이 알려 주지 못하는 경우가 있어 문서가 `'light' | 'dark' | null`을 반환값으로 정의한다. 타입이 `null`을 포함하므로 `colorScheme ?? 'light'`처럼 기본값을 정해 두고 `Colors[...]`로 접근해야 타입 오류와 `undefined` 접근이 생기지 않는다.
-2. `null`은 앱의 색상표 강제를 풀어 시스템 설정을 따르게 하고, `'dark'`는 시스템이 라이트여도 앱을 다크로 고정한다. 어느 쪽도 기기의 시스템 설정이나 다른 앱에는 영향을 주지 않으며, 변경은 앱과 앱이 띄우는 네이티브 요소(알럿·피커)에만 적용된다.
+1. 문서가 `'light' | 'dark' | null`을 반환값으로 정의한다(0.81 문서는 사용자가 선호를 밝히지 않은 경우, 최신 문서는 네이티브 모듈이 없는 플랫폼의 경우로 설명한다). 타입이 `null`을 포함하므로 `colorScheme ?? 'light'`처럼 기본값을 정해 두고 `Colors[...]`로 접근해야 타입 오류와 `undefined` 접근이 생기지 않는다.
+2. `null`(최신 0.88 문서에서는 `'auto'`)은 앱의 색상표 강제를 풀어 시스템 설정을 따르게 하고, `'dark'`는 시스템이 라이트여도 앱을 다크로 고정한다. 어느 쪽도 기기의 시스템 설정이나 다른 앱에는 영향을 주지 않으며, 변경은 앱과 앱이 띄우는 네이티브 요소(알럿·피커)에만 적용된다.
 3. `StyleSheet.create`는 모듈이 로드될 때 한 번 계산되므로 런타임에 바뀌는 색상표를 알 수 없다. 색은 렌더 시점의 `useTheme()` 값으로 덧붙이고, 바뀌지 않는 레이아웃만 `StyleSheet`에 둔다. `ThemeProvider`는 `useTheme()`와 별개로, 내비게이션 라이브러리가 헤더·탭바·화면 배경을 칠할 때 쓰는 색을 정한다. 둘 중 하나만 적용하면 본문은 다크인데 헤더·탭바는 라이트인 식으로 어긋난다.
 
 </details>

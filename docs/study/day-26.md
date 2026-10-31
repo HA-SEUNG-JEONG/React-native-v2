@@ -10,8 +10,8 @@
    - 확인할 사실: Effect가 데이터를 가져오면 cleanup은 요청을 abort하거나 결과를 무시해야 한다. 이미 나간 요청을 "취소"할 수는 없고, 더 이상 필요 없는 요청이 앱에 영향을 주지 않게 막는다.
    - 확인할 사실: `ignore` 변수는 Effect 실행마다 따로 존재하고, 의존성이 바뀌거나 언마운트될 때 cleanup이 그 Effect의 `ignore`를 `true`로 만든다.
    - 확인할 사실: 문서의 해설은 `AbortController`만으로는 경쟁 상태를 완전히 막지 못하고(fetch 뒤에 다른 비동기 단계가 이어질 수 있다), 명시적 `ignore` 플래그가 가장 확실하다고 한다.
-2. https://reactnative.dev/docs/0.81/network — fetch 에러 처리 복습. `AbortController`는 이 페이지에 언급이 없다. 취소 동작은 오늘 실험(콘솔에 `AbortError` 확인)으로 확인하고, 문서 근거는 확인하지 못했음을 막힌 점에 적는다(문서에서 확인 필요).
-3. https://tanstack.com/query/v5/docs/framework/react/guides/query-cancellation — Day 28 예고. `queryFn`이 `signal`을 받아 `fetch(url, { signal })`에 넘기는 형태를 확인한다(Day 28에서 쓴다. 지금은 `signal`이 `AbortController`에서 온다는 것만 본다).
+2. https://reactnative.dev/docs/network — fetch 에러 처리 복습. `AbortController`는 이 페이지에 언급이 없다. 취소 동작은 오늘 실험(콘솔에 `AbortError` 확인)으로 확인하고, 문서 근거는 확인하지 못했음을 막힌 점에 적는다(문서에서 확인 필요).
+3. https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation — Day 28 예고. `queryFn`이 `signal`을 받아 `fetch(url, { signal })`에 넘기는 형태를 확인한다(Day 28에서 쓴다. 지금은 `signal`이 `AbortController`에서 온다는 것만 본다).
 
 ## 예측(10분)
 

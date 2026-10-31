@@ -1,4 +1,12 @@
-import { Image, Pressable, ScrollView, Text } from "react-native";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  StyleSheet,
+  View,
+  Platform,
+} from "react-native";
 
 const ENTRIES = [
   {
@@ -23,23 +31,55 @@ const ENTRIES = [
 
 export default function Index() {
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <Text style={{ fontSize: 24, fontWeight: "bold" }}>오늘의 기록</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.diary}>오늘의 기록</Text>
+        <Text style={styles.date}>
+          {new Date().toLocaleDateString("ko-KR")}
+        </Text>
+      </View>
       {ENTRIES.map((entry) => (
         <Pressable
           key={entry.id}
           onPress={() => console.log(entry.id)}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         >
-          <Image
-            source={entry.image}
-            style={{ width: 64, height: 64 }}
-            alt={entry.title}
-          />
-          <Text style={{ fontSize: 18, fontWeight: "600" }}>{entry.title}</Text>
-          <Text numberOfLines={2}>{entry.body}</Text>
+          <Image source={entry.image} style={styles.thumb} alt={entry.title} />
+          <View style={styles.textArea}>
+            <Text style={styles.title}>{entry.title}</Text>
+            <Text numberOfLines={2}>{entry.body}</Text>
+          </View>
         </Pressable>
       ))}
     </ScrollView>
   );
 }
+
+export const styles = StyleSheet.create({
+  title: { fontSize: 18, fontWeight: "600" },
+  container: { padding: 20, gap: 16 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  diary: { fontSize: 24, fontWeight: "bold" },
+  date: { fontSize: 14 },
+  thumb: { width: 64, height: 64, borderRadius: 8 },
+  textArea: { flex: 1 },
+  card: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: "#fff",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  pressed: { opacity: 0.6 },
+});

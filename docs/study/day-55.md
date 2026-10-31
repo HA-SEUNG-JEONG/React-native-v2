@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/accessibility
+1. https://reactnative.dev/docs/accessibility
    - 확인할 사실: 터치 가능한 요소는 기본적으로 `accessible`이고, `accessibilityLabel`을 주지 않으면 라벨은 자식 `Text` 내용을 공백으로 이어 붙여 만들어진다. `accessibilityRole`은 요소의 용도를 알려 주며 `button`, `header`, `image`, `switch` 같은 값이 있다. 같은 목적의 `role` 속성은 `accessibilityRole`보다 우선하고 `heading`, `img`처럼 웹식 이름을 쓴다. `accessibilityState`는 `disabled`, `selected`, `checked`, `busy`, `expanded`를 가진다. `accessibilityActions`를 정의하고 `onAccessibilityAction`을 구현하면 스크린 리더 사용자에게 스와이프 같은 제스처의 대체 동작을 제공할 수 있다. 하단의 테스트 절에서 시뮬레이터/에뮬레이터별 스크린 리더 사용 가능 여부를 확인한다.
-2. https://reactnative.dev/docs/0.81/accessibilityinfo
+2. https://reactnative.dev/docs/accessibilityinfo
    - 확인할 사실: `AccessibilityInfo.isScreenReaderEnabled()`와 `isReduceMotionEnabled()`는 Promise를 돌려주고, `addEventListener('screenReaderChanged' | 'reduceMotionChanged', handler)`는 구독 객체를 돌려주므로 `useEffect` 정리 함수에서 `remove()`를 불러야 한다.
-3. https://reactnative.dev/docs/0.81/pressable
+3. https://reactnative.dev/docs/pressable
    - 확인할 사실: `hitSlop`은 요소 바깥으로 터치를 인식하는 영역을 넓히되, 부모 뷰의 경계 밖까지는 확장되지 않는다.
 
 ## 예측(10분)

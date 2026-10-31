@@ -8,17 +8,17 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54의 `expo-image`는 `~3.0`이고 이 템플릿에 이미 들어 있다. 설치는 필요 없고, 오늘이 처음 쓰는 날이다. prop 이름은 설치된 패키지의 타입 정의로 한 번 더 확인한다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54의 `expo-image`는 `~3.0`이고 이 템플릿에 이미 들어 있다. 설치는 필요 없고, 오늘이 처음 쓰는 날이다. prop 이름은 설치된 패키지의 타입 정의로 한 번 더 확인한다.
 
-1. [Image (expo-image)](https://docs.expo.dev/versions/v54.0.0/sdk/image/)
+1. [Image (expo-image)](https://docs.expo.dev/versions/latest/sdk/image/)
    - 기능 소개에서 BlurHash·ThumbHash 지원과 "소스가 바뀔 때 전환(transition)" 설명을 찾는다.
    - Usage 예제에서 `placeholder={{ blurhash }}`, `contentFit="cover"`, `transition={1000}`을 쓰는 형태를 확인한다. 이 예제의 `blurhash` 문자열을 오늘 그대로 복사해 쓴다.
    - `contentFit`이 CSS `object-fit`을 따르는 prop이고 기본값이 `'cover'`라는 점, `cachePolicy`의 선택지(`'none' | 'disk' | 'memory' | 'memory-disk'`)와 기본값이 `'disk'`라는 점을 API 절에서 확인한다.
    - `recyclingKey` prop이 "재활용되는 뷰(FlashList 같은 리스트)에서 이전 이미지가 잠깐 보이는 것을 막는다"는 설명을 찾는다.
    - 정적 메서드 `Image.prefetch`, `Image.clearDiskCache`, `Image.clearMemoryCache`가 있는지 확인한다.
-2. [Images (React Native 0.81)](https://reactnative.dev/docs/0.81/images)
+2. [Images (React Native)](https://reactnative.dev/docs/images)
    - "Network Images" 절에서 정적 리소스와 달리 네트워크 이미지는 크기를 직접 지정해야 한다는 문장을 찾는다.
-   - [Image 컴포넌트 문서](https://reactnative.dev/docs/0.81/image)의 `resizeMode` prop도 확인한다. Day 2에서 쓴 RN `Image`와 오늘 쓰는 `expo-image`는 import 경로만 다른 것이 아니라 prop 이름도 다르다(`resizeMode` 대 `contentFit`).
+   - [Image 컴포넌트 문서](https://reactnative.dev/docs/image)의 `resizeMode` prop도 확인한다. Day 2에서 쓴 RN `Image`와 오늘 쓰는 `expo-image`는 import 경로만 다른 것이 아니라 prop 이름도 다르다(`resizeMode` 대 `contentFit`).
 
 ## 예측(10분)
 

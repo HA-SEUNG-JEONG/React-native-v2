@@ -8,7 +8,7 @@
 
 ## 읽기(15분)
 
-- https://docs.expo.dev/versions/v54.0.0/sdk/async-storage/
+- https://docs.expo.dev/versions/latest/sdk/async-storage/
   - 설치는 `npx expo install @react-native-async-storage/async-storage`이고 Expo Go에 포함되어 있다. 암호화되지 않은 비동기 영구 key-value 저장소다.
   - SDK 54에서 `expo install`이 고정하는 버전은 2.2.0이다(Expo의 `bundledNativeModules.json`, 2026-10-27 확인). npm 최신은 3.x이므로 `npm install`로 직접 설치하지 말고 `expo install`을 쓴다.
 - https://react-native-async-storage.github.io/2.0/API/

@@ -8,11 +8,11 @@ Daily Log의 글 데이터(`LogEntry`)와 컴포넌트 props, 입력 이벤트 �
 
 ## 읽기(15분)
 
-1. React Native 0.81 TypeScript 가이드: https://reactnative.dev/docs/0.81/typescript
+1. React Native TypeScript 가이드: https://reactnative.dev/docs/typescript
    - 확인할 사실: props는 `type Props = {...}`로 선언하고 함수 컴포넌트의 파라미터에 붙인다. 선택 props는 `?`로 표시한다. `useState`의 상태 타입은 초기값에서 추론된다. 타입 검사는 TypeScript 컴파일러(`npx tsc`)로만 하고 번들링은 Babel이 한다.
-2. `TextInput` 문서: https://reactnative.dev/docs/0.81/textinput
+2. `TextInput` 문서: https://reactnative.dev/docs/textinput
    - 확인할 사실: `onChangeText`는 변경된 텍스트를 문자열 하나로 받는다. `onSubmitEditing`은 문자열이 아니라 `{nativeEvent: {text, eventCount, target}}` 모양의 이벤트를 받는다. 문서에는 모양만 나오고 타입 이름은 없으므로, 에디터에서 `onSubmitEditing`에 마우스를 올려 실제 타입 이름을 확인한다.
-3. `Pressable` 문서: https://reactnative.dev/docs/0.81/pressable
+3. `Pressable` 문서: https://reactnative.dev/docs/pressable
    - 확인할 사실: `onPress`는 이벤트 객체를 받고, `style`은 스타일 객체이거나 `({ pressed })`를 받아 스타일을 돌려주는 함수다.
 
 ## 예측(10분)

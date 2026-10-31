@@ -5,7 +5,7 @@
 빈 Expo 앱에서 시작해 14주(약 3개월) 동안 **Daily Log**(일상 기록 앱)를 직접 쌓아 올리며 React Native를 처음부터 다시 익힌다. 기존 코드는 보지 않는다. 옛 문서와 코드는 git 태그 `archive/pre-reset`에 남아 있다.
 
 - 기술 기준: Expo SDK 54, React Native 0.81, React 19.1, TypeScript, expo-router 6.
-- 공식 문서 기준: `https://docs.expo.dev/versions/v54.0.0/`, `https://reactnative.dev/docs/0.81/getting-started`. 코드를 쓰기 전에 해당 Day의 문서를 먼저 읽는다.
+- 공식 문서 기준: `https://docs.expo.dev/versions/latest/`, `https://reactnative.dev/docs/getting-started`. 코드를 쓰기 전에 해당 Day의 문서를 먼저 읽는다.
 - 일정: Day 1 = 2026-10-27(화), Day 69 = 2027-01-29(금). **월~금 주 5일**, 금요일은 버퍼다. 첫 주만 화~금 4일이다. 운영 방식은 `docs/rules.md`를 따른다.
 - 구성: 학습 Day 55개 + 버퍼 Day 14개. 학습 Day 하나는 90분이다.
 

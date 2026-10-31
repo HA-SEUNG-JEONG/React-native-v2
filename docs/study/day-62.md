@@ -6,8 +6,8 @@
 
 ## 읽기(15분)
 
-1. [React Native DevTools](https://reactnative.dev/docs/0.81/react-native-devtools)
-   - 패널 구성(Console, Sources, Memory, React Components, React Profiler)을 확인한다.
+1. [React Native DevTools](https://reactnative.dev/docs/react-native-devtools)
+   - 패널 구성(Console, Sources, Memory, React Components, React Profiler)을 확인한다. 최신 문서에는 Network(RN 0.83부터)와 Performance 패널도 있다. 이 프로젝트는 RN 0.81.5라 Network 패널은 없으니 DevTools를 열어 실제 탭 구성을 확인한다.
    - React Components 패널 설정(톱니바퀴)의 "Highlight updates when components render" 항목이 리렌더를 눈으로 보여 준다는 문장을 찾는다.
    - React Compiler로 최적화된 컴포넌트에 "Memo" 배지가 표시된다는 문장을 찾는다.
 2. [Expo — React Compiler](https://docs.expo.dev/guides/react-compiler/)
@@ -68,7 +68,7 @@
 ## 검증(10분)
 
 - 예측 1~3과 표의 실제 값을 비교해 다른 지점을 적는다. 숫자가 흔들리면 같은 조건에서 2번 측정한다.
-- 개발 모드 숫자의 한계를 한 문장으로 적는다(React Native 성능 문서에서 개발 모드와 릴리스 빌드의 차이를 확인한다: https://reactnative.dev/docs/0.81/performance ).
+- 개발 모드 숫자의 한계를 한 문장으로 적는다(React Native 성능 문서에서 개발 모드와 릴리스 빌드의 차이를 확인한다: https://reactnative.dev/docs/performance ).
 
 > 실제 결과 / 예측과 다른 지점:
 

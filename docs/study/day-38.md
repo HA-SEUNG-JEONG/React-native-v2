@@ -8,7 +8,7 @@
 
 ## 읽기(15분)
 
-- https://reactnative.dev/docs/0.81/textinput
+- https://reactnative.dev/docs/textinput
   - `returnKeyType`(또는 우선하는 `enterKeyHint`)은 키보드의 return 키 모양이다. `onSubmitEditing`은 return 키를 눌렀을 때 호출된다.
   - 한 줄 입력의 `submitBehavior` 기본값은 `'blurAndSubmit'`(입력을 블러하고 제출)이다. 키보드를 내리지 않고 다음 칸으로 넘기려면 `'submit'`을 준다. `blurOnSubmit`은 deprecated다.
   - `ref.focus()`로 포커스를 옮긴다. `autoComplete`와 iOS 전용 `textContentType`을 둘 다 주면 `textContentType`이 우선하므로 하나만 쓴다.

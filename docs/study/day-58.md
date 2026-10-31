@@ -6,11 +6,11 @@
 
 ## 읽기(15분)
 
-1. https://docs.expo.dev/versions/v54.0.0/sdk/netinfo/
-   - 확인할 사실: 설치 명령은 `npx expo install @react-native-community/netinfo`이고 Expo Go에 포함되어 있다. `NetInfo.fetch()`는 한 번 읽고, `NetInfo.addEventListener()`는 변경을 구독하며 구독 해제 함수를 돌려준다. SDK 54가 고정하는 버전은 11.4.1이다(설치 후 `package.json`에서 확인).
+1. https://docs.expo.dev/versions/latest/sdk/netinfo/
+   - 확인할 사실: 설치 명령은 `npx expo install @react-native-community/netinfo`이고 Expo Go에 포함되어 있다. `NetInfo.fetch()`는 한 번 읽고, `NetInfo.addEventListener()`는 변경을 구독하며 구독 해제 함수를 돌려준다. SDK 54가 고정하는 버전은 11.4.1이다(설치 후 `package.json`에서 확인). 최신 페이지는 권장 버전을 12.0.1로 적으므로 숫자가 다르다.
 2. https://github.com/react-native-netinfo/react-native-netinfo (README)
    - 확인할 사실: `useNetInfo()` 훅이 있다. `isConnected`는 "활성 네트워크 연결이 있는가", `isInternetReachable`은 "그 연결로 인터넷에 닿는가"이며 둘은 다른 질문이다. 아직 알 수 없으면 값이 `null`이다. iOS 시뮬레이터는 네트워크 변경 알림을 제대로 받지 못하는 알려진 문제가 있어 실기기에서 테스트하라는 안내가 있다.
-3. https://tanstack.com/query/v5/docs/framework/react/react-native 의 "Online status management" 절
+3. https://tanstack.com/query/latest/docs/framework/react/react-native 의 "Online status management" 절
    - 확인할 사실: React Native에서는 `onlineManager`가 기본으로 네트워크 변화를 알지 못하므로, NetInfo의 `addEventListener`로 `setOnline`을 연결해야 한다. `isConnected`가 참인 경우를 온라인으로 취급한다. 확인할 버전: 이 프로젝트의 `@tanstack/react-query` 버전과 문서의 v5 표기가 같은지 `package.json`에서 본다.
 
 ## 예측(10분)
