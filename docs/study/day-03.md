@@ -6,11 +6,11 @@ Day 2의 인라인 스타일을 `StyleSheet.create`로 옮기고, Flexbox로 카
 
 ## 읽기(15분)
 
-1. [https://reactnative.dev/docs/0.81/style](https://reactnative.dev/docs/0.81/style)
+1. [https://reactnative.dev/docs/style](https://reactnative.dev/docs/style)
    - 확인할 사실: 스타일 이름은 camelCase다. `style`에 배열을 주면 뒤의 요소가 우선한다. 웹 CSS와 달리 `style` prop을 직접 넘겨야 하위 컴포넌트에 "cascade"시킬 수 있다.
-2. [https://reactnative.dev/docs/0.81/flexbox](https://reactnative.dev/docs/0.81/flexbox)
+2. [https://reactnative.dev/docs/flexbox](https://reactnative.dev/docs/flexbox)
    - 확인할 사실: `flexDirection` 기본값은 웹의 `row`가 아니라 `column`이다. `alignItems` 기본값은 `stretch`, `justifyContent` 기본값은 `flex-start`다. `flex`는 숫자 하나만 받는다. 웹과 다른 점으로 `flexShrink` 기본값이 `0`이라는 문장이 있다. `gap`은 `rowGap`과 `columnGap`의 줄임이다.
-3. [https://reactnative.dev/docs/0.81/platform-specific-code](https://reactnative.dev/docs/0.81/platform-specific-code)
+3. [https://reactnative.dev/docs/platform-specific-code](https://reactnative.dev/docs/platform-specific-code)
    - 확인할 사실: `Platform.OS`는 `'ios'` 또는 `'android'`다. `Platform.select`는 키 `ios`·`android`·`native`·`default` 중 현재 플랫폼에 맞는 값을 돌려준다. 파일 확장자(`.ios.tsx`, `.android.tsx`)로 파일 자체를 나누는 방법도 있다.
 
 ## 예측(10분)
@@ -30,7 +30,7 @@ Day 2의 인라인 스타일을 `StyleSheet.create`로 옮기고, Flexbox로 카
 2. 화면 상단 헤더 행: "오늘의 기록"(왼쪽)과 오늘 날짜 `Text`(오른쪽)를 `flexDirection: 'row'`, `justifyContent: 'space-between'`, `alignItems: 'center'`로 배치한다.
 3. 카드: 왼쪽 썸네일(고정 너비·높이, `borderRadius`), 오른쪽 텍스트 영역(`flex: 1`)의 가로 배치로 바꾼다. 카드 사이 간격은 `gap`이나 `marginBottom` 중 하나로 통일한다.
 4. 화면 바깥 여백은 `ScrollView`의 `contentContainerStyle`에 `padding`을 준다.
-5. 카드 그림자: iOS는 `shadow*` 속성, Android는 `elevation`을 쓰도록 `Platform.select`로 나눈다. 속성 목록은 [https://reactnative.dev/docs/0.81/shadow-props](https://reactnative.dev/docs/0.81/shadow-props) 에서 확인한다.
+5. 카드 그림자: iOS는 `shadow*` 속성, Android는 `elevation`을 쓰도록 `Platform.select`로 나눈다. 속성 목록은 [https://reactnative.dev/docs/shadow-props](https://reactnative.dev/docs/shadow-props) 에서 확인한다.
 6. 화면 맨 위 헤더 제목이 라우트 이름(`index`)으로 보이면 정상이다. 헤더는 Day 18에서 다룬다.
 
 ```tsx

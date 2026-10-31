@@ -8,9 +8,9 @@
 
 1. https://react.dev/learn/state-a-components-memory
    - 확인할 사실: 지역 변수는 렌더 사이에 유지되지 않고, 바꿔도 렌더를 일으키지 않는다. `useState`는 값을 유지하는 state 변수와 렌더를 일으키는 setter, 두 가지를 준다.
-2. https://reactnative.dev/docs/0.81/handling-text-input
+2. https://reactnative.dev/docs/handling-text-input
    - 확인할 사실: `TextInput`의 `onChangeText`는 글자가 바뀔 때마다 호출되고 새 문자열을 인자로 받는다. `onSubmitEditing`은 제출 동작 때 호출된다. 입력값은 시간에 따라 바뀌므로 state에 둔다.
-3. https://reactnative.dev/docs/0.81/textinput
+3. https://reactnative.dev/docs/textinput
    - 확인할 사실: `value`를 주면 입력창이 그 값에 맞춰진 제어 컴포넌트가 된다. `defaultValue`는 초기값만 준다. `multiline`의 기본값은 `false`이고, Android에서 여러 줄 텍스트는 기본이 가운데 정렬이라 `textAlignVertical="top"`이 필요하다. `maxLength`는 글자 수 제한이다.
 
 ## 예측(10분)

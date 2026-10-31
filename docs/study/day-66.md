@@ -13,7 +13,7 @@ Daily Log에 `expo-dev-client`와 `eas.json`을 추가하고, EAS Build로 iOS �
 2. [Expo — eas.json (Build profiles)](https://docs.expo.dev/build/eas-json/)
    - `development`는 `developmentClient: true`와 `distribution: "internal"`, `preview`는 `distribution: "internal"`, `production`은 빈 객체라는 기본 프로필 3종의 용도를 정리한다.
    - `ios.simulator: true`를 쓰면 시뮬레이터용 빌드가 되고, 시뮬레이터 빌드와 실기기용 빌드는 프로필을 따로 두는 것이 권장된다는 문장을 찾는다.
-3. [Expo — Create a development build (EAS)](https://docs.expo.dev/develop/development-builds/create-a-build/)
+3. [Expo — Introduction to development builds](https://docs.expo.dev/develop/development-builds/introduction/)
    - `npx expo install expo-dev-client` 후 `eas build --platform ios --profile development` 순서를 확인한다.
    - 빌드가 끝나면 CLI가 시뮬레이터 설치를 묻고, 그 뒤 `npx expo start`를 실행하면 Expo Go 대신 development build를 대상으로 한다는 문장을 찾는다.
    - 클라우드 빌드 대신 Xcode가 있을 때 `npx expo run:ios`로 로컬 빌드할 수 있다는 대안을 찾는다.

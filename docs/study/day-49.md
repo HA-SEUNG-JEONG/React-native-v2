@@ -33,7 +33,7 @@
 
 1. `granted`여도 접근 범위가 다르다. iOS는 `whenInUse`와 `always`가 있고(`Allow Once`도 `whenInUse`로 보여 구분되지 않는다), Android는 정밀(`fine`)과 대략(`coarse`) 위치를 구분한다. `getCurrentPositionAsync`는 새로 측정하므로 정확하지만 몇 초 걸릴 수 있어 "지금 위치를 기록에 붙일 때" 쓰고, `getLastKnownPositionAsync`는 마지막 값을 바로 돌려주므로 빠르지만 오래됐거나 `null`일 수 있어 빠른 초기 표시용으로 쓴다.
 2. 권한 상태는 한 번 조회해 `state`에 둔 값일 뿐이라 설정 앱에서 바뀐 것을 React가 알지 못한다. `AppState`가 `active`로 바뀔 때 권한을 다시 조회(`useForegroundPermissions`가 돌려주는 `get`)해 상태를 갱신하고, 구독은 cleanup에서 해제한다.
-3. 스토어용 Android 바이너리는 Google Cloud에서 받은 API 키를 `app.json`의 `android.config.googleMaps.apiKey`에 넣고 `provider={PROVIDER_GOOGLE}`을 지정한 뒤 앱을 다시 빌드해야 한다(SDK 54 문서). 지도가 안 보이는 대표 원인은 `MapView`나 부모에 폭·높이가 정해지지 않아 크기가 0이 되는 것이다.
+3. 스토어용 Android 바이너리는 Google Cloud에서 받은 API 키를 `app.json`의 `android.config.googleMaps.apiKey`에 넣고(최신 SDK 58 문서는 `plugins`의 `react-native-maps` 설정에 `androidGoogleMapsApiKey`를 넣는 방식으로 안내한다. SDK 54에서는 앞의 방식이다) `provider={PROVIDER_GOOGLE}`을 지정한 뒤 앱을 다시 빌드해야 한다(SDK 54 문서). 지도가 안 보이는 대표 원인은 `MapView`나 부모에 폭·높이가 정해지지 않아 크기가 0이 되는 것이다.
 4. 앱 최상위(`app/_layout.tsx`의 컴포넌트 밖)에서 `Notifications.setNotificationHandler`를 호출하고 `shouldShowBanner`, `shouldShowList`를 `true`로 반환한다(`shouldShowAlert`는 deprecated). 예약은 `scheduleNotificationAsync({ content, trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 21, minute: 0 } })`다. Android 13 이상은 알림 채널이 하나 이상 만들어져야 권한 프롬프트가 뜨므로 `setNotificationChannelAsync`를 먼저 호출한다.
 5. 앱 시작 시의 응답을 얻는 `getLastNotificationResponse()`와 실행 중 탭을 받는 `addNotificationResponseReceivedListener`를 함께 쓴다. 시뮬레이터·에뮬레이터는 푸시 서비스에 등록할 수 있는 실기기가 아니라서 지원되지 않는다. `data.url`은 보낸 쪽이 채우는 값이므로 문자열인지, 허용된 경로 형태(예: `/`로 시작)인지 검증한 뒤에만 이동한다.
 

@@ -6,9 +6,9 @@ JSONPlaceholder 모양의 목 데이터로 피드 목록을 `FlatList`로 그리
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/flatlist
+1. https://reactnative.dev/docs/flatlist
    - 확인할 사실: `data`와 `renderItem`이 필수다. `renderItem`은 `{ item, index, separators }` 객체를 받는다. `keyExtractor`를 주지 않으면 `item.key`, 그다음 `item.id`, 마지막으로 index를 쓴다. `ItemSeparatorComponent`는 항목 사이에만, `ListEmptyComponent`는 데이터가 빌 때, `ListHeaderComponent`는 목록 맨 위에 렌더된다. `initialNumToRender` 기본값은 10이다.
-2. https://reactnative.dev/docs/0.81/scrollview
+2. https://reactnative.dev/docs/scrollview
    - 확인할 사실: `ScrollView`는 모든 자식을 한 번에 렌더하고, `FlatList`는 곧 보일 항목만 렌더하며 멀리 벗어난 항목을 제거한다. 긴 목록에는 `FlatList`를 쓰라는 문장을 찾는다.
 3. https://jsonplaceholder.typicode.com/posts
    - 확인할 사실: 응답은 100개의 글 배열이고 각 글은 `userId`, `id`, `title`, `body` 필드를 가진다. 오늘은 네트워크를 쓰지 않고 이 모양을 흉내 낸 목 데이터를 쓴다. 실제 fetch는 Day 25에서 한다.

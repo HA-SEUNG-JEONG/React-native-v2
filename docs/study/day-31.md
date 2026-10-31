@@ -8,13 +8,13 @@
 
 ## 읽기(15분)
 
-- https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates
+- https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
   - 방법이 두 가지다. `variables`를 이용해 UI에서만 임시 항목을 그리는 방법(캐시를 건드리지 않음)과, `onMutate`에서 캐시를 직접 고치는 방법이다. 여러 화면이 같은 데이터를 보면 캐시 방식을 쓴다.
   - 캐시 방식의 순서는 `cancelQueries` → `getQueryData`로 이전 값 저장 → `setQueryData`로 낙관적 값 쓰기 → `onMutate`가 이전 값을 반환 → `onError`에서 그 값으로 복원 → `onSettled`에서 `invalidateQueries`다.
   - `cancelQueries`는 진행 중인 재요청이 낙관적 값을 덮어쓰지 못하게 막는다.
-- https://tanstack.com/query/v5/docs/framework/react/guides/mutations
+- https://tanstack.com/query/latest/docs/framework/react/guides/mutations
   - `onMutate`가 반환한 값이 `onError`, `onSuccess`, `onSettled`의 `onMutateResult`(세 번째 인자)로 전달된다. 롤백용 스냅샷을 여기에 담는다.
-- https://tanstack.com/query/v5/docs/reference/QueryClient
+- https://tanstack.com/query/latest/docs/framework/react/reference/classes/QueryClient
   - 우리 피드는 칩마다 캐시가 따로(`['posts', { userId: 1 }]`, `['posts', { userId: null }]` 등) 있다. `getQueriesData(filters)`는 일치하는 캐시 전부를 `[queryKey, data]` 쌍의 배열로 돌려주고, `setQueriesData(filters, updater)`는 일치하는 기존 캐시 전부를 한 번에 고친다(새 캐시는 만들지 않는다). updater는 불변으로 새 값을 만들어야 하고, 현재 값은 `undefined`일 수 있다.
 
 확인할 버전: 최신 문서의 `onMutate(variables, context)`는 `context.client`를 주지만, 이 카드는 `useQueryClient()`로 얻은 `queryClient`를 클로저로 쓴다. 이 방식은 버전과 무관하게 동작한다. 콜백 인자 순서는 설치된 버전의 타입 정의로 확인한다.

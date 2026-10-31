@@ -12,7 +12,7 @@ SDK 54 Expo 앱을 프로젝트 루트에 만들어 iOS 시뮬레이터에서 �
    - 확인할 사실: development build는 `expo-dev-client`를 넣어 직접 컴파일한 "나만의 Expo Go"다. 어떤 네이티브 라이브러리든 쓰고 네이티브 설정을 바꿀 수 있다는 문장, 그리고 개발 서버를 고르는 런처 화면이 생긴다는 문장을 찾는다.
 3. [https://docs.expo.dev/more/create-expo/](https://docs.expo.dev/more/create-expo/)
    - 확인할 사실: `--template default@sdk-NN` 형태로 템플릿을 SDK 버전에 고정한다. `--no-install`은 의존성 설치를 건너뛴다. 페이지 예시는 최신 SDK 기준이므로 우리는 숫자를 `54`로 바꿔 쓴다. 실기기에서 Expo Go를 쓰려면 지원되는 SDK 프로젝트를 쓰라는 안내 문장을 찾는다. 페이지는 "Expo Go가 최신 SDK만 지원한다"고 쓰지 않고 "실기기에서 Expo Go를 쓸 계획이면 이 SDK의 프로젝트를 쓰라"고 안내한다(2026-10-27 확인 시점 문구: SDK 58 전환 기간에는 SDK 57 프로젝트).
-   - `docs.expo.dev/versions/v54.0.0/...` 형태의 SDK 54 문서 링크는 301로 `versions/latest/...`(최신 문서)로 이동한다(2026-10-27 확인). 열었을 때 주소가 바뀌면 SDK 54 문서가 아니라는 점을 기억하고 읽는다.
+   - `docs.expo.dev/versions/latest/...` 형태의 SDK 54 문서 링크는 301로 `versions/latest/...`(최신 문서)로 이동한다(2026-10-27 확인). 열었을 때 주소가 바뀌면 SDK 54 문서가 아니라는 점을 기억하고 읽는다.
 
 > 문서에서 확인 필요: "iOS 실기기의 App Store판 Expo Go는 최신 SDK만 지원한다"는 문장은 위 세 페이지에서 직접 찾지 못했다. 3번 페이지의 실기기 안내가 가장 가깝다. 이 사실은 시험으로 확인된 것이며, 문서 문구를 찾으면 여기에 적는다.
 

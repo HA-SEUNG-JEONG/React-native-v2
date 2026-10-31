@@ -6,7 +6,7 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/network — React Native의 `fetch` 사용법과 에러 처리.
+1. https://reactnative.dev/docs/network — React Native의 `fetch` 사용법과 에러 처리.
    - 확인할 사실: `fetch`는 Promise를 돌려주며, `fetch`가 던지는 에러를 잡지 않으면 조용히 버려진다고 적혀 있다.
    - 확인할 사실: iOS는 ATS 때문에 HTTP 연결을 기본 차단하고, Android는 API 28부터 cleartext 트래픽을 기본 차단한다. JSONPlaceholder는 HTTPS라 해당 없다.
    - 확인할 사실: 이 페이지에는 `response.ok`와 HTTP 상태 코드 처리가 나오지 않는다. `response.ok`의 정확한 의미는 이 페이지에서 확인할 수 없으므로 오늘 예측 1번 실험으로 직접 확인한다(문서에서 확인 필요).

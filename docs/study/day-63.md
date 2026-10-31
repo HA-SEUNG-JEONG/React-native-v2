@@ -8,11 +8,11 @@
 
 ## 읽기(15분)
 
-1. [React Native — Optimizing FlatList Configuration](https://reactnative.dev/docs/0.81/optimizing-flatlist-configuration)
+1. [React Native — Optimizing FlatList Configuration](https://reactnative.dev/docs/optimizing-flatlist-configuration)
    - 용어(Viewport, Window, Blank areas)의 정의를 찾는다. Window는 항목이 마운트되어 있어야 하는 영역이고 보통 뷰포트보다 훨씬 크다.
    - `windowSize`(기본 21, 단위는 뷰포트 높이), `initialNumToRender`(기본 10), `maxToRenderPerBatch`(기본 10), `updateCellsBatchingPeriod`(기본 50ms), `removeClippedSubviews`의 값을 키울 때와 줄일 때의 득실을 표로 정리한다.
    - `getItemLayout`을 쓸 수 있는 조건(모든 항목의 높이가 같을 때)과 그 이유를 찾는다.
-2. [React Native — Performance Overview](https://reactnative.dev/docs/0.81/performance)
+2. [React Native — Performance Overview](https://reactnative.dev/docs/performance)
    - JS 스레드와 UI 스레드가 각각 맡는 일을 구분한다. Dev Menu의 "Show Perf Monitor"가 두 FPS를 보여 준다.
    - 개발 모드(`dev=true`)에서는 JS 성능이 크게 떨어지므로 성능은 릴리스 빌드에서 측정하라는 문장과, 번들된 앱에서 `console.*` 호출이 JS 스레드 병목이 된다는 문장을 찾는다.
 3. [Expo — Analyzing bundles (Atlas)](https://docs.expo.dev/guides/analyzing-bundles/)

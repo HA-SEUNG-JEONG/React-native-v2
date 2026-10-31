@@ -6,16 +6,16 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`, `expo-device ~8.0`이다. `setNotificationHandler`가 돌려주는 객체의 필드 이름(`shouldShowBanner`, `shouldShowList`)은 SDK 54 문서 기준이고, 예전 글에 나오는 `shouldShowAlert`는 deprecated다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`, `expo-device ~8.0`이다. `setNotificationHandler`가 돌려주는 객체의 필드 이름(`shouldShowBanner`, `shouldShowList`)은 SDK 54 문서 기준이고, 예전 글에 나오는 `shouldShowAlert`는 deprecated다.
 
-1. [Notifications](https://docs.expo.dev/versions/v54.0.0/sdk/notifications/)
+1. [Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)
    - 상단 경고(warning)를 읽는다: 원격 푸시는 SDK 53부터 Android Expo Go에서 쓸 수 없고 development build가 필요하지만, **로컬 알림은 Expo Go에서도 가능**하다. 오늘은 로컬 알림만 다룬다.
    - "Present a local (in-app) notification to the user" 예제에서 `setNotificationHandler`의 반환 객체(`shouldPlaySound`, `shouldSetBadge`, `shouldShowBanner`, `shouldShowList`)와 `scheduleNotificationAsync({ content, trigger: null })`이 즉시 표시라는 점을 확인한다.
    - Usage 예제의 `schedulePushNotification`에서 `trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 2 }` 형태를 확인한다. `SchedulableTriggerInputTypes`에 `DAILY`(`hour`, `minute`), `WEEKLY`, `DATE`, `TIME_INTERVAL`이 있다는 점은 API 절에서 확인한다.
    - Permissions 절의 Android 설명: Android 13에서는 알림 채널이 하나 이상 만들어져야 권한 프롬프트가 뜬다는 문장을 찾는다.
    - iOS 권한 해석 절: 루트 `status`가 아니라 `ios.status`(`NOT_DETERMINED`, `DENIED`, `AUTHORIZED`, `PROVISIONAL`, `EPHEMERAL`)를 보라는 안내를 확인한다.
    - `getAllScheduledNotificationsAsync`, `cancelScheduledNotificationAsync`, `cancelAllScheduledNotificationsAsync`가 있는지 API 절에서 확인한다.
-2. [Device](https://docs.expo.dev/versions/v54.0.0/sdk/device/)
+2. [Device](https://docs.expo.dev/versions/latest/sdk/device/)
    - `Device.isDevice`가 실기기인지 시뮬레이터·에뮬레이터인지 알려 주는 값이라는 설명을 확인한다. Day 48의 푸시 토큰에서 쓸 값이다.
 
 ## 예측(10분)

@@ -8,13 +8,13 @@
 
 ## 읽기(15분)
 
-- https://tanstack.com/query/v5/docs/framework/react/guides/mutations
+- https://tanstack.com/query/latest/docs/framework/react/guides/mutations
   - `useMutation`은 쓰기(생성·수정·삭제) 전용이고 `status`는 `idle`, `pending`, `error`, `success` 중 하나다. v5에서는 진행 중 플래그 이름이 `isPending`이다.
   - `mutate(variables)`는 바로 반환되고, `mutateAsync(variables)`는 Promise를 돌려주며 실패하면 throw한다.
   - 콜백 실행 순서는 `onMutate` → `onSuccess`/`onError` → `onSettled`이고, 콜백이 Promise를 반환하면 다음 콜백 전에 기다린다.
-- https://tanstack.com/query/v5/docs/framework/react/guides/invalidations-from-mutations
+- https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations
   - `onSuccess`에서 `queryClient.invalidateQueries({ queryKey: ['todos'] })`를 쓴다. 이 Promise를 `await`하거나 반환하면 재요청이 끝날 때까지 mutation이 `isPending`으로 남는다.
-- https://tanstack.com/query/v5/docs/framework/react/guides/query-invalidation
+- https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation
   - `invalidateQueries`는 일치하는 쿼리를 stale로 표시하고, 지금 화면에서 쓰이는(active) 쿼리는 백그라운드에서 다시 가져온다.
   - `['todos']`는 `['todos', { page: 1 }]`처럼 그 키로 시작하는 쿼리 전부와 일치한다(접두사 일치). 정확히 같은 키만 대상으로 하려면 `exact: true`를 쓴다.
 

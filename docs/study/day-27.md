@@ -6,7 +6,7 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/0.81/network — `fetch`의 두 번째 인자(`method`, `headers`, `body`)와 에러 처리 예시.
+1. https://reactnative.dev/docs/network — `fetch`의 두 번째 인자(`method`, `headers`, `body`)와 에러 처리 예시.
    - 확인할 사실: 요청 옵션에 `headers`의 `Accept`, `Content-Type`을 주는 형태가 예시로 있다. 이 모양을 `request()` 함수에 한 번만 쓰면 된다.
    - 확인할 사실: 이 페이지의 알려진 문제 목록에 "같은 이름의 헤더는 Android에서 마지막 하나만 남는다"가 있다. 공통 헤더를 한 곳에서 관리하는 이유로 기억해 둔다.
 2. https://jsonplaceholder.typicode.com/guide/ — `/posts`, `/posts/1`, `/posts/1/comments` 등 엔드포인트.

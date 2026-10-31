@@ -8,9 +8,9 @@
 
 1. React 공식 문서, props 전달: https://react.dev/learn/passing-props-to-a-component
    - 확인할 사실: 태그 안에 중첩한 JSX는 그 컴포넌트의 `children` prop으로 전달된다. 감싸는 컴포넌트는 안에 무엇이 들어오는지 알 필요가 없다. `children`은 부모가 임의의 JSX로 채우는 "구멍"이다.
-2. `FlatList` 문서: https://reactnative.dev/docs/0.81/flatlist
+2. `FlatList` 문서: https://reactnative.dev/docs/flatlist
    - 확인할 사실: `ListHeaderComponent`, `ListEmptyComponent`는 컴포넌트 또는 React 요소를 받는다. 목록이 비었을 때 보일 화면을 컴포넌트로 따로 만들어 꽂을 수 있다는 뜻이다.
-3. `Pressable` 문서: https://reactnative.dev/docs/0.81/pressable
+3. `Pressable` 문서: https://reactnative.dev/docs/pressable
    - 확인할 사실: `style`에 `({ pressed }) => ...` 함수를 주면 눌린 상태에 따라 스타일을 바꿀 수 있다. `AppButton`의 눌림 효과에 쓴다.
 
 ## 예측(10분)

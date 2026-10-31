@@ -6,7 +6,7 @@
 
 ## 읽기(15분)
 
-이 카드는 SDK 54가 고정하는 `react-native-gesture-handler` 2.28 계열 기준이다. 공식 문서 사이트의 기본 주소는 최신 3.x(다른 API 모양)를 보여 줄 수 있으므로 아래 링크처럼 주소에 `2.x`가 들어간 페이지를 읽는다. 설치 명령(`npx expo install react-native-gesture-handler`)과 Expo Go 포함 여부는 https://docs.expo.dev/versions/v54.0.0/sdk/gesture-handler/ 에 있다. 이 템플릿은 이미 설치되어 있으니 `package.json`의 `dependencies`에서 버전이 `~2.28.0`인지만 확인한다.
+이 카드는 SDK 54가 고정하는 `react-native-gesture-handler` 2.28 계열 기준이다. 공식 문서 사이트의 기본 주소는 최신 3.x(다른 API 모양)를 보여 줄 수 있으므로 아래 링크처럼 주소에 `2.x`가 들어간 페이지를 읽는다. 설치 명령(`npx expo install react-native-gesture-handler`)과 Expo Go 포함 여부는 https://docs.expo.dev/versions/latest/sdk/gesture-handler/ 에 있다. 이 템플릿은 이미 설치되어 있으니 `package.json`의 `dependencies`에서 버전이 `~2.28.0`인지만 확인한다.
 
 1. https://docs.swmansion.com/react-native-gesture-handler/docs/2.x/fundamentals/installation
    - 확인할 사실: `GestureHandlerRootView`는 앱 루트에 최대한 가깝게 둔다. 그 밖에서는 제스처가 인식되지 않고, 제스처 간 관계(우선순위 등)도 같은 root 안에서만 동작한다. 중첩된 root는 가장 바깥 것만 쓰인다. `style`을 직접 주면 `flex: 1`을 포함해야 화면이 보인다. Android에서 `Modal` 안의 제스처는 Modal 내용을 따로 `GestureHandlerRootView`로 감싸야 한다.

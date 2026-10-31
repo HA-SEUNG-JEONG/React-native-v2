@@ -10,12 +10,12 @@
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/v54.0.0/...` 링크는 지금 열면 최신 문서(SDK 58)로 넘어간다. SDK 54에 고정되는 `react-native-maps`는 `1.20.1`이다. 아래 사실은 SDK 54 문서 원문 기준이다.
+> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 `react-native-maps`는 `1.20.1`이다(최신 페이지의 권장 버전은 1.29.11). 아래 사실은 SDK 54 문서 원문 기준이다.
 
-1. [react-native-maps (Expo 문서)](https://docs.expo.dev/versions/v54.0.0/sdk/map-view/)
+1. [react-native-maps (Expo 문서)](https://docs.expo.dev/versions/latest/sdk/map-view/)
    - 상단의 "Expo Go에서 테스트할 때는 추가 설정이 필요 없고, **앱 스토어용 바이너리를 배포하려면** Google Maps 관련 추가 단계가 필요하다"는 문장을 찾는다. 개발 중에는 Expo Go로 되고, 스토어용 바이너리에서만 키 설정과 재빌드가 필요하다는 뜻이다. 오늘 직접 Expo Go에서 지도가 뜨는지 확인해 기록한다.
    - 이 라이브러리가 Android에서 Google Maps, iOS에서 Apple Maps 또는 Google Maps를 쓴다는 설명을 확인한다.
-   - "Deploy app with Google Maps"에서 Android는 Google Cloud의 API 키를 `android.config.googleMaps.apiKey`에 넣고, `provider={PROVIDER_GOOGLE}`을 지정한 뒤 앱 바이너리를 다시 빌드해야 한다는 흐름을 읽는다. 오늘은 이 키 설정을 하지 않는다. 설정이 필요한 시점이 언제인지만 파악한다.
+   - "Deploy app with Google Maps"에서 Android는 Google Cloud의 API 키를 `android.config.googleMaps.apiKey`에 넣고(최신 SDK 58 문서는 `plugins`의 `react-native-maps` 설정에 `androidGoogleMapsApiKey`를 넣는 방식으로 바뀌었다. 이 프로젝트는 SDK 54라 앞의 방식이 맞다), `provider={PROVIDER_GOOGLE}`을 지정한 뒤 앱 바이너리를 다시 빌드해야 한다는 흐름을 읽는다. 오늘은 이 키 설정을 하지 않는다. 설정이 필요한 시점이 언제인지만 파악한다.
 2. [Development builds 소개](https://docs.expo.dev/develop/development-builds/introduction/)
    - Expo Go와 development build의 차이를 다시 읽는다(Day 1 복습). 네이티브 설정을 바꾸는 라이브러리를 쓰려면 왜 새 빌드가 필요한지를 문장으로 적는다.
 

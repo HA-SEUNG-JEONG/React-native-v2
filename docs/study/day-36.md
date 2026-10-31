@@ -8,12 +8,12 @@
 
 ## 읽기(15분)
 
-- https://docs.expo.dev/versions/v54.0.0/sdk/securestore/
+- https://docs.expo.dev/versions/latest/sdk/securestore/
   - 설치는 `npx expo install expo-secure-store`이고 Expo Go에서 쓸 수 있다. Android는 SharedPreferences에 Keystore로 암호화해 저장하고, iOS는 Keychain에 저장한다.
   - 비동기 API는 `setItemAsync(key, value)`, `getItemAsync(key)`(없으면 `null`), `deleteItemAsync(key)`이고, 동기 `setItem`·`getItem`은 JS 스레드를 막는다.
   - 키에는 영문자·숫자와 `.`, `-`, `_`만 쓸 수 있다. 값 크기는 Expo가 제한하지 않지만 플랫폼이 큰 값을 거부할 수 있다(일부 구형 iOS는 약 2048바이트 초과를 거부했다는 보고가 문서에 있다).
   - iOS는 앱을 지웠다가 같은 번들 ID로 다시 설치하면 데이터가 남을 수 있지만 보장되지 않으니 의존하지 않는다. Android는 앱을 지우면 데이터도 사라진다.
-- https://tanstack.com/query/v5/docs/reference/QueryClient
+- https://tanstack.com/query/latest/docs/framework/react/reference/classes/QueryClient
   - `queryClient.clear()`는 쿼리 캐시와 mutation 캐시를 모두 비운다(재요청은 하지 않는다).
 
 ## 예측(10분)

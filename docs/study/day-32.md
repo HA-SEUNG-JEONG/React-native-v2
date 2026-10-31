@@ -8,14 +8,14 @@
 
 ## 읽기(15분)
 
-- https://tanstack.com/query/v5/docs/framework/react/guides/infinite-queries
+- https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries
   - v5의 `useInfiniteQuery`는 `initialPageParam`이 필수이고, `queryFn`은 `({ pageParam })`을 받으며, `getNextPageParam`이 다음 페이지 파라미터를 돌려준다. `undefined`나 `null`을 돌려주면 다음 페이지가 없는 것이다.
   - `data`는 배열이 아니라 `{ pages, pageParams }` 객체다. `fetchNextPage`, `hasNextPage`, `isFetchingNextPage`로 다음 페이지 상태를 다룬다.
   - 하나의 무한 쿼리는 캐시 항목 하나를 공유하므로 동시에 하나의 요청만 돈다. 사용자가 직접 호출하지 않는 곳에서는 `fetchNextPage` 전에 `isFetching`을 확인해야 한다.
   - 다시 가져올 때는 첫 페이지부터 순서대로 가져온다. `setQueryData`로 직접 고칠 때는 `{ pages, pageParams }` 구조를 유지해야 한다.
-- https://reactnative.dev/docs/0.81/virtualizedlist (Props의 `onEndReached`, `onEndReachedThreshold`)
+- https://reactnative.dev/docs/virtualizedlist (Props의 `onEndReached`, `onEndReachedThreshold`)
   - `onEndReachedThreshold`의 단위는 픽셀이 아니라 리스트 보이는 길이의 배수이고, 기본값은 2다. 0.5이면 끝이 화면 절반 길이 안으로 들어올 때 `onEndReached`가 호출된다.
-- https://reactnative.dev/docs/0.81/flatlist
+- https://reactnative.dev/docs/flatlist
   - `ListFooterComponent`는 모든 항목 아래에, `ListEmptyComponent`는 항목이 없을 때 그려진다.
 
 JSONPlaceholder 페이지네이션: 공식 가이드(https://jsonplaceholder.typicode.com/guide/)에는 설명이 없지만, `/posts?_page=2&_limit=5`는 해당 구간만 돌려주고 `x-total-count` 헤더(전체 100)를 준다. `userId=1`과 함께 쓸 수도 있고 그 사용자의 글은 10개뿐이다(2026-10-27 직접 요청으로 확인). 따라서 칩 "전체"는 10페이지, 사용자 칩은 1페이지다.

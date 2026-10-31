@@ -8,12 +8,12 @@
 
 ## 읽기(15분)
 
-- https://tanstack.com/query/v5/docs/framework/react/guides/query-keys
+- https://tanstack.com/query/latest/docs/framework/react/guides/query-keys
   - 키는 배열이고 JSON으로 직렬화할 수 있어야 한다. 객체 안의 속성 순서는 무시되지만 배열 항목의 순서는 키를 바꾼다.
   - 쿼리 함수가 쓰는 변수는 키에 넣어야 변수마다 캐시 항목이 따로 생기고, 변수가 바뀌면 다시 요청된다.
-- https://tanstack.com/query/v5/docs/framework/react/guides/caching
+- https://tanstack.com/query/latest/docs/framework/react/guides/caching
   - `staleTime` 기본값은 0이라 받자마자 stale이고, `gcTime` 기본값은 5분이다. 마지막으로 쓰는 컴포넌트가 사라지면 `gcTime` 타이머가 시작되고, 타이머 전에 다시 쓰이면 캐시를 바로 보여 주면서 뒤에서 다시 요청한다.
-- https://tanstack.com/query/v5/docs/framework/react/react-native
+- https://tanstack.com/query/latest/docs/framework/react/react-native
   - RN에서는 `AppState`를 `focusManager.setFocused(status === 'active')`에 연결해야 앱 복귀 때 재요청이 동작한다. 웹이 아닐 때만 연결한다(`Platform.OS !== 'web'`).
   - `onlineManager.setEventListener`에 NetInfo(`@react-native-community/netinfo`) 구독을 넘겨 온라인 상태를 연결한다. NetInfo는 Day 58에서 설치하므로 오늘은 연결 방법만 읽고 설치하지 않는다.
 
@@ -38,7 +38,7 @@
 - `src/hooks/useDeletePost.ts`: 예측 1의 문제를 피하려고 `getQueriesData`·`setQueriesData`의 필터를 `postKeys.lists`로 좁힌다. `cancelQueries`는 `postKeys.all` 그대로 둔다.
 - `app/_layout.tsx`: `new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } })`로 바꾼다. 같은 파일의 `RootLayout` 안에 `AppState` 연결 `useEffect`를 추가한다.
 - `src/hooks/usePost.ts`: 실험용으로 `gcTime: 5000`을 임시로 준다. `app/post/[id].tsx` 상단에 `fetchStatus`와 `isPaused`를 `Text`로 임시 표시한다.
-- 설정 탭(`app/(tabs)/settings/index.tsx`): 개발용 임시 `Switch` "오프라인 흉내". 값이 바뀔 때 `onlineManager.setOnline(!value)`를 호출한다(`setOnline`은 온라인 상태를 수동으로 바꾸는 메서드이며, https://tanstack.com/query/v5/docs/reference/onlineManager 에서 확인한다. 검증 후 지운다).
+- 설정 탭(`app/(tabs)/settings/index.tsx`): 개발용 임시 `Switch` "오프라인 흉내". 값이 바뀔 때 `onlineManager.setOnline(!value)`를 호출한다(`setOnline`은 온라인 상태를 수동으로 바꾸는 메서드이며, https://tanstack.com/query/latest/docs/framework/react/reference/interfaces/OnlineManager 에서 확인한다. 검증 후 지운다).
 
 핵심 호출 형태:
 
@@ -79,7 +79,7 @@ useEffect(() => {
 
 1. 키가 캐시 항목의 이름이라서, 변수를 넣어야 변수마다 별도의 캐시가 생기고 변수가 바뀔 때 재요청이 일어난다. `['posts']`로 두면 글 1의 상세와 글 2의 상세가 같은 캐시를 공유해, 다른 글을 열어도 이전 글 내용이 보이거나 재요청이 일어나지 않는다.
 2. `staleTime`은 받은 데이터를 "신선하다"고 볼 시간으로, 그 안에는 재요청하지 않는다(기본 0). `gcTime`은 쓰는 곳이 없어진(inactive) 캐시를 메모리에서 지우기까지 기다리는 시간이다(기본 5분). 하나는 재요청 여부, 다른 하나는 캐시 보관 기간이다.
-3. 오프라인은 서버가 거부한 것이 아니라 요청을 아직 못 보낸 상태이기 때문이다. `networkMode: 'online'`에서는 연결이 없으면 `queryFn`을 실행하지 않고 대기(`paused`)하다가 연결이 돌아오면 이어서 실행한다. `status`는 데이터를 아직 못 받았다는 뜻의 `pending`으로 남는다. 그래서 스피너를 `pending`만 보고 그리면 오프라인에서 영원히 도는 것처럼 보인다. (근거: https://tanstack.com/query/v5/docs/framework/react/guides/network-mode 의 `fetchStatus` 설명)
+3. 오프라인은 서버가 거부한 것이 아니라 요청을 아직 못 보낸 상태이기 때문이다. `networkMode: 'online'`에서는 연결이 없으면 `queryFn`을 실행하지 않고 대기(`paused`)하다가 연결이 돌아오면 이어서 실행한다. `status`는 데이터를 아직 못 받았다는 뜻의 `pending`으로 남는다. 그래서 스피너를 `pending`만 보고 그리면 오프라인에서 영원히 도는 것처럼 보인다. (근거: https://tanstack.com/query/latest/docs/framework/react/guides/network-mode 의 `fetchStatus` 설명)
 
 </details>
 

@@ -11,7 +11,7 @@
 2. Stack 헤더 옵션: https://docs.expo.dev/router/advanced/stack/
    - 확인할 사실: `headerRight`는 헤더 오른쪽에 그릴 React 요소를 돌려주는 함수이고, `screenOptions`는 Stack 전체 화면에 공통 옵션을 준다. `presentation` 값은 `card`, `modal`, `formSheet` 등이다. 플랫폼별 지원 범위는 문서에서 모호하므로 `presentation` 옵션 설명을 읽고 시뮬레이터에서 확인한다.
 3. 딥링크 연결: https://docs.expo.dev/linking/into-your-app/
-   - 확인할 사실: `app.json`의 `scheme`은 개발 빌드나 스토어 빌드에서 `myapp://` 링크로 앱을 열게 한다. Expo Go에서는 `exp://` 스킴을 쓰고, 경로가 있을 때 `/--/`가 붙는다. `npx uri-scheme open <주소> --ios`로 시뮬레이터에서 링크를 연다. `scheme`은 Expo Go에서는 효과가 없는 빌드 시점 설정이다(공식 앱 설정 문서: https://docs.expo.dev/versions/v54.0.0/config/app/ 의 `scheme` 항목).
+   - 확인할 사실: `app.json`의 `scheme`은 개발 빌드나 스토어 빌드에서 `myapp://` 링크로 앱을 열게 한다. Expo Go에서는 `exp://` 스킴을 쓰고, 경로가 있을 때 `/--/`가 붙는다. `npx uri-scheme open <주소> --ios`로 시뮬레이터에서 링크를 연다. `scheme`은 Expo Go에서는 효과가 없는 빌드 시점 설정이다(공식 앱 설정 문서: https://docs.expo.dev/versions/latest/config/app/ 의 `scheme` 항목).
 
 ## 예측(10분)
 

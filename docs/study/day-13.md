@@ -10,7 +10,7 @@
    - 확인할 사실: Effect가 시작한 일을 되돌려야 하면 함수를 반환한다. 그 cleanup은 Effect가 다시 실행되기 직전과 컴포넌트가 사라질 때 호출된다. 의존성 배열이 `[]`이면 마운트 때 한 번, `[a, b]`이면 값이 바뀔 때마다 다시 실행된다. cleanup이 필요 없는 Effect도 있다.
 2. React 공식 문서, 커스텀 훅: https://react.dev/learn/reusing-logic-with-custom-hooks
    - 확인할 사실: 훅 이름은 `use`로 시작해야 한다. 커스텀 훅은 상태 로직을 공유하지만 상태 자체를 공유하지 않는다. 같은 훅을 두 번 호출하면 서로 독립된 상태가 생긴다.
-3. `Keyboard` 문서: https://reactnative.dev/docs/0.81/keyboard
+3. `Keyboard` 문서: https://reactnative.dev/docs/keyboard
    - 확인할 사실: `Keyboard.addListener(eventName, callback)`은 구독 객체를 돌려주고, 문서 예제는 정리할 때 `.remove()`를 호출한다. Android에서는 `keyboardDidShow`, `keyboardDidHide`만 쓸 수 있다. `keyboardWillShow`류는 iOS 전용이다.
 
 ## 예측(10분)
