@@ -51,7 +51,6 @@ Day 2~3에서 만든 `app/index.tsx`(ScrollView 위에 목록이 있는 기록 �
 - 예측 1번: 저장 직후 `console.log(entries.length)`가 찍힌 값을 보고 왜 그 값인지 한 줄로 적는다.
 - 예측 3번: `value`를 임시로 지워 보고 `setTitle('')` 뒤 입력창이 비워지는지 본다.
 - 실험: 저장 `onPress`를 `entries.push(...)`와 `setEntries(entries)`로 바꿔 저장 버튼을 눌러 보고, 화면이 바뀌는지와 그 이유를 적는다. 확인 후 되돌린다.
-  > 관찰:
 
 
 | 예측  | 실제      | 다른 이유 |
