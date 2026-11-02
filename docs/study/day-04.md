@@ -4,25 +4,26 @@
 
 1주차(Day 1~3)에서 배운 환경, 코어 컴포넌트, 스타일·Flexbox를 퀴즈와 구술로 점검하고 밀린 Day를 흡수한다.
 
-> 1주차는 화~금 4일이라 학습 Day가 3개(Day 1~3)다. 퀴즈 5문항은 이 3개 Day에서 낸다.
+> 1주차는 화~~금 4일이라 학습 Day가 3개(Day 1~~3)다. 퀴즈 5문항은 이 3개 Day에서 낸다.
 
 ## 주간 점검 퀴즈(30분)
 
 정답을 가리고 풀고, 맞은 뒤에도 "왜"를 한 문장으로 적는다. 결과는 `docs/quiz/2026-10-30-day-04.md`에 `AGENTS.md`의 상세 구조(문항별 상세, 종합 약점 패턴, 재복습 일정)로 기록한다.
 
-1. Expo Go와 development build는 무엇이 다른가? SDK 54 앱을 iOS 시뮬레이터에서 바로 열 수 있는 이유는?
-2. `npm run reset-project`가 지우거나 만드는 것을 말하고, 질문에 `n`과 `y` 중 무엇을 골랐는지, 왜 그렇게 골랐는지 설명하라.
-3. 다음 코드는 오류가 난다. 이유와 고치는 방법은?
+1. Expo Go와 development build는 무엇이 다른가? SDK 54 앱을 iOS 시뮬레이터에서 바로 열 수 있는 이유는? 잘 기억이 안남
+2. `npm run reset-project`가 지우거나 만드는 것을 말하고, 질문에 `n`과 `y` 중 무엇을 골랐는지, 왜 그렇게 골랐는지 설명하라. 잘 기억이 안남
+3. 다음 코드는 오류가 난다. 이유와 고치는 방법은? 일반 문자열은 런타임 에러가 나기 때문에 반드시 `<Text>` 태그로 감싸야 한다.
    ```tsx
-   <View>
-     <Text>제목</Text>
-     오늘의 기록
-   </View>
+    <View>
+      <Text>제목</Text>
+      오늘의 기록
+    </View>
    ```
-4. 카드 `View`에 `flexDirection: 'row'`를 주고 자식으로 `Image`와 `View`(안에 긴 `Text`)를 놓았더니 글이 오른쪽 밖으로 넘친다. 원인과 해결 방법은?
-5. iOS에서는 그림자가 보이는데 Android에서는 안 보인다. 이유와 한 파일 안에서 해결하는 방법은?
+4. 카드 `View`에 `flexDirection: 'row'`를 주고 자식으로 `Image`와 `View`(안에 긴 `Text`)를 놓았더니 글이 오른쪽 밖으로 넘친다. 원인과 해결 방법은? Image와 Text가 가로로 배치되기 때문이다. flexDirection 기본값인 column으로 주면 된다.
+5. iOS에서는 그림자가 보이는데 Android에서는 안 보인다. 이유와 한 파일 안에서 해결하는 방법은? ios나 android 설정 중 하나만 설정해서 그렇다. ios, android 설정을 한 파일에서 StyleSheet로 처리한다.
 
-<details><summary>정답</summary>
+<details class="orca-details" open>
+<summary>정답</summary>
 
 1. Expo Go는 Expo가 미리 만든 앱 안에 JS 번들만 올려 실행하고, development build는 `expo-dev-client`를 넣어 우리 프로젝트를 직접 컴파일한 앱이라 SDK 밖의 네이티브 라이브러리와 네이티브 설정을 쓸 수 있다. 시뮬레이터는 `npx expo start`에서 `i`를 누르면 Expo CLI가 Expo Go를 자동으로 설치해 주기 때문에 프로젝트 SDK에 맞는 Expo Go가 준비된다(실기기의 App Store판은 최신 SDK만 열기 때문에 SDK 54는 시뮬레이터를 쓴다).
 2. `app`, `components`, `hooks`, `constants`, `scripts`를 지우거나(`n`) `app-example/`로 옮기고(`y`) 새 `app/index.tsx`와 `app/_layout.tsx`를 만든다. `n`을 고르면 Day 1 커밋으로 복구할 수 있고 `app-example`이 `tsconfig.json`의 `include` 때문에 타입 검사에 섞이는 일을 피한다.

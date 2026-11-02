@@ -1,28 +1,39 @@
 import {
   Image,
+  ImageSourcePropType,
   Pressable,
   ScrollView,
   Text,
   StyleSheet,
   View,
   Platform,
+  TextInput,
 } from "react-native";
 
-const ENTRIES = [
+import { useState } from "react";
+
+type Entry = {
+  id: string;
+  title: string;
+  body: string;
+  image?: ImageSourcePropType;
+};
+
+const ENTRIES: Entry[] = [
   {
-    id: 1,
+    id: "1",
     title: "아침 러닝",
     body: "한강변을 5km 달렸다. 날씨가 선선해서 페이스가 좋았고 끝나고 먹은 아침이 맛있었다. 이 본문은 두 줄을 넘겨서 말줄임표가 붙는지 확인하기 위해 일부러 길게 썼다.",
     image: require("../assets/images/icon.png"),
   },
   {
-    id: 2,
+    id: "2",
     title: "React Native 공부",
     body: "코어 컴포넌트를 훑었다.",
     image: { uri: "https://reactnative.dev/img/tiny_logo.png" },
   },
   {
-    id: 3,
+    id: "3",
     title: "저녁 독서",
     body: "책을 30쪽 읽었다.",
     image: require("../assets/images/icon.png"),
@@ -30,6 +41,23 @@ const ENTRIES = [
 ];
 
 export default function Index() {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [entries, setEntries] = useState<Entry[]>(ENTRIES);
+
+  const canSave = title.trim() !== "";
+
+  const handleSave = () => {
+    const newEntry: Entry = { id: String(Date.now()), title, body };
+    setEntries([newEntry, ...entries]);
+    setTitle("");
+    setBody("");
+    // entries.push(newEntry);
+    // setEntries(entries)
+  };
+
+  console.log(entries.length);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -38,13 +66,42 @@ export default function Index() {
           {new Date().toLocaleDateString("ko-KR")}
         </Text>
       </View>
-      {ENTRIES.map((entry) => (
+      <TextInput
+        placeholder="제목"
+        value={title}
+        onChangeText={setTitle}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="본문"
+        multiline
+        textAlignVertical="top"
+        maxLength={200}
+        value={body}
+        onChangeText={setBody}
+        style={[styles.input, styles.bodyInput]}
+      />
+      <Text>{body.length}/200</Text>
+      <Pressable
+        onPress={handleSave}
+        disabled={!canSave}
+        style={[styles.saveButton, !canSave && styles.disabled]}
+      >
+        <Text>저장</Text>
+      </Pressable>
+      {entries.map((entry) => (
         <Pressable
           key={entry.id}
           onPress={() => console.log(entry.id)}
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         >
-          <Image source={entry.image} style={styles.thumb} alt={entry.title} />
+          {entry.image && (
+            <Image
+              source={entry.image}
+              style={styles.thumb}
+              alt={entry.title}
+            />
+          )}
           <View style={styles.textArea}>
             <Text style={styles.title}>{entry.title}</Text>
             <Text numberOfLines={2}>{entry.body}</Text>
@@ -82,4 +139,13 @@ export const styles = StyleSheet.create({
     }),
   },
   pressed: { opacity: 0.6 },
+  saveButton: {
+    backgroundColor: "rgba(17, 14, 204, 0.33)",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  disabled: { opacity: 0.2 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
+  bodyInput: { minHeight: 100 },
 });
