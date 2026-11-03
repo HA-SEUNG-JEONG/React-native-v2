@@ -8,9 +8,12 @@ import {
   View,
   Platform,
   TextInput,
+  KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 type Entry = {
   id: string;
@@ -45,6 +48,9 @@ export default function Index() {
   const [body, setBody] = useState("");
   const [entries, setEntries] = useState<Entry[]>(ENTRIES);
 
+  const ref = useRef<TextInput>(null);
+  const headerHeight = useHeaderHeight();
+
   const canSave = title.trim() !== "";
 
   const handleSave = () => {
@@ -54,61 +60,72 @@ export default function Index() {
     setBody("");
     // entries.push(newEntry);
     // setEntries(entries)
+    Keyboard.dismiss();
   };
 
-  console.log(entries.length);
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.diary}>오늘의 기록</Text>
-        <Text style={styles.date}>
-          {new Date().toLocaleDateString("ko-KR")}
-        </Text>
-      </View>
-      <TextInput
-        placeholder="제목"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="본문"
-        multiline
-        textAlignVertical="top"
-        maxLength={200}
-        value={body}
-        onChangeText={setBody}
-        style={[styles.input, styles.bodyInput]}
-      />
-      <Text>{body.length}/200</Text>
-      <Pressable
-        onPress={handleSave}
-        disabled={!canSave}
-        style={[styles.saveButton, !canSave && styles.disabled]}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.select({ ios: "padding", android: "height" })}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text>저장</Text>
-      </Pressable>
-      {entries.map((entry) => (
+        <View style={styles.header}>
+          <Text style={styles.diary}>오늘의 기록</Text>
+          <Text style={styles.date}>
+            {new Date().toLocaleDateString("ko-KR")}
+          </Text>
+        </View>
+        <TextInput
+          placeholder="제목"
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+          returnKeyType="next"
+          onSubmitEditing={() => ref.current?.focus()}
+        />
+        <TextInput
+          placeholder="본문"
+          multiline
+          textAlignVertical="top"
+          maxLength={200}
+          value={body}
+          onChangeText={setBody}
+          ref={ref}
+          style={[styles.input, styles.bodyInput]}
+        />
+        <Text>{body.length}/200</Text>
         <Pressable
-          key={entry.id}
-          onPress={() => console.log(entry.id)}
-          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+          onPress={handleSave}
+          disabled={!canSave}
+          style={[styles.saveButton, !canSave && styles.disabled]}
         >
-          {entry.image && (
-            <Image
-              source={entry.image}
-              style={styles.thumb}
-              alt={entry.title}
-            />
-          )}
-          <View style={styles.textArea}>
-            <Text style={styles.title}>{entry.title}</Text>
-            <Text numberOfLines={2}>{entry.body}</Text>
-          </View>
+          <Text>저장</Text>
         </Pressable>
-      ))}
-    </ScrollView>
+        {entries.map((entry) => (
+          <Pressable
+            key={entry.id}
+            onPress={() => console.log(entry.id)}
+            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+          >
+            {entry.image && (
+              <Image
+                source={entry.image}
+                style={styles.thumb}
+                alt={entry.title}
+              />
+            )}
+            <View style={styles.textArea}>
+              <Text style={styles.title}>{entry.title}</Text>
+              <Text numberOfLines={2}>{entry.body}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
