@@ -10,10 +10,15 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Keyboard,
+  FlatList,
 } from "react-native";
+
+import { MOCK_POSTS } from "../data/mock-posts";
 
 import { useState, useRef } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
+
+type TabState = "log" | "feed";
 
 type Entry = {
   id: string;
@@ -47,6 +52,7 @@ export default function Index() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [entries, setEntries] = useState<Entry[]>(ENTRIES);
+  const [tab, setTab] = useState<TabState>("log");
 
   const ref = useRef<TextInput>(null);
   const headerHeight = useHeaderHeight();
@@ -58,74 +64,111 @@ export default function Index() {
     setEntries([newEntry, ...entries]);
     setTitle("");
     setBody("");
-    // entries.push(newEntry);
-    // setEntries(entries)
     Keyboard.dismiss();
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.select({ ios: "padding", android: "height" })}
-      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.header}>
-          <Text style={styles.diary}>오늘의 기록</Text>
-          <Text style={styles.date}>
-            {new Date().toLocaleDateString("ko-KR")}
-          </Text>
-        </View>
-        <TextInput
-          placeholder="제목"
-          value={title}
-          onChangeText={setTitle}
-          style={styles.input}
-          returnKeyType="next"
-          onSubmitEditing={() => ref.current?.focus()}
-        />
-        <TextInput
-          placeholder="본문"
-          multiline
-          textAlignVertical="top"
-          maxLength={200}
-          value={body}
-          onChangeText={setBody}
-          ref={ref}
-          style={[styles.input, styles.bodyInput]}
-        />
-        <Text>{body.length}/200</Text>
+    <View style={{ flex: 1 }}>
+      <View style={styles.tabBar}>
         <Pressable
-          onPress={handleSave}
-          disabled={!canSave}
-          style={[styles.saveButton, !canSave && styles.disabled]}
+          onPress={() => setTab("log")}
+          style={[styles.tabButton, tab === "log" && styles.tabActive]}
         >
-          <Text>저장</Text>
+          <Text>기록</Text>
         </Pressable>
-        {entries.map((entry) => (
-          <Pressable
-            key={entry.id}
-            onPress={() => console.log(entry.id)}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        <Pressable
+          onPress={() => setTab("feed")}
+          style={[styles.tabButton, tab === "feed" && styles.tabActive]}
+        >
+          <Text>피드</Text>
+        </Pressable>
+      </View>
+      {tab === "log" ? (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.select({ ios: "padding", android: "height" })}
+          keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps="handled"
           >
-            {entry.image && (
-              <Image
-                source={entry.image}
-                style={styles.thumb}
-                alt={entry.title}
-              />
-            )}
-            <View style={styles.textArea}>
-              <Text style={styles.title}>{entry.title}</Text>
-              <Text numberOfLines={2}>{entry.body}</Text>
+            <View style={styles.header}>
+              <Text style={styles.diary}>오늘의 기록</Text>
+              <Text style={styles.date}>
+                {new Date().toLocaleDateString("ko-KR")}
+              </Text>
             </View>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <TextInput
+              placeholder="제목"
+              value={title}
+              onChangeText={setTitle}
+              style={styles.input}
+              returnKeyType="next"
+              onSubmitEditing={() => ref.current?.focus()}
+            />
+            <TextInput
+              placeholder="본문"
+              multiline
+              textAlignVertical="top"
+              maxLength={200}
+              value={body}
+              onChangeText={setBody}
+              ref={ref}
+              style={[styles.input, styles.bodyInput]}
+            />
+            <Text>{body.length}/200</Text>
+            <Pressable
+              onPress={handleSave}
+              disabled={!canSave}
+              style={[styles.saveButton, !canSave && styles.disabled]}
+            >
+              <Text>저장</Text>
+            </Pressable>
+            {entries.map((entry) => (
+              <Pressable
+                key={entry.id}
+                onPress={() => console.log(entry.id)}
+                style={({ pressed }) => [
+                  styles.card,
+                  pressed && styles.pressed,
+                ]}
+              >
+                {entry.image && (
+                  <Image
+                    source={entry.image}
+                    style={styles.thumb}
+                    alt={entry.title}
+                  />
+                )}
+                <View style={styles.textArea}>
+                  <Text style={styles.title}>{entry.title}</Text>
+                  <Text numberOfLines={2}>{entry.body}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : (
+        <FlatList
+          data={MOCK_POSTS}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <View style={styles.postCard}>
+              <Text style={styles.title} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text numberOfLines={2}>{item.body}</Text>
+            </View>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListHeaderComponent={
+            <Text style={styles.feedCount}>피드 {MOCK_POSTS.length}개</Text>
+          }
+          ListEmptyComponent={<Text style={styles.empty}>글이 없습니다</Text>}
+        />
+      )}
+    </View>
   );
 }
 
@@ -165,4 +208,18 @@ export const styles = StyleSheet.create({
   disabled: { opacity: 0.2 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
   bodyInput: { minHeight: 100 },
+  tabBar: { flexDirection: "row", gap: 8, padding: 12 },
+  tabButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  tabActive: { backgroundColor: "rgba(17, 14, 204, 0.33)" },
+  postCard: { padding: 16, gap: 4 },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: "#ccc" },
+  feedCount: { padding: 16, fontWeight: "600" },
+  empty: { padding: 16, textAlign: "center" },
 });
