@@ -6,21 +6,21 @@
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/sectionlist
+1. [https://reactnative.dev/docs/sectionlist](https://reactnative.dev/docs/sectionlist)
    - 확인할 사실: `sections`의 각 요소는 `data` 배열을 가진 객체이고 `key`는 선택이다. `renderSectionHeader`는 섹션 맨 위에 렌더된다. `stickySectionHeadersEnabled`는 iOS에서만 기본으로 켜진다. `keyExtractor`는 항목 key를 만들 뿐 섹션 자체에도 key가 필요하다는 문장.
-2. https://reactnative.dev/docs/refreshcontrol
+2. [https://reactnative.dev/docs/refreshcontrol](https://reactnative.dev/docs/refreshcontrol)
    - 확인할 사실: 스크롤이 맨 위일 때 아래로 당기면 `onRefresh`가 호출된다. `refreshing`은 제어되는 prop이라 `onRefresh`에서 `true`로 바꾸지 않으면 인디케이터가 바로 사라진다. iOS는 `tintColor`, Android는 `colors`·`progressBackgroundColor`로 색을 바꾼다.
-3. https://reactnative.dev/docs/optimizing-flatlist-configuration
+3. [https://reactnative.dev/docs/optimizing-flatlist-configuration](https://reactnative.dev/docs/optimizing-flatlist-configuration)
    - 확인할 사실: `windowSize` 기본값 21(화면 높이 단위), `initialNumToRender` 기본값 10, `maxToRenderPerBatch` 기본값 10. 값을 키우면 빈 영역(blank areas)은 줄지만 메모리를 더 쓴다. 항목은 `memo()`로 감싸고 `renderItem`은 `useCallback`으로 고정하라는 팁.
 
 ## 예측(10분)
 
 1. `stickySectionHeadersEnabled`를 따로 지정하지 않고 iOS와 Android에서 스크롤하면 섹션 헤더가 어떻게 보일까?
-   > 내 예측:
+   > 내 예측: ios에서는 기본값이 true이기 때문에 자동으로 섹션헤더가 고정되어지지만,  android에서는 기본값이 false라, 만약 안드로이드/아이폰에서 모두 고정되게 하려면 해당 속성을  true로 강제해야 한다.
 2. `onRefresh` 안에서 `setRefreshing(true)`를 호출하지 않고 시간 지연 후 `setRefreshing(false)`만 호출하면 화면에는 어떻게 보일까?
-   > 내 예측:
+   > 내 예측: 데이터가 로드되지 않을 것이다.
 3. 항목 컴포넌트를 `memo`로 감싸기 전에는 새 글을 맨 앞에 하나 추가할 때 `console.log`로 센 `PostCard` 렌더가 몇 번 일어날까? `memo`로 감싼 뒤에는?
-   > 내 예측:
+   > 내 예측: PostCard 개수만큼 렌더가 일어날 것 같다
 
 ## 만들기(40분)
 
@@ -44,32 +44,37 @@ Day 7에서 만든 `app/index.tsx`의 피드 화면을 고친다. 기록 화면�
 ```
 
 완료 기준:
-- [ ] 피드가 User 1, 2, 3 섹션으로 나뉘어 보이고 각 섹션 아래에 글 10개가 있다
-- [ ] 아래로 당기면 인디케이터가 약 1초 보이고 맨 위에 새 글이 한 개 생긴다
-- [ ] iOS에서는 섹션 헤더가 스크롤 중 위에 붙어 있다
-- [ ] `PostCard`가 `memo`로 감싸져 있고, 새 글 추가 시 로그로 센 렌더 수가 `memo` 전보다 줄었다
-- [ ] 임시 `console.log`를 제거했다
+
+
+
+- [x] 피드가 User 1, 2, 3 섹션으로 나뉘어 보이고 각 섹션 아래에 글 10개가 있다
+- [x] 아래로 당기면 인디케이터가 약 1초 보이고 맨 위에 새 글이 한 개 생긴다
+- [x] iOS에서는 섹션 헤더가 스크롤 중 위에 붙어 있다
+- [x] `PostCard`가 `memo`로 감싸져 있고, 새 글 추가 시 로그로 센 렌더 수가 `memo` 전보다 줄었다
+- [x] 임시 `console.log`를 제거했다
 
 ## 검증(10분)
 
 - 예측 1번: iOS에서 섹션 헤더가 붙는지 확인한다. Android 에뮬레이터가 있다면 같이 본다. 없으면 `stickySectionHeadersEnabled={true}`를 줘서 차이를 알아본다.
 - 예측 3번: `memo`를 제거했다가 다시 붙여 렌더 로그 수를 비교하고 표에 숫자를 적는다.
 - 실험: `onRefresh`에서 `setRefreshing(true)` 줄을 지우고 당겨 본다. 인디케이터가 어떻게 되는지 적고 되돌린다.
-  > 관찰:
 
-| 예측 | 실제 | 다른 이유 |
-|---|---|---|
-| 1 |  |  |
-| 2 |  |  |
-| 3 |  |  |
+
+| 예측  | 실제                                                                                                                               | 다른 이유                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | android에서는 stickySectionHeadersEnabled를 true로 강제해야 섹션 헤더가 고정이 되고, ios에서는 기본값이 true로 작용했다.                                        | 같음                        |
+| 2   | onRefresh 함수 내 `setRefreshing(true)` 의 주석 처리 여부 관계없이 스피너가 모두 보였고, 데이터 추가가 되는 타이밍도 모두 같았다.                                        |                           |
+| 3   | memo를 제거후 실행시 onRefesh를 실행했을 때, 로그에 찍히는 형태를 보면 34,33,32,... 형태로 진행되며, memo를 다시 붙였을 때 onRefresh 실행시 아이디가 오름차순으로 정확히 정렬되서 로그가 찍혔다. | memo의 개념을 잘 이해하지 못했던 거 같음 |
+
 
 ## 이해 점검 질문
 
-1. `SectionList`의 `sections`는 어떤 모양이어야 하고, `keyExtractor`로 충분하지 않은 이유(섹션 key)는 무엇인가?
-2. `refreshing`이 "제어되는 prop"이라는 말은 무슨 뜻이며, `onRefresh`에서 `setRefreshing(true)`를 호출해야 하는 이유는?
-3. `windowSize`를 키우면 어떤 이득과 비용이 있는가? 항목을 `memo`로 감싸는 효과는 무엇인가?
+1. `SectionList`의 `sections`는 어떤 모양이어야 하고, `keyExtractor`로 충분하지 않은 이유(섹션 key)는 무엇인가? 잘 모르겠음
+2. `refreshing`이 "제어되는 prop"이라는 말은 무슨 뜻이며, `onRefresh`에서 `setRefreshing(true)`를 호출해야 하는 이유는? 잘 모르겠음
+3. `windowSize`를 키우면 어떤 이득과 비용이 있는가? 항목을 `memo`로 감싸는 효과는 무엇인가? 잘 모르겠음
 
-<details><summary>정답</summary>
+<details class="orca-details" open>
+<summary>정답</summary>
 
 1. `[{ title, data: [...] }, ...]`처럼 각 섹션이 `data` 배열을 가진 객체인 배열이다. `keyExtractor`는 항목의 key만 만든다. 섹션 자체에도 key가 필요하며, 지정하지 않으면 섹션 배열 index가 기본으로 쓰인다(섹션 순서를 바꿀 계획이면 `key`를 지정).
 2. 리스트가 스스로 로딩 여부를 기억하지 않고 부모가 준 `refreshing` 값을 그대로 표시한다는 뜻이다. 당긴 순간 `onRefresh`가 호출되지만 부모가 `refreshing`을 `true`로 올리지 않으면 값이 `false`로 유지돼 인디케이터가 바로 사라진다(문서에 명시).
@@ -80,6 +85,12 @@ Day 7에서 만든 `app/index.tsx`의 피드 화면을 고친다. 기록 화면�
 ## 기록(5분)
 
 배운 것 3줄:
+
+- SectionList를 사용할 때, keyExtractor는 각 항목에 대한 key로만 동작한다는 사실
+- 또한 섹션 헤더를 고정시키기 위해서는 ios와 android 설정을 달리 해야한다는 사실
+-
+
+ 
 
 막힌 점:
 
