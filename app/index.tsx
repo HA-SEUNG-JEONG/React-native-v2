@@ -1,8 +1,5 @@
 import {
-  Image,
-  ImageSourcePropType,
   Pressable,
-  ScrollView,
   Text,
   StyleSheet,
   View,
@@ -11,21 +8,18 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   SectionList,
+  FlatList,
+  TextInputSubmitEditingEvent,
 } from "react-native";
 
 import { MOCK_POSTS, Post } from "../data/mock-posts";
 
 import { useState, useRef, useCallback, memo } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
+import { LogEntry } from "../types/log";
+import LogItem from "../components/LogItem";
 
 type TabState = "log" | "feed";
-
-type Entry = {
-  id: string;
-  title: string;
-  body: string;
-  image?: ImageSourcePropType;
-};
 
 type PostSection = { title: string; data: Post[] };
 
@@ -54,31 +48,10 @@ const PostCard = memo(function PostCard({ post }: { post: Post }) {
   );
 });
 
-const ENTRIES: Entry[] = [
-  {
-    id: "1",
-    title: "아침 러닝",
-    body: "한강변을 5km 달렸다. 날씨가 선선해서 페이스가 좋았고 끝나고 먹은 아침이 맛있었다. 이 본문은 두 줄을 넘겨서 말줄임표가 붙는지 확인하기 위해 일부러 길게 썼다.",
-    image: require("../assets/images/icon.png"),
-  },
-  {
-    id: "2",
-    title: "React Native 공부",
-    body: "코어 컴포넌트를 훑었다.",
-    image: { uri: "https://reactnative.dev/img/tiny_logo.png" },
-  },
-  {
-    id: "3",
-    title: "저녁 독서",
-    body: "책을 30쪽 읽었다.",
-    image: require("../assets/images/icon.png"),
-  },
-];
-
 export default function Index() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [entries, setEntries] = useState<Entry[]>(ENTRIES);
+  const [entries, setEntries] = useState<LogEntry[]>([]);
   const [tab, setTab] = useState<TabState>("log");
 
   const [posts, setPosts] = useState(MOCK_POSTS);
@@ -92,7 +65,12 @@ export default function Index() {
       setPosts((prev) => {
         const id = Math.max(...prev.map((p) => p.id)) + 1;
         return [
-          { id, userId: 1, title: `새 글 ${id}`, body: `새 글 본문 ${id} ...` },
+          {
+            id,
+            userId: 1,
+            title: `새 글 ${id}`,
+            body: `새 글 본문 ${id} ...`,
+          },
           ...prev,
         ];
       });
@@ -111,7 +89,12 @@ export default function Index() {
   const canSave = title.trim() !== "";
 
   const handleSave = () => {
-    const newEntry: Entry = { id: String(Date.now()), title, body };
+    const newEntry: LogEntry = {
+      id: String(Date.now()),
+      title,
+      body,
+      createdAt: Date.now(),
+    };
     setEntries([newEntry, ...entries]);
     setTitle("");
     setBody("");
@@ -137,13 +120,13 @@ export default function Index() {
       {tab === "log" ? (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.select({ ios: "padding", android: "height" })}
+          behavior={Platform.select({
+            ios: "padding",
+            android: "height",
+          })}
           keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
         >
-          <ScrollView
-            contentContainerStyle={styles.container}
-            keyboardShouldPersistTaps="handled"
-          >
+          <View style={[styles.container, { flex: 1 }]}>
             <View style={styles.header}>
               <Text style={styles.diary}>오늘의 기록</Text>
               <Text style={styles.date}>
@@ -153,10 +136,12 @@ export default function Index() {
             <TextInput
               placeholder="제목"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={(text: string) => setTitle(text)}
               style={styles.input}
               returnKeyType="next"
-              onSubmitEditing={() => ref.current?.focus()}
+              onSubmitEditing={(e: TextInputSubmitEditingEvent) =>
+                ref.current?.focus()
+              }
             />
             <TextInput
               placeholder="본문"
@@ -176,29 +161,16 @@ export default function Index() {
             >
               <Text>저장</Text>
             </Pressable>
-            {entries.map((entry) => (
-              <Pressable
-                key={entry.id}
-                onPress={() => console.log(entry.id)}
-                style={({ pressed }) => [
-                  styles.card,
-                  pressed && styles.pressed,
-                ]}
-              >
-                {entry.image && (
-                  <Image
-                    source={entry.image}
-                    style={styles.thumb}
-                    alt={entry.title}
-                  />
-                )}
-                <View style={styles.textArea}>
-                  <Text style={styles.title}>{entry.title}</Text>
-                  <Text numberOfLines={2}>{entry.body}</Text>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+            <FlatList
+              data={entries}
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              style={{ flex: 1 }}
+              renderItem={({ item }) => (
+                <LogItem entry={item} onPress={(id) => console.log(id)} />
+              )}
+            />
+          </View>
         </KeyboardAvoidingView>
       ) : (
         <SectionList
@@ -256,7 +228,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   disabled: { opacity: 0.2 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 12,
+  },
   bodyInput: { minHeight: 100 },
   tabBar: { flexDirection: "row", gap: 8, padding: 12 },
   tabButton: {
