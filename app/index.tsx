@@ -1,23 +1,26 @@
 import {
-  Pressable,
-  Text,
-  StyleSheet,
-  View,
-  Platform,
-  TextInput,
-  KeyboardAvoidingView,
-  Keyboard,
-  SectionList,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  Text,
+  TextInput,
   TextInputSubmitEditingEvent,
+  View,
 } from "react-native";
 
 import { MOCK_POSTS, Post } from "../data/mock-posts";
 
-import { useState, useRef, useCallback, memo } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { LogEntry } from "../types/log";
+import { useCallback, useRef, useState } from "react";
+import { AppButton } from "../components/AppButton";
+import { EmptyState } from "../components/EmptyState";
 import LogItem from "../components/LogItem";
+import { PostCard } from "../components/PostCard";
+import { LogEntry } from "../types/log";
 
 type TabState = "log" | "feed";
 
@@ -35,18 +38,6 @@ const groupByUser = (posts: Post[]): PostSection[] => {
     data,
   }));
 };
-
-const PostCard = memo(function PostCard({ post }: { post: Post }) {
-  console.log("PostCard render", post.id); // TEMP: 렌더 횟수 측정용, 검증 후 제거
-  return (
-    <View style={styles.postCard}>
-      <Text style={styles.title} numberOfLines={1}>
-        {post.title}
-      </Text>
-      <Text numberOfLines={2}>{post.body}</Text>
-    </View>
-  );
-});
 
 export default function Index() {
   const [title, setTitle] = useState("");
@@ -78,9 +69,13 @@ export default function Index() {
     }, 1000);
   };
 
+  const handlePostPress = useCallback((id: number) => console.log(id), []);
+
   const renderItem = useCallback(
-    ({ item }: { item: Post }) => <PostCard post={item} />,
-    [],
+    ({ item }: { item: Post }) => (
+      <PostCard post={item} onPress={handlePostPress} />
+    ),
+    [handlePostPress],
   );
 
   const ref = useRef<TextInput>(null);
@@ -102,7 +97,7 @@ export default function Index() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, marginHorizontal: 0 }}>
       <View style={styles.tabBar}>
         <Pressable
           onPress={() => setTab("log")}
@@ -154,20 +149,31 @@ export default function Index() {
               style={[styles.input, styles.bodyInput]}
             />
             <Text>{body.length}/200</Text>
-            <Pressable
+            <AppButton
+              title="저장"
+              variant="primary"
               onPress={handleSave}
               disabled={!canSave}
-              style={[styles.saveButton, !canSave && styles.disabled]}
-            >
-              <Text>저장</Text>
-            </Pressable>
+            />
+            <AppButton
+              title="전체 삭제"
+              variant="danger"
+              onPress={() => setEntries([])}
+              disabled={entries.length === 0}
+            />
             <FlatList
               data={entries}
               keyExtractor={(item) => item.id}
               keyboardShouldPersistTaps="handled"
               style={{ flex: 1 }}
+              ItemSeparatorComponent={() => <View style={styles.logGap} />}
+              ListEmptyComponent={<EmptyState message="아직 기록이 없어요" />}
               renderItem={({ item }) => (
-                <LogItem entry={item} onPress={(id) => console.log(id)} />
+                <LogItem
+                  entry={item}
+                  onPress={(id) => console.log(id)}
+                  style={{ padding: 0 }}
+                />
               )}
             />
           </View>
@@ -221,13 +227,7 @@ export const styles = StyleSheet.create({
     }),
   },
   pressed: { opacity: 0.6 },
-  saveButton: {
-    backgroundColor: "rgba(17, 14, 204, 0.33)",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  disabled: { opacity: 0.2 },
+  logGap: { height: 12 },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -245,7 +245,6 @@ export const styles = StyleSheet.create({
     borderColor: "#ccc",
   },
   tabActive: { backgroundColor: "rgba(17, 14, 204, 0.33)" },
-  postCard: { padding: 16, gap: 4 },
   sectionHeader: {
     padding: 16,
     fontWeight: "700",
