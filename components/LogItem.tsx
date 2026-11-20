@@ -1,14 +1,13 @@
 import {
-  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
   Text,
-  View,
   ViewStyle,
 } from "react-native";
 
 import { LogEntry } from "../types/log";
+import { Card } from "./Card";
 
 type LogItemProps = {
   entry: LogEntry;
@@ -18,34 +17,24 @@ type LogItemProps = {
 
 export default function LogItem({ entry, onPress, style }: LogItemProps) {
   return (
-    <Pressable
-      onPress={() => onPress(entry.id)}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed, style]}
-    >
-      <View style={styles.textArea}>
+    <Card style={style}>
+      <Pressable
+        onPress={() => onPress(entry.id)}
+        style={({ pressed }) => [styles.content, pressed && styles.pressed]}
+      >
         <Text style={styles.title}>{entry.title}</Text>
         <Text numberOfLines={2}>{entry.body}</Text>
-      </View>
-    </Pressable>
+        <Text style={styles.time}>
+          {new Date(entry.createdAt).toLocaleTimeString("ko-KR")}
+        </Text>
+      </Pressable>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    gap: 12,
-    backgroundColor: "#fff",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: { elevation: 3 },
-    }),
-  },
+  content: { gap: 4 },
   pressed: { opacity: 0.6 },
-  textArea: { flex: 1 },
   title: { fontSize: 18, fontWeight: "600" },
+  time: { fontSize: 12, color: "#888" },
 });
