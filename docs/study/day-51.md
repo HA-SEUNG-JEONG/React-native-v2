@@ -1,86 +1,91 @@
-# Day 51 · 1/5 (화) — Reanimated 기초: shared value, animated style
+# Day 51 · 1/6 (수) — 제스처 + Reanimated 결합(스와이프 삭제)
+
+> 건너뛰기 가능: 삭제는 항목의 삭제 버튼으로도 같은 기능을 얻을 수 있고, 이후 Day는 이 스와이프 구현에 의존하지 않는다. 건너뛰면 읽기만 한다.
 
 ## 오늘의 목표
 
-shared value, `useAnimatedStyle`, `withSpring`/`withTiming`으로 좋아요 하트 팝 애니메이션과 연습 박스의 손가락 추종 애니메이션을 만들고, "값이 바뀌어도 리렌더되지 않는다"는 점을 확인한다.
+기록 탭 목록의 각 항목을 왼쪽으로 밀어 삭제하는 `SwipeableRow`를 `Gesture.Pan()`, shared value, `withTiming` 콜백, `scheduleOnRN`으로 만들고, 세로 스크롤과 충돌하지 않게 제스처 활성화 조건을 설정한다.
 
 ## 읽기(15분)
 
-이 카드는 SDK 54가 고정하는 `react-native-reanimated` 4.1 계열과 `react-native-worklets` 0.5 기준이다. Reanimated 문서 사이트는 최신 버전(4.4 이상 기능 포함)을 보여 주므로, 문서에서 "4.x.0부터"라고 적힌 기능은 쓰지 않는다. 설치 명령(`npx expo install react-native-reanimated react-native-worklets`)과 "Babel 플러그인은 `babel-preset-expo`에 자동 설정된다"는 설명은 https://docs.expo.dev/versions/latest/sdk/reanimated/ 에 있다. 이 템플릿은 이미 설치되어 있으니 `package.json`에서 두 패키지의 버전만 확인한다.
-
-1. https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/your-first-animation
-   - 확인할 사실: 값은 `useSharedValue`로 만들고 읽고 쓸 때는 항상 `.value`를 쓴다(`sv = 100`이 아니라 `sv.value = 100`). 애니메이션은 값을 `withSpring(목표값)`으로 감싸서 대입하면 시작된다.
-2. https://docs.swmansion.com/react-native-reanimated/docs/core/useSharedValue
-   - 확인할 사실: shared value를 바꿔도 React 리렌더가 일어나지 않는다. 쓰기 직후 JS 스레드에서 `.value`를 읽으면 이전 값이 보일 수 있다. 렌더 중에 `.value`를 읽거나 쓰면 안 된다(콜백·`useAnimatedStyle`·`useEffect` 안에서 접근). 구조분해(`const { value } = sv`)와 객체 속성 직접 수정(`sv.value.x = 1`)은 반응성을 잃는다.
-3. https://docs.swmansion.com/react-native-reanimated/docs/core/useAnimatedStyle
-   - 확인할 사실: 결과 스타일은 `Animated.View` 같은 Animated 컴포넌트에만 줄 수 있다. 정적 스타일은 `StyleSheet`에 두고 `[styles.box, animatedStyle]`로 합친다. 애니메이션 스타일은 정적 스타일을 덮어쓴다. `useAnimatedStyle` 안에서 shared value를 대입하면 안 된다.
+1. https://docs.swmansion.com/react-native-gesture-handler/docs/2.x/gestures/pan-gesture (Day 49에서 읽은 페이지의 Config 절을 다시 본다)
+   - 확인할 사실: `activeOffsetX`는 "이 범위 안의 움직임은 활성화하지 않고, 범위를 벗어나면 활성화"한다. `failOffsetY`는 "활성화 전에 이 범위를 벗어나면 제스처를 실패 처리"한다. 두 옵션 모두 숫자 하나 또는 `[시작, 끝]` 쌍을 받는다.
+2. https://docs.swmansion.com/react-native-reanimated/docs/animations/withTiming
+   - 확인할 사실: 세 번째 인자 콜백은 `finished`를 받고, 애니메이션이 취소되면 `false`, 아니면 `true`다. 기본 `duration`은 300밀리초다.
+3. https://docs.swmansion.com/react-native-worklets/docs/threading/scheduleOnRN
+   - 확인할 사실: `scheduleOnRN(함수, ...인자)`는 UI 스레드(worklet 런타임)에서 React Native(JS) 런타임으로 함수 실행을 예약한다. 상태 갱신이나 reducer `dispatch`처럼 JS 쪽 함수를 부를 때 쓴다. 이전 자료에는 `runOnJS(fn)(...인자)`가 자주 나오는데, SDK 54의 worklets 0.5 소스에서는 `runOnJS`에 "`scheduleOnRN`을 쓰라"는 deprecated 표시가 붙어 있다. 둘이 같은 일을 한다는 것만 알고 이 카드는 `scheduleOnRN`을 쓴다.
 
 ## 예측(10분)
 
-1. 하트가 팝되는 동안 `LikeHeart` 컴포넌트는 몇 번 리렌더될까? 렌더 본문에 `console.log('render')`를 넣었을 때 `liked`가 바뀌는 순간과 `scale.value`가 바뀌는 매 프레임을 구분해서 예측한다.
+1. `activeOffsetX`와 `failOffsetY`를 아무것도 주지 않은 Pan을 FlatList 행에 붙이면 목록의 세로 스크롤은 어떻게 될까?
 
 > 내 예측:
 
-2. `scale.value = 1.4;` 바로 다음 줄에서 `console.log(scale.value)`를 찍으면 무엇이 찍힐까?
+2. 행을 삭제 임계값(예: 80)보다 덜 밀고 손을 떼면 행은 어떻게 움직일까? 임계값을 넘겨서 놓으면?
 
 > 내 예측:
 
-3. `useAnimatedStyle`의 결과를 `Animated.View`가 아닌 일반 `View`의 `style`에 넘기면 어떻게 될까?
+3. 삭제 애니메이션이 끝나기 전에 사용자가 같은 행을 다시 잡아 끌면 `withTiming` 콜백의 `finished`는 무엇일까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-Daily Log 글 상세 화면의 좋아요 표시를 하트 아이콘으로 바꾸고 팝 애니메이션을 준다. 이어서 Day 50에서 만든 연습 영역을 손가락을 따라 움직이는 박스로 바꾼다. 새 컴포넌트는 `src/components/LikeHeart.tsx`에 만든다.
+기록 탭(`app/(tabs)/write.tsx`)의 기록 목록 `FlatList` 각 행을 스와이프 삭제 가능하게 만든다. 새 컴포넌트는 `src/components/SwipeableRow.tsx`의 `SwipeableRow({ onDelete, children })`다. 삭제는 Day 21의 `removed` 액션과 Day 41의 `deletePhoto`를 부르는 기존 삭제 핸들러를 `onDelete`로 넘긴다.
 
-1. `src/components/LikeHeart.tsx`의 `LikeHeart({ liked }: { liked: boolean })`를 만든다.
-   - `@expo/vector-icons`의 `Ionicons`에서 `heart`(켜짐)와 `heart-outline`(꺼짐)을 `liked`로 고른다.
-   - `scale` shared value(초기값 1)를 만들고, `useAnimatedStyle`이 `transform: [{ scale: scale.value }]`를 돌려주게 한다. 아이콘은 `Animated.View`로 감싼다.
-   - `liked`가 바뀔 때 `useEffect`에서 `scale.value = withSequence(withTiming(1.4, { duration: 100 }), withSpring(1))`처럼 커졌다가 스프링으로 돌아오게 한다. 맨 처음 마운트 시점에도 효과가 실행되므로, 첫 렌더에는 팝이 나오지 않게 할 방법을 스스로 정한다(예: 이전 값 `useRef` 비교, 또는 처음 실행은 건너뛰기).
-2. Day 50에서 상세 화면에 만든 "좋아요: 켜짐/꺼짐" 글자를 `LikeHeart`로 교체한다. 더블탭 제스처는 그대로 둔다.
-3. 상세 화면 연습 영역을 박스로 바꾼다.
-   - `translateX` shared value와 `useAnimatedStyle`(`transform: [{ translateX: translateX.value }]`)을 만든다. 박스는 `Animated.View`다.
-   - Pan의 `onUpdate`에서 `translateX.value = e.translationX`, `onEnd`에서 `translateX.value = withSpring(0)`.
-   - 이제 Pan 콜백은 shared value만 건드리므로 UI 스레드에서 그대로 실행된다. Day 50의 `dragX` 상태와 `.runOnJS(true)`는 제거한다. 왜 이번에는 `runOnJS`가 필요 없는지 기록 칸에 한 줄로 적는다.
-4. 상세 화면 본문 카드가 처음 보일 때 서서히 나타나게 한다: `opacity` shared value(초기값 0)를 `useEffect`에서 `withTiming(1, { duration: 300 })`로 올리고, 본문 카드 바깥을 `Animated.View`로 감싼다. `GestureDetector` 바로 아래 자식은 그대로 일반 `View`로 두어 Day 50의 탭 제스처가 계속 동작하게 한다.
-5. `expo lint`가 `.value` 대입을 렌더 중 변경으로 경고하면 경고 위치가 이벤트·효과·제스처 콜백 안인지 확인한다. 이 템플릿은 React Compiler가 켜져 있다. Reanimated 문서는 Compiler 사용 시 `.value` 대신 `get()`/`set()`을 권한다. 이 메서드가 4.1에도 있는지는 `react-native-reanimated`의 타입(`SharedValue`)에서 확인하고, 경고가 실제로 나온 경우에만 바꾼다.
+1. `SwipeableRow`가 하는 일
+   - 바깥 `View`(배경): 오른쪽 끝에 "삭제" 글자를 두고 위험을 뜻하는 배경색을 준다. 행이 밀리면 이 배경이 드러난다.
+   - 안쪽 `Animated.View`(내용): `children`을 담고 `translateX` shared value를 `useAnimatedStyle`로 연결한다.
+2. Pan 설정: 가로 이동이 일정 거리 이상일 때만 활성화하고, 세로로 먼저 움직이면 실패시켜 `FlatList`의 세로 스크롤이 동작하게 한다.
+
+```tsx
+Gesture.Pan()
+  .activeOffsetX([-10, 10])
+  .failOffsetY([-10, 10])
+```
+
+3. 콜백
+   - `onUpdate`: `translateX.value = Math.min(0, e.translationX)`로 왼쪽으로만 밀리게 한다.
+   - `onEnd`: `e.translationX`가 `-80`(상수로 둔다)보다 작으면 `withTiming(-화면너비, { duration: 200 }, 콜백)`으로 밖으로 밀어내고, 콜백에서 `finished`일 때만 `scheduleOnRN(onDelete)`를 부른다. 아니면 `withSpring(0)`으로 되돌린다. 화면 너비는 `useWindowDimensions().width`(Day 55에서 더 자세히 다룬다)로 얻는다.
+   - `scheduleOnRN`은 `react-native-worklets`에서 가져온다. 이 패키지는 템플릿에 이미 있다.
+4. `children`으로 Day 10의 `LogItem`(`Pressable`)을 그대로 넣고, 탭과 가로 스와이프가 둘 다 동작하는지 검증에서 확인한다.
+5. 기록 목록 `FlatList`의 `renderItem`에서 각 행을 `SwipeableRow`로 감싼다. `keyExtractor`가 기록의 고유 id를 쓰는지 확인한다. index를 키로 쓰면 삭제 후 다른 행에 애니메이션 값이 남을 수 있다.
 
 완료 기준
 
-- [ ] `package.json`에서 `react-native-reanimated`(`~4.1.x`)와 `react-native-worklets`(`0.5.x`) 버전을 확인했다
-- [ ] 더블탭하면 하트가 커졌다가 원래 크기로 돌아오고, 아이콘이 채워진 하트/빈 하트로 바뀐다
-- [ ] 화면에 처음 들어올 때 하트 팝이 나오지 않는다
-- [ ] 연습 박스가 손가락을 따라 좌우로 움직이고, 손을 떼면 스프링으로 돌아온다
-- [ ] 본문 카드가 서서히 나타난다
-- [ ] 연습 박스 Pan에 `.runOnJS(true)`와 `useState`가 남아 있지 않다
+- [ ] 행을 왼쪽으로 밀면 손가락을 따라 움직이고 뒤에 "삭제" 배경이 보인다
+- [ ] 임계값 안쪽에서 놓으면 스프링으로 제자리로 돌아온다
+- [ ] 임계값을 넘겨서 놓으면 행이 밖으로 사라진 뒤 목록에서 기록이 삭제된다
+- [ ] 목록을 세로로 스크롤할 때 행이 가로로 딸려 움직이지 않는다
+- [ ] 오른쪽으로 밀어도 행이 오른쪽으로 움직이지 않는다
+- [ ] 삭제 후 앱을 다시 열어도(Day 41의 `saveLogs`로) 삭제 상태가 유지된다.
 
 ## 검증(10분)
 
 확인할 동작
 
-- 상세 화면에서 본문을 여러 번 더블탭하며 하트 팝을 본다. 개발 메뉴를 열어 성능 모니터를 켜거나, `LikeHeart` 렌더 본문의 `console.log('render')` 횟수를 센다. 예측 1과 비교한다.
-- 연습 박스를 느리게/빠르게 밀었다 놓아 본다. `withSpring`의 감쇠가 어떻게 보이는지 `damping` 값을 바꿔 가며(예: 10과 30) 비교한다. 문서 기본값(`stiffness` 900, `damping` 120, `mass` 4)에서 시작해 값을 바꿀 때 튕김이 어떻게 달라지는지 본다.
+- 시뮬레이터에서 기록 탭을 열고 기록을 여러 개 만든 뒤, 한 행을 천천히 왼쪽으로 밀었다 되돌리기, 임계값을 넘겨 삭제하기, 목록 세로 스크롤하기를 차례로 한다. 예측 2와 비교한다.
+- 행을 가볍게 탭하면 `LogItem`의 `onPress`(기록 상세 이동)가 동작하고, 가로로 밀면 스와이프가 동작하는지 둘 다 확인한다. Day 45(건너뛰기 가능)을 건너뛰어 기록 상세 화면(`app/log/[id].tsx`)이 없다면 이동 확인은 생략한다. 대신 기록 탭 목록에서만 확인한다: 행을 탭하는 동안 행이 가로로 딸려 움직이지 않고, 탭 직후 바로 가로로 밀면 스와이프가 정상 시작되는지 본다.
+- 삭제 직후 아래 행들이 점프하듯 올라오는지 본다. 이번 Day에는 이를 부드럽게 만들지 않는다. 눈에 띄는 점을 기록 칸에 적어 둔다.
 
 일부러 깨뜨려 보는 실험
 
-- 연습 박스의 `Animated.View`를 일반 `View`로 바꿔 보고 화면에 나오는 에러 메시지 원문을 적는다. 예측 3과 비교한 뒤 되돌린다. 이어서 `onUpdate`에서 `translateX.value = e.translationX` 바로 다음 줄에 `console.log(translateX.value)`를 찍어 예측 2와 비교하고, 확인한 뒤 로그를 지운다.
+- `activeOffsetX`와 `failOffsetY` 두 줄을 지우고 목록을 세로로 스크롤해 본다. 어떤 일이 일어나는지 적은 뒤 두 줄을 되돌린다. 예측 1과 비교한다.
 
-> 에러 원문:
->
-> 예측과 달랐던 점:
+> 실험 결과:
 
 ## 이해 점검 질문
 
-1. `useState`로 `scale`을 관리하는 대신 shared value를 쓰면 무엇이 달라지고, 왜 애니메이션에 유리할까?
-2. `sv.value = 100;` 바로 다음 줄에서 `console.log(sv.value)`를 찍으면 왜 100이 아닐 수 있을까?
-3. `useAnimatedStyle`로 만든 스타일을 쓰려면 왜 `Animated.View`여야 하고, 정적 스타일과 같이 쓸 때 어떤 점을 조심해야 할까?
+1. `activeOffsetX([-10, 10])`과 `failOffsetY([-10, 10])`은 각각 무슨 뜻이고, 둘을 같이 쓰면 스크롤 가능한 목록 안에서 어떻게 동작할까?
+2. `withTiming`의 콜백에서 삭제 함수를 직접 부르지 않고 `scheduleOnRN`으로 감싸는 이유는 무엇일까?
+3. 삭제 콜백에서 `finished`가 `true`일 때만 삭제하는 이유는 무엇일까?
 
 <details>
 <summary>정답</summary>
 
-1. shared value를 바꾸면 React 리렌더 없이 값이 UI 스레드에 반영되고, `useAnimatedStyle`이 그 값을 읽어 네이티브 뷰의 스타일만 직접 갱신한다. `useState`로 매 프레임 값을 바꾸면 매번 JS 스레드에서 리렌더가 일어나 JS가 바쁠 때 애니메이션이 끊긴다. 그래서 애니메이션 값은 shared value, 화면 구조를 바꾸는 값(`liked` 같은 논리 상태)은 `useState`로 나눈다.
-2. shared value의 쓰기는 UI 스레드에서 동기적으로 반영되지만 JS 스레드는 그 변경을 비동기로 받는다. 그래서 쓰기 직후 JS에서 읽으면 이전 값이 보일 수 있다. 같은 이유로 JS 스레드에서 `.value`를 반복해서 읽으면 UI 스레드의 값이 올 때까지 기다리게 되어 느려질 수 있다.
-3. `Animated.View` 같은 Animated 컴포넌트만 `useAnimatedStyle`이 만든 스타일(내부적으로 UI 스레드에서 갱신되는 스타일)을 받을 수 있고, 일반 `View`에 넘기면 에러가 난다. 정적 스타일은 `[styles.box, animatedStyle]`처럼 배열로 합치며, 애니메이션 스타일이 정적 스타일의 같은 속성을 덮어쓰므로 `width`처럼 겹치는 속성을 양쪽에 두지 않는다.
+1. `activeOffsetX([-10, 10])`은 가로로 10 포인트 안쪽 움직임은 무시하고 그 범위를 벗어나야 Pan이 활성화된다는 뜻이다. `failOffsetY([-10, 10])`은 활성화되기 전에 세로로 10 포인트를 벗어나면 Pan을 실패 처리한다는 뜻이다. 합치면 가로로 먼저 움직이면 스와이프가 시작되고 세로로 먼저 움직이면 Pan이 빠져 `FlatList`가 스크롤을 가져간다. 대각선으로 시작할 때는 먼저 범위를 벗어나는 축이 이긴다.
+2. 이 콜백은 애니메이션이 끝날 때 UI 스레드에서 worklet으로 실행된다. `onDelete`는 reducer `dispatch`를 부르는 일반 JS 함수라서 UI 스레드에서 동기 호출하면 "non-worklet function" 에러가 난다. `scheduleOnRN`이 그 함수를 JS(React Native) 런타임에서 실행하도록 예약해 준다.
+3. 애니메이션이 취소되면 콜백이 `finished === false`로 불린다. 삭제 애니메이션 도중에 사용자가 행을 다시 잡아 끌면 `onUpdate`가 값을 덮어써 애니메이션이 취소되는데, 이때 삭제를 호출하면 사용자가 되돌리려던 기록이 지워진다. 끝까지 정상 종료된 경우에만 삭제한다.
 
 </details>
 
@@ -96,10 +101,9 @@ Daily Log 글 상세 화면의 좋아요 표시를 하트 아이콘으로 바꾸
 
 ## 커밋 단위 제안
 
-- `feat: 좋아요 하트에 Reanimated 팝 애니메이션 추가`
-- `feat: 글 상세 연습 박스가 손가락을 따라 움직이게 변경`
-- `style: 상세 본문 카드에 fade-in 추가`
+- `feat: 기록 항목 스와이프 삭제 SwipeableRow 추가`
+- `refactor: 기록 목록 행을 SwipeableRow로 감싸 삭제 reducer 연결`
 
 ## 웹과 다른 점
 
-웹의 CSS transition·animation은 브라우저가 알아서 합성하지만, RN에서는 매 프레임 JS가 리렌더하지 않도록 shared value와 `useAnimatedStyle`로 UI 스레드가 스타일을 직접 갱신하게 만들어야 한다.
+웹은 스크롤 중인지 드래그 중인지를 `touch-action` 같은 CSS와 이벤트 `preventDefault`로 정하지만, RN은 네이티브 제스처 인식기끼리 `activeOffset`·`failOffset`·우선순위로 누가 터치를 가져갈지 정한다.

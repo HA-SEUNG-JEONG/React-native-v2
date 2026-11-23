@@ -1,87 +1,81 @@
-# Day 12 · 11/11 (수) — 폴더 구조, path alias, expo lint·prettier
+# Day 12 · 11/12 (목) — 커스텀 훅과 useEffect 기초, cleanup
 
 ## 오늘의 목표
 
-흩어진 코드를 `src/` 아래 폴더로 정리하고 `@/` 별칭으로 import하며, `expo lint`와 Prettier가 돌아가는 상태를 만든다.
+`useEffect`로 타이머와 키보드 이벤트를 구독하고 cleanup으로 해제하는 커스텀 훅 `useNow`, `useKeyboardVisible`을 만들어 Daily Log에 붙인다.
 
 ## 읽기(15분)
 
-1. Expo Router 핵심 개념: https://docs.expo.dev/router/basics/core-concepts/
-   - 확인할 사실: `app` 폴더 안의 파일은 기본 export가 곧 하나의 화면(라우트)이 된다. 컴포넌트와 훅 같은 라우트가 아닌 코드는 `src/components` 같은 다른 폴더에 둔다. 이 문서의 예시는 `src/app`으로 쓰여 있지만, 이 프로젝트 템플릿(SDK 54)은 루트의 `app/`을 쓴다. 역할이 같다.
-2. Expo TypeScript 가이드, 경로 별칭 절: https://docs.expo.dev/guides/typescript/
-   - 확인할 사실: `tsconfig.json`의 `paths`에 `"@/*": ["src/*"]`를 쓰면 `src/components/Button.tsx`를 `@/components/Button`으로 import할 수 있다. Expo CLI가 `tsconfig.json`의 별칭을 자동 지원하므로 Metro 설정을 따로 만지지 않는다. `paths`는 `baseUrl`이 있으면 `baseUrl` 기준으로 해석된다.
-3. Expo ESLint 가이드: https://docs.expo.dev/guides/using-eslint/
-   - 확인할 사실: `npx expo lint`를 처음 실행하면 필요한 의존성을 설치하고 `eslint.config.js`를 만든다. 이 파일은 `eslint-config-expo`를 확장한다. 가이드의 Prettier 절은 `prettier`, `eslint-config-prettier`, `eslint-plugin-prettier` 세 개를 개발 의존성으로 설치하고 `eslint.config.js` 배열에 `eslint-plugin-prettier/recommended`를 추가하라고 한다.
+1. React 공식 문서, Effect 동기화: https://react.dev/learn/synchronizing-with-effects
+   - 확인할 사실: Effect가 시작한 일을 되돌려야 하면 함수를 반환한다. 그 cleanup은 Effect가 다시 실행되기 직전과 컴포넌트가 사라질 때 호출된다. 의존성 배열이 `[]`이면 마운트 때 한 번, `[a, b]`이면 값이 바뀔 때마다 다시 실행된다. cleanup이 필요 없는 Effect도 있다.
+2. React 공식 문서, 커스텀 훅: https://react.dev/learn/reusing-logic-with-custom-hooks
+   - 확인할 사실: 훅 이름은 `use`로 시작해야 한다. 커스텀 훅은 상태 로직을 공유하지만 상태 자체를 공유하지 않는다. 같은 훅을 두 번 호출하면 서로 독립된 상태가 생긴다.
+3. `Keyboard` 문서: https://reactnative.dev/docs/keyboard
+   - 확인할 사실: `Keyboard.addListener(eventName, callback)`은 구독 객체를 돌려주고, 문서 예제는 정리할 때 `.remove()`를 호출한다. Android에서는 `keyboardDidShow`, `keyboardDidHide`만 쓸 수 있다. `keyboardWillShow`류는 iOS 전용이다.
 
 ## 예측(10분)
 
-1. `tsconfig.json`의 `paths`만 고치고 `babel.config.js`나 `metro.config.js`는 건드리지 않았을 때, `@/components/Card` import는 Metro 번들링에서 해석되는가?
+1. `setInterval`을 시작하는 Effect에 cleanup을 쓰지 않고, 그 컴포넌트를 화면에서 사라지게(언마운트) 하면 타이머는 멈추는가?
 
 > 내 예측:
 
-2. 일부러 `app/index.tsx`에 쓰지 않는 import 한 줄을 남기고 `npx expo lint`를 돌리면 오류(error)로 나오는가, 경고(warning)로 나오는가, 아무 말도 없는가?
+2. 서로 다른 두 컴포넌트가 각각 `useNow(1000)`을 호출하면 두 컴포넌트가 받는 `now` 값은 같은 상태를 공유하는가, 각자 따로인가?
 
 > 내 예측:
 
-3. Prettier를 ESLint에 연결한 뒤 들여쓰기가 틀린 파일에 `npx expo lint`를 돌리면 그 지적이 어떤 모양으로 나오는가?
+3. Effect의 의존성 배열에 `intervalMs`를 빼고 `[]`로 두었는데 코드 안에서 `intervalMs`를 쓰고 있다면 `npx expo lint`가 어떤 반응을 보이는가?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-Day 7·10~11에서 루트에 만든 `components/`, `types/`, `data/`를 `src/`로 옮기고, 린트와 포맷 도구를 붙인다.
+Day 12에서 정리한 `src/` 구조에 훅 폴더를 만들고, 글 목록에 "방금 전 / N분 전" 표시를 얹는다.
 
-폴더 구조 목표:
+새로 만들 파일:
+- `src/hooks/useNow.ts` — `useNow(intervalMs: number): number`. 현재 시각(`Date.now()`)을 상태로 들고, `setInterval`로 `intervalMs`마다 갱신하고, cleanup에서 `clearInterval`한다.
+- `src/hooks/useKeyboardVisible.ts` — `useKeyboardVisible(): boolean`. `keyboardDidShow`와 `keyboardDidHide`를 구독하고 cleanup에서 두 구독을 모두 `remove()`한다. Day 6에서 화면에 직접 쓴 `Keyboard` 코드가 있으면 이 훅으로 옮긴다.
+- `src/utils/formatRelative.ts` — `formatRelative(createdAt: number, now: number): string`. 1분 미만이면 `방금 전`, 이후는 `N분 전`, 60분 이상은 `N시간 전`. 순수 함수다.
 
-```
-app/                  라우트 파일만 (지금은 index.tsx)
-src/components/       Card, AppButton, EmptyState, LogItem, PostCard
-src/types/            log.ts
-src/data/             mock-posts.ts
-```
+핵심 형태:
 
-해야 할 일:
-1. 루트의 `components/`, `types/`, `data/`를 `src/components/`, `src/types/`, `src/data/`로 옮긴다(`data/mock-posts.ts` → `src/data/mock-posts.ts`). 편집기에서 옮기면 import 경로를 자동 갱신하는지 확인한다.
-2. `tsconfig.json`의 `compilerOptions.paths`를 `@/*`가 `src/*`를 가리키게 고친다. 템플릿이 이미 `@/*`를 다른 경로로 잡고 있으면 그 값을 바꾼다.
-3. `app/index.tsx`와 `src/components/*`의 상대 경로 import(`../components/...`)를 `@/components/...`, `@/types/log`, `@/data/mock-posts`로 바꾼다.
-4. `npx expo lint`를 실행한다. 처음 실행 때 안내가 나오면 따른다. 나온 경고를 읽고 고친다.
-5. Prettier를 설치한다.
-
-```sh
-npx expo install prettier eslint-config-prettier eslint-plugin-prettier --dev
+```tsx
+useEffect(() => {
+  const id = setInterval(() => setNow(Date.now()), intervalMs);
+  return () => clearInterval(id);
+}, [intervalMs]);
 ```
 
-6. `eslint.config.js`에 `eslint-plugin-prettier/recommended`를 가이드대로 추가한다. 템플릿의 `eslint.config.js`가 `require` 방식인지 `import` 방식인지에 맞춰 쓴다.
-7. 루트에 `.prettierrc`를 만들어 최소 설정(예: `singleQuote`, `printWidth`)을 정한다.
-8. `package.json`의 `scripts`에 `"typecheck": "tsc --noEmit"`을 추가한다.
-9. `npx prettier --write app src`로 두 폴더만 포맷한다. `docs/`까지 건드리지 않도록 `.`로 실행하지 않는다.
+고칠 파일:
+- `app/index.tsx` — 화면에서 `useNow(10_000)`을 한 번만 호출하고 `now`를 `LogItem`에 props로 내려 준다. `FlatList`에는 `extraData={now}`를 준다. 입력창이 있는 영역에는 `useKeyboardVisible()`이 `true`일 때만 "키보드 닫기" `AppButton`을 보여 주고, 누르면 `Keyboard.dismiss()`를 호출한다.
+- `src/components/LogItem.tsx` — props에 `now: number`를 추가하고 작성 시각 줄에 `formatRelative(entry.createdAt, now)`를 쓴다.
+
+항목마다 `useNow`를 따로 호출하면 항목 수만큼 타이머가 생긴다. 그래서 화면에서 한 번만 호출해 내려 준다(점검 질문 2번).
 
 완료 기준:
-- [ ] `app/`에는 라우트 파일만 있다
-- [ ] 모든 import가 `@/`로 시작하거나 같은 폴더 안의 `./`뿐이다. `../../`가 없다
-- [ ] `npm run typecheck`가 오류 0개다
-- [ ] `npx expo lint`가 오류 0개다
-- [ ] 들여쓰기를 일부러 틀리게 한 뒤 `npx expo lint`가 이를 지적하고, `npx prettier --write app src`가 고친다
-- [ ] 시뮬레이터에서 앱이 Day 11과 똑같이 동작한다
+- [ ] `useNow`와 `useKeyboardVisible`이 `src/hooks/`에 있고 이름이 `use`로 시작한다
+- [ ] 두 훅의 Effect가 모두 cleanup을 반환한다
+- [ ] 글 항목에 "방금 전"이 보이고, 시간이 지나면 "1분 전"으로 바뀐다(테스트용으로 `createdAt`을 5분 전 값으로 만들어 확인해도 된다)
+- [ ] 입력창을 누르면 "키보드 닫기" 버튼이 나타나고, 누르면 키보드와 버튼이 같이 사라진다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다(의존성 배열 경고 포함)
 
 ## 검증(10분)
 
-- Metro를 재시작(`npx expo start`)한 뒤 앱이 정상 동작하는지 본다.
+- 시뮬레이터에서 글을 추가하고 "방금 전"이 바뀌는 것을 본다. 키보드를 올렸다 내리며 버튼이 따라오는지 본다.
 - 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- 일부러 깨뜨려 보기: `@/components/Card`를 `@/component/Card`(오타)로 바꿔 `npm run typecheck`와 시뮬레이터에서 각각 어떤 메시지가 나오는지 적고 되돌린다.
+- 일부러 깨뜨려 보기: 화면에 `visible` 상태로 토글되는 임시 컴포넌트를 만들어, 그 안에서 `useNow` 대신 Effect에 `console.log('tick')`을 찍는 `setInterval`을 쓰되 cleanup을 뺀다. 컴포넌트를 껐다 켜며 로그가 어떻게 되는지 보고, cleanup을 넣은 뒤 다시 비교한다. 확인이 끝나면 임시 컴포넌트를 지운다.
 
 ## 이해 점검 질문
 
-1. 라우트가 아닌 컴포넌트 파일을 `app/` 안에 두면 안 되는 이유는 무엇인가?
-2. 이 프로젝트에서 `@/` 별칭이 `tsconfig.json`만 고쳤는데 Metro에서도 동작하는 이유는 무엇인가?
-3. ESLint와 Prettier는 각각 무엇을 담당하며, `eslint-plugin-prettier`를 붙이면 무엇이 달라지는가?
+1. cleanup 없이 `setInterval`을 쓴 컴포넌트가 사라지면 어떤 문제가 생기고, cleanup은 언제 호출되는가?
+2. 같은 커스텀 훅 `useNow`를 두 컴포넌트에서 각각 호출하면 상태를 공유하는가? 이 때문에 `useNow`를 화면에서 한 번만 호출해 내려 주는가?
+3. `useKeyboardVisible`에서 `keyboardWillShow` 대신 `keyboardDidShow`를 쓰는 이유는 무엇인가?
 
 <details>
 <summary>정답</summary>
 
-1. `app/` 안의 파일은 기본 export가 곧 화면(라우트)이 되고 파일 경로가 URL이 된다. 컴포넌트를 거기 두면 화면이 아닌 파일이 라우트로 취급되어 경고가 나거나 의도하지 않은 URL이 생긴다. 그래서 라우트가 아닌 코드는 `src/` 아래에 둔다.
-2. Expo CLI가 `tsconfig.json`의 `paths`를 읽어 별칭을 자동으로 지원하기 때문이다(`tsconfigPaths` 기능이 기본으로 켜져 있다). TypeScript 검사와 번들러가 같은 설정을 보게 되어 한 곳만 고치면 된다. 반대로 순수 React Native 프로젝트는 Metro 설정을 따로 해야 한다.
-3. ESLint는 쓰지 않는 변수나 훅 규칙 위반 같은 코드 문제를 찾고, Prettier는 들여쓰기와 따옴표 같은 모양만 통일한다. `eslint-plugin-prettier`는 Prettier 포맷 위반을 ESLint 지적으로 보여 줘서 `expo lint` 한 번에 둘 다 확인하게 한다. `eslint-config-prettier`는 Prettier와 겹치는 ESLint 서식 규칙을 꺼서 둘이 서로 충돌하지 않게 한다.
+1. 컴포넌트가 사라져도 타이머는 JS 런타임에 남아 계속 실행되며 낭비와 중복 실행을 낳는다. 다시 마운트될 때마다 타이머가 하나씩 더 쌓인다. cleanup은 의존성이 바뀌어 Effect가 다시 실행되기 직전과 컴포넌트가 언마운트될 때 호출된다.
+2. 공유하지 않는다. 커스텀 훅은 로직만 공유하고 상태는 호출마다 독립적이다. 그래서 항목마다 호출하면 항목 수만큼 상태와 타이머가 생긴다. 화면에서 한 번 호출해 `props`로 내려 주면 타이머가 하나이고 모든 항목이 같은 `now`를 본다.
+3. `keyboardWillShow`는 iOS에서만 발생하고 Android에서는 `keyboardDidShow`와 `keyboardDidHide`만 발생한다. 양쪽 플랫폼에서 같은 훅이 동작하려면 공통으로 지원되는 Did 이벤트를 써야 한다.
 
 </details>
 
@@ -93,5 +87,9 @@ npx expo install prettier eslint-config-prettier eslint-plugin-prettier --dev
 
 ## 커밋 단위 제안
 
-- `refactor: components와 types를 src 아래로 이동하고 @ 별칭 적용`
-- `chore: expo lint와 prettier 설정 추가`
+- `feat: useNow 훅과 상대 시간 표시 추가`
+- `feat: useKeyboardVisible 훅과 키보드 닫기 버튼 추가`
+
+## 웹과 다른 점
+
+브라우저처럼 `window.addEventListener('resize')`에 쓰는 DOM 이벤트가 없다. RN은 `Keyboard`, `AppState` 같은 모듈에 `addListener`로 구독하고, 반환된 구독 객체의 `remove()`로 해제한다.

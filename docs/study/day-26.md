@@ -1,71 +1,75 @@
-# Day 26 · 12/1 (화) — 요청 취소(AbortController)와 경쟁 상태
+# Day 26 · 12/2 (수) — API 클라이언트 모듈과 에러 모델
 
 ## 오늘의 목표
 
-피드에 사용자 필터를 달아 경쟁 상태(오래된 응답이 최신 화면을 덮어쓰는 버그)를 일부러 재현하고, `ignore` 플래그와 `AbortController`로 고친다.
+화면마다 흩어진 `fetch` 코드를 `api/` 모듈로 모으고, 네트워크 실패와 HTTP 오류를 구분하는 `ApiError`로 피드와 상세 화면이 에러 문구를 다르게 보여 주게 한다.
 
 ## 읽기(15분)
 
-1. https://react.dev/learn/synchronizing-with-effects — "Fetching data"의 race condition 설명과 `ignore` 패턴.
-   - 확인할 사실: Effect가 데이터를 가져오면 cleanup은 요청을 abort하거나 결과를 무시해야 한다. 이미 나간 요청을 "취소"할 수는 없고, 더 이상 필요 없는 요청이 앱에 영향을 주지 않게 막는다.
-   - 확인할 사실: `ignore` 변수는 Effect 실행마다 따로 존재하고, 의존성이 바뀌거나 언마운트될 때 cleanup이 그 Effect의 `ignore`를 `true`로 만든다.
-   - 확인할 사실: 문서의 해설은 `AbortController`만으로는 경쟁 상태를 완전히 막지 못하고(fetch 뒤에 다른 비동기 단계가 이어질 수 있다), 명시적 `ignore` 플래그가 가장 확실하다고 한다.
-2. https://reactnative.dev/docs/network — fetch 에러 처리 복습. `AbortController`는 이 페이지에 언급이 없다. 취소 동작은 오늘 실험(콘솔에 `AbortError` 확인)으로 확인하고, 문서 근거는 확인하지 못했음을 막힌 점에 적는다(문서에서 확인 필요).
-3. https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation — Day 28 예고. `queryFn`이 `signal`을 받아 `fetch(url, { signal })`에 넘기는 형태를 확인한다(Day 28에서 쓴다. 지금은 `signal`이 `AbortController`에서 온다는 것만 본다).
+1. https://reactnative.dev/docs/network — `fetch`의 두 번째 인자(`method`, `headers`, `body`)와 에러 처리 예시.
+   - 확인할 사실: 요청 옵션에 `headers`의 `Accept`, `Content-Type`을 주는 형태가 예시로 있다. 이 모양을 `request()` 함수에 한 번만 쓰면 된다.
+   - 확인할 사실: 이 페이지의 알려진 문제 목록에 "같은 이름의 헤더는 Android에서 마지막 하나만 남는다"가 있다. 공통 헤더를 한 곳에서 관리하는 이유로 기억해 둔다.
+2. https://jsonplaceholder.typicode.com/guide/ — `/posts`, `/posts/1`, `/posts/1/comments` 등 엔드포인트.
+   - 확인할 사실: 없는 id(예: `/posts/99999`)는 404를 돌려주는지 오늘 `curl`이나 앱에서 직접 확인한다. 이 가이드에는 404 동작이 적혀 있지 않다(문서에서 확인 필요).
+3. https://react.dev/learn/synchronizing-with-effects — Day 24~25에서 읽은 "Fetching data"를 다시 훑는다. 오늘 만들 모듈은 Effect 밖으로 나가는 `fetch` 부분이고, Effect(취소 처리)는 화면에 남는다는 점을 구분한다.
 
 ## 예측(10분)
 
-1. 사용자 필터 "1번 사용자"는 응답이 2초, "2번 사용자"는 0.2초 걸리게 만들었다. "1번"을 누르고 곧바로 "2번"을 누르면 최종 화면에는 어느 사용자의 글이 보이는가? 선택된 칩은 무엇인가?
+1. `class ApiError extends Error`를 만들어 `throw new ApiError(...)`한 뒤 `catch`에서 `error instanceof ApiError`를 쓰면 `true`가 나오는가?
    > 내 예측:
-2. 같은 코드에 `ignore` 플래그를 넣으면 위 상황에서 결과가 어떻게 달라지는가? 그때 1번 사용자 요청은 네트워크에서 실제로 취소되는가?
+2. 비행기 모드일 때와 `/posts/99999`(404)일 때, 각각 `fetch`가 던지는 것/돌려주는 것은 무엇이고 `ApiError`의 `kind`를 어떻게 정해야 두 경우를 구분할 수 있는가?
    > 내 예측:
-3. `AbortController`로 `abort()`한 `fetch`의 Promise는 어떻게 되는가(성공/reject)? `catch`에 들어오는 에러의 `name`은 무엇이라고 생각하는가?
+3. 요청 함수가 `signal`을 받아 `fetch`에 넘겼다가 abort되면, 이 `AbortError`도 `ApiError`로 감싸야 하는가?
    > 내 예측:
 
 ## 만들기(40분)
 
-피드 탭 상단에 필터 칩 "전체 / 1 / 2 / 3"을 달아 `userId`로 글을 거른다. JSONPlaceholder는 `/posts?userId=1`처럼 쿼리 파라미터로 거르기를 지원한다.
+**새 파일**
+- `src/api/client.ts`: 공통 `request<T>(path: string, options?: { signal?: AbortSignal }): Promise<T>`.
+  - `BASE_URL = 'https://jsonplaceholder.typicode.com'`을 한 곳에 둔다.
+  - `fetch` 자체가 reject되면(`catch`) `new ApiError('network', ...)`를 던진다. 단, `error.name === 'AbortError'`이면 감싸지 않고 그대로 다시 던진다.
+  - `!response.ok`이면 `new ApiError('http', ..., response.status)`를 던진다.
+  - 성공하면 `response.json()`을 `T`로 반환한다.
+- `src/api/client.ts` 안의 `ApiError`: `class ApiError extends Error`, 필드는 `kind: 'network' | 'http'`와 `status?: number`.
 
-**고칠 파일** `app/(tabs)/index.tsx` (Day 25의 `loadPosts`와 `useEffect`)
-- state 추가: `userId: number | null`(null이면 전체). 칩은 `Pressable` 네 개로, 눌린 칩이 구분되게 스타일을 준다(Day 3 StyleSheet).
-- URL은 `userId`가 있으면 `?userId=${userId}`를 붙인다. `useEffect`의 deps에 `userId`를 넣어 칩을 누를 때마다 다시 요청한다.
-
-**1단계: 경쟁 상태 재현.** 임시로 `fetch` 앞에 지연을 넣는다. 이 지연 코드는 단계 3이 끝나면 지운다.
-
-```tsx
-await new Promise((r) => setTimeout(r, userId === 1 ? 2000 : 200));
+```ts
+export class ApiError extends Error {
+  constructor(public kind: 'network' | 'http', message: string, public status?: number) {
+    super(message);
+  }
+}
 ```
 
-"1"을 누르고 곧바로 "2"를 눌러 최종 화면과 선택된 칩이 어긋나는지 본다.
+- `src/api/posts.ts`: `getPosts({ userId, signal })`와 `getPost(id, { signal })`. 둘 다 `request`를 호출하고 `Post` 타입(Day 24의 `src/types/post.ts`)을 반환한다.
 
-**2단계: `ignore` 플래그.** `useEffect` 안에서 `let ignore = false;`를 만들고, 결과를 state에 넣기 전에 `if (!ignore)`로 검사한다. cleanup에서 `ignore = true`. (`loadPosts`를 Effect 안으로 옮기거나 `ignore`를 인자로 넘기는 구조는 자유다.) 새로고침(Day 25의 `RefreshControl`, 다시 시도 버튼)이 같은 `loadPosts`를 쓰고 있으면 그 경로도 어떻게 처리할지 정한다.
-
-**3단계: `AbortController`.** 같은 `useEffect`에서 `const controller = new AbortController();`를 만들고 `fetch(url, { signal: controller.signal })`로 넘긴다. cleanup에서 `controller.abort()`. `catch`에서 `error.name === 'AbortError'`이면 에러 화면으로 바꾸지 않고 조용히 return한다. 2단계의 `ignore` 플래그는 남겨 두고 둘을 같이 쓴다. 지연 코드를 삭제한다.
+**고칠 파일**
+- `app/(tabs)/index.tsx`: Day 24~25의 `fetch` 직접 호출을 `getPosts`로 교체한다. `ignore`/`AbortController` 구조는 그대로 둔다. 에러 문구를 `ApiError`로 고른다: `kind === 'network'`이면 "인터넷 연결을 확인해 주세요", `status`가 404이면 "글을 찾을 수 없어요", `status`가 500 이상이면 "서버에 문제가 있어요", 그 외는 "알 수 없는 오류".
+- `app/post/[id].tsx`(Day 15의 상세): `id` 파라미터로 `getPost`를 호출해 제목과 본문을 보여 준다. 로딩·에러·성공 3상태는 Day 24 피드와 같은 구조로 만든다. 에러 문구 선택은 피드와 같은 함수를 쓰도록 `src/api/messages.ts`의 `getErrorMessage(error: unknown): string`에 한 번만 쓴다.
 
 완료 기준
-- [ ] 1단계 코드에서 "1 → 2" 빠른 전환 시 버그가 실제로 재현됐고 화면과 칩이 어긋난 모습을 기록했다.
-- [ ] 2단계 후 같은 조작에서 최종 화면이 선택된 칩과 일치한다.
-- [ ] 3단계 후 취소된 요청이 에러 화면을 띄우지 않는다. 콘솔에 `AbortError`를 임시로 찍어 확인한 뒤 로그를 지운다.
-- [ ] 피드를 벗어났다 돌아오거나 필터를 연타해도 에러 화면이나 크래시가 없다.
-- [ ] 임시 지연 코드와 `console.log`를 모두 지웠다.
+- [ ] 화면 파일에 `fetch(`와 `BASE_URL` 문자열이 없다(grep으로 확인).
+- [ ] 비행기 모드에서 "인터넷 연결을 확인해 주세요", 존재하지 않는 글 id(임시로 하드코딩한 `99999`)에서 "글을 찾을 수 없어요"가 보인다.
+- [ ] 필터 칩 연타 시 `AbortError`가 에러 화면으로 새지 않는다(Day 25 동작 유지).
+- [ ] `request`의 반환 타입이 `Promise<T>`이고 `getPosts`/`getPost`의 반환이 `Post[]`/`Post`로 추론된다(`npx tsc --noEmit`에 에러 없음).
+- [ ] 에러 문구 선택 로직이 피드와 상세에 중복되어 있지 않다.
 
 ## 검증(10분)
 
-- 1단계 상태에서 "1 → 2"를 눌러 예측 1과 비교한다. 칩과 목록의 `userId`가 서로 다른 화면 상태를 캡처하듯 글로 적는다.
-- 2단계, 3단계마다 같은 조작을 반복한다. 예측 2·3과 비교하고, `catch`에서 찍은 `error.name`을 그대로 적는다. RN 0.81 문서에는 `AbortController` 근거가 없으므로 이 실험 결과가 오늘의 유일한 증거다.
-- 일부러 깨뜨리기: `catch`에서 `AbortError` 분기를 지우고 칩을 연타한다. 에러 화면이 깜빡이는지 확인한 뒤 원복한다.
+- 예측 1을 확인한다. `catch`에서 `error instanceof ApiError`를 콘솔에 찍는다. `false`가 나오면 `error.kind`나 `error.name === 'ApiError'`처럼 필드로 판별하도록 `ApiError`에 `name`을 지정하거나 판별 함수 `isApiError`를 만든다. 결과를 적는다(문서에서 확인 필요한 동작이라 실험으로 판단한다).
+- 상세 화면에서 존재하는 글과 존재하지 않는 글(임시 id 99999) 둘을 열어 본다. 404일 때 `ApiError.status` 값을 찍어 확인한다.
+- 일부러 깨뜨리기: `request`에서 `AbortError` 예외 처리를 지우고(모든 `catch`를 `network`로 감싼다) 칩을 연타한다. "인터넷 연결을 확인해 주세요"가 잘못 뜨는지 확인한 뒤 원복한다.
 
 ## 이해 점검 질문
 
-1. 경쟁 상태가 왜 생기는가? 요청을 보낸 순서와 응답이 도착하는 순서는 어떤 관계인가?
-2. `ignore` 플래그는 요청을 취소하는가? 무엇을 해 주는가?
-3. `abort()`된 `fetch`를 `catch`에서 에러 화면으로 처리하면 안 되는 이유는 무엇이고, 어떻게 구분하는가?
+1. 에러에 `kind`와 `status`를 두는 이유는 무엇인가? 문자열 `message`만으로 구분하면 어떤 문제가 생기는가?
+2. 왜 `AbortError`는 `ApiError`로 감싸지 않고 그대로 던지는가?
+3. 화면에서 `fetch`를 직접 부르는 방식과 `api/` 모듈을 거치는 방식을 비교하면 무엇이 좋아지는가? (Day 27의 TanStack Query와 연결해서 한 가지 이상)
 
 <details><summary>정답</summary>
 
-1. 비동기 요청은 보낸 순서대로 응답이 온다는 보장이 없다. 먼저 보낸 느린 요청의 응답이 나중에 도착하면 최신 요청의 결과를 덮어써서 화면이 선택과 어긋난다.
-2. 요청 자체는 취소하지 않는다. cleanup이 그 Effect 실행의 `ignore`를 `true`로 바꿔서, 오래된 응답이 도착해도 `if (!ignore)` 검사에서 걸려 state를 갱신하지 못하게 한다. 응답 처리 뒤에 다른 비동기 단계가 이어져도 같은 검사를 두면 되므로 가장 확실하다.
-3. `abort()`는 의도한 동작이므로 사용자에게 보여 줄 오류가 아니다. abort된 fetch는 reject되고, 에러의 `name`이 `AbortError`이면 무시하고 그 외 에러만 에러 상태로 처리한다. 실제 `name` 값은 검증 단계의 실험 결과와 같아야 하고, 다르면 그 값을 기준으로 분기를 고친다. `AbortController`는 불필요한 네트워크 사용을 줄이고, 응답 뒤 처리까지 막는 일은 `ignore`가 맡는다.
+1. 화면이 "연결 문제"와 "서버가 거부한 요청"을 다르게 안내하려면 원인 종류와 상태 코드가 필요하다. `message` 문자열은 번역이나 문구 수정으로 바뀌고 파싱이 취약해서 분기 기준으로 쓸 수 없다. `kind`와 `status`는 코드가 의존할 수 있는 안정적인 값이다.
+2. abort는 사용자에게 알릴 오류가 아니라 의도된 취소이므로, `ApiError`로 감싸면 호출한 쪽이 일반 오류로 처리해 에러 화면을 띄운다. 그대로 던져서 호출하는 쪽에서 `error.name === 'AbortError'`로 걸러야 한다.
+3. 기본 URL, 헤더, `response.ok` 검사, JSON 파싱, 에러 변환이 한 곳에 모이므로 바꿀 곳이 하나다. 화면은 `getPosts()`가 성공 시 `Post[]`를 주고 실패 시 `ApiError`를 던진다는 계약만 알면 된다. Day 27의 `useQuery`는 `queryFn`에 이 `getPosts`를 그대로 넘기면 되므로 모듈을 분리해 둔 덕에 화면 쪽 변경이 작다.
 
 </details>
 
@@ -77,6 +81,6 @@ await new Promise((r) => setTimeout(r, userId === 1 ? 2000 : 200));
 
 ## 커밋 단위 제안
 
-- `feat: 피드에 userId 필터 칩 추가`
-- `fix: 필터 전환 시 오래된 응답이 덮어쓰는 경쟁 상태 수정`
-- `fix: 피드 요청을 AbortController로 취소`
+- `refactor: fetch를 api 클라이언트 모듈로 분리`
+- `feat: ApiError로 네트워크·HTTP 오류 구분`
+- `feat: 상세 화면이 getPost로 글 불러오기`

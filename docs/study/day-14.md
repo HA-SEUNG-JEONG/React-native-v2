@@ -1,80 +1,94 @@
-# Day 14 · 11/13 (금) — 버퍼 + 3주차 점검
+# Day 14 · 11/16 (월) — expo-router 파일 기반 라우팅
 
 ## 오늘의 목표
 
-3주차(Day 10~13) 내용을 정답을 가리고 풀어 보고, 밀린 Day를 흡수하며, 가장 헷갈린 개념 하나를 소리 내어 설명한다.
+한 화면이던 Daily Log를 `app/` 폴더의 파일 두 개(피드 `index.tsx`, 기록 `write.tsx`)로 나누고, `Link`로 오가는 것을 확인한다.
 
-## 주간 점검 퀴즈(30분)
+## 읽기(15분)
 
-정답을 가리고 먼저 답을 적는다. 결과는 `docs/quiz/2026-11-13-day-14.md`에 `AGENTS.md`의 상세 구조(문항별 상세, 종합 약점 패턴, 재복습 일정)로 기록한다.
+1. Expo Router 핵심 개념: https://docs.expo.dev/router/basics/core-concepts/
+   - 확인할 사실: `app`의 파일은 기본 export가 곧 화면이고, 파일 경로가 URL이 된다(`profile/friends.tsx`는 `/profile/friends`). `index.tsx`는 그 폴더의 기본 화면이다. 루트 `_layout.tsx`는 어떤 화면보다 먼저 렌더되고 예전 `App.jsx` 자리를 대신한다. 이 문서는 `src/app`으로 쓰여 있지만 이 프로젝트는 루트의 `app/`이다.
+2. 라우트 표기법: https://docs.expo.dev/router/basics/notation/
+   - 확인할 사실: `index`, `_layout`, `[param]`, `(group)`, `+not-found`가 각각 무엇을 뜻하는지 표로 정리한다. 특히 `(group)` 폴더 이름은 URL에 포함되지 않는다.
+3. 페이지 사이 이동: https://docs.expo.dev/router/basics/navigation/
+   - 확인할 사실: `<Link href="/about">`이 기본 이동 수단이다. `Link`는 기본적으로 자식을 `Text`로 감싸므로, `View`나 `Pressable`을 자식으로 쓰려면 `asChild`가 필요하다. 명령형 이동은 `router.push`, `router.replace`, `router.back`이다.
 
-1. (Day 10) 아래 코드에서 `entries`의 타입은 무엇이고, 마지막 줄은 왜 문제인가? 고치는 방법은?
+## 예측(10분)
+
+1. `app/write.tsx`를 만들고 어디에서도 import하지 않았을 때, 앱에서 `/write` 화면에 갈 수 있는가?
+
+> 내 예측:
+
+2. `app/` 안에 `Card.tsx`처럼 기본 export가 없는 일반 파일을 두면 어떻게 되는가? (Day 12에서 `components`를 `src/`로 옮긴 이유와 연결해 적는다)
+
+> 내 예측:
+
+3. `Stack`을 쓰는 `_layout.tsx`에서 화면 제목을 따로 지정하지 않았을 때, 헤더에 보이는 제목은 무엇이 될 것 같은가?
+
+> 내 예측:
+
+## 만들기(40분)
+
+지금까지는 `app/index.tsx` 한 화면에 입력 폼과 목록이 같이 있었다. 이를 라우트 두 개로 나눈다.
+
+중요한 변화: 화면을 나누면 기록 화면에서 입력한 글이 피드에 나타나지 않는다. 피드는 `Post`(`MOCK_POSTS`)만 보여 주고 기록(`LogEntry`)과 섞지 않는다. 기록 개수 공유는 Day 21에서 한다. 오늘은 이 상태가 정상이다.
+
+새로 만들 파일:
+- `app/write.tsx` — 기존 `app/index.tsx`의 내용(입력 폼 + 이번에 작성한 글 목록)을 그대로 옮겨 기록 화면으로 쓴다. 기본 export 컴포넌트 이름은 `WriteScreen`으로 바꾼다.
+- `app/_layout.tsx` — 템플릿 초기화 후 이미 있으면 내용을 확인만 한다. 없으면 `Stack`을 렌더하는 기본 export를 만든다.
 
 ```tsx
-const [entries, setEntries] = useState([]);
-setEntries([...entries, { id: '1', title: '첫 글', body: '', createdAt: 0 }]);
+import { Stack } from 'expo-router';
+
+export default function RootLayout() {
+  return <Stack />;
+}
 ```
 
-> 내 답:
+고칠 파일:
+- `app/index.tsx` — 피드 화면 `FeedScreen`으로 바꾼다. `@/data/mock-posts`의 `MOCK_POSTS`를 `FlatList`와 `PostCard`로 보여 준다(Day 8의 `SectionList`는 `FlatList`로 되돌리고 `refreshing`·`onRefresh`는 유지한다). Day 7의 기록|피드 전환 버튼을 지운다. `now`·`useNow`는 피드에서 빼고 `app/write.tsx`의 `LogItem`에 남긴다. 화면 위쪽에 `<Link href="/write">글쓰기</Link>`를 둔다.
+- `app/write.tsx` — 위쪽에 피드로 돌아가는 `<Link href="/">피드</Link>`를 둔다.
+- `src/data/entries.ts`와 `ENTRIES`가 남아 있으면 모두 지운다.
 
-2. (Day 10) `TextInput`의 `onChangeText`와 `onSubmitEditing`에 넘기는 핸들러의 인자는 각각 무엇인가?
+완료 기준:
+- [ ] `app/`에 `_layout.tsx`, `index.tsx`, `write.tsx`가 있고 `app/` 안에 라우트가 아닌 파일은 없다
+- [ ] 피드에서 `글쓰기`를 누르면 기록 화면으로 이동하고 헤더에 뒤로가기가 보인다
+- [ ] 기록 화면에서 글을 쓰면 그 화면의 목록에는 나타난다(피드에는 나타나지 않는다)
+- [ ] 피드가 `MOCK_POSTS`를 `PostCard`로 보여 준다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
 
-> 내 답:
+## 검증(10분)
 
-3. (Day 11) `Card` 컴포넌트가 `<Card><Text>안녕</Text></Card>`로 쓰이려면 props 타입과 본문에서 무엇이 필요한가? 그리고 `style` prop을 `[styles.card, style]`로 합치는 순서의 이유는?
+- 시뮬레이터에서 `글쓰기`를 누르고, 기록 화면에서 뒤로 가기를 눌러 피드로 돌아오는 것을 확인한다. 헤더의 제목 문자열을 적는다.
+- 예측 1~3과 실제를 비교해 다른 지점을 적는다.
+- 일부러 깨뜨려 보기: `app/write.tsx` 파일 이름을 `app/compose.tsx`로 바꾸고 `Link`의 `href="/write"`는 그대로 둔다. `npm run typecheck`에서 오류가 나는지, 앱에서 `글쓰기`를 눌렀을 때 무엇이 보이는지 적는다. `app.json`의 `experiments.typedRoutes` 값이 `true`인지도 함께 확인해 오류 여부와 연결해 적는다(타입이 지정된 라우트 문서: https://docs.expo.dev/router/reference/typed-routes/). 확인이 끝나면 이름을 되돌린다.
 
-> 내 답:
+## 이해 점검 질문
 
-4. (Day 12) `src/components/Card.tsx`를 `@/components/Card`로 import하려면 어디를 고치는가? `app/` 폴더 안에 `Card.tsx`를 두면 왜 안 되는가?
-
-> 내 답:
-
-5. (Day 13) `useEffect` 안에서 `setInterval`을 쓰고 cleanup을 빼면 어떤 일이 생기는가? 같은 커스텀 훅을 두 컴포넌트에서 호출하면 상태는 공유되는가?
-
-> 내 답:
+1. `app/profile/index.tsx`, `app/(auth)/login.tsx`, `app/post/[id].tsx`는 각각 어떤 URL이 되는가?
+2. `Link`가 `<a>`와 달리 자식을 `Text`로 감싸는 이유와, 자식으로 `Pressable`을 쓰고 싶을 때 필요한 prop은 무엇인가?
+3. 화면을 둘로 나누자 기록 화면에서 `useState`로 든 글을 다른 화면이 읽을 수 없다. 왜이고, 어떻게 해결하게 되는가?
 
 <details>
 <summary>정답</summary>
 
-1. `useState([])`는 빈 배열 리터럴에서 요소 타입을 알 수 없어 `never[]`로 추론된다. 그래서 객체를 넣는 마지막 줄은 `never`에 할당할 수 없다는 타입 오류가 난다. `useState<LogEntry[]>([])`처럼 제네릭으로 요소 타입을 알려 준다.
-2. `onChangeText`는 변경된 텍스트를 문자열 하나로 받는다. `onSubmitEditing`은 `{ nativeEvent: { text, eventCount, target } }` 모양의 이벤트 객체를 받으므로 `e.nativeEvent.text`로 값을 읽는다. 인자가 달라서 핸들러 타입도 다르다.
-3. props 타입에 `children`을 포함해야 하고 `PropsWithChildren<...>`가 이를 더해 준다. 본문에서는 `{children}`을 렌더한다. `style`은 뒤의 값이 앞의 같은 속성을 덮어쓰므로 기본 스타일을 앞에, 부모가 넘긴 `style`을 뒤에 둬야 부모가 필요한 부분만 바꿀 수 있다.
-4. `tsconfig.json`의 `paths`에 `"@/*": ["src/*"]`를 쓴다. Expo CLI가 이 설정을 자동으로 읽어 Metro에서도 동작한다. `app/` 안의 파일은 기본 export가 곧 라우트가 되고 파일 경로가 URL이 되므로, 컴포넌트를 두면 화면이 아닌 파일이 라우트로 취급된다.
-5. 컴포넌트가 사라져도 타이머가 계속 돌고, 다시 마운트될 때마다 타이머가 하나씩 쌓인다. cleanup(`clearInterval`)은 언마운트 때와 의존성이 바뀌어 Effect가 다시 실행되기 직전에 호출된다. 커스텀 훅은 로직만 공유하고 상태는 호출마다 독립적이므로, 두 컴포넌트가 훅을 따로 호출하면 상태를 공유하지 않는다.
+1. `/profile`, `/login`, `/post/<id 값>`이다. `index.tsx`는 폴더의 기본 화면이라 URL에 `index`가 붙지 않고, `(auth)`처럼 괄호로 묶인 폴더는 URL에 포함되지 않는 그룹이며, `[id]`는 동적 세그먼트다.
+2. RN에서는 문자열을 `Text` 안에서만 렌더할 수 있고, 링크의 기본 자식은 글자이기 때문이다. `Link`가 기본으로 `Text`로 감싸는 것이다. `View`나 `Pressable`을 자식으로 쓰려면 `asChild`를 붙여 `onPress`를 받는 자식에게 링크 동작을 위임해야 한다.
+3. 상태가 기록 화면 컴포넌트 안의 `useState`에 갇혀 있어, 다른 화면은 그 값에 접근할 수 없기 때문이다. 화면(컴포넌트) 밖에서 상태를 들고 있는 Context를 Day 20~21에서 도입해 해결한다.
 
 </details>
 
-## 구술 1주제(15분)
-
-주제: "Effect를 쓰면 왜 cleanup을 신경 써야 하는가"를 Daily Log의 `useNow`와 `useKeyboardVisible`을 예로 1분 안에 소리 내어 설명한다.
-
-설명에 포함할 핵심어: 구독, 해제(cleanup), 언마운트, 의존성 배열, 상태 비공유(커스텀 훅)
-
-- [ ] 핵심어 5개를 모두 썼다
-- [ ] 막힌 부분을 아래에 적었다
-
-막힌 부분:
-
-## 질문 목록 처리(15분)
-
-`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 해결한 질문은 해결 방법 한 줄을 적고, 그래도 안 풀린 질문은 에러 원문과 시도한 것을 남겨 다음 주 금요일로 넘긴다.
-
-- [ ] 해결한 질문 수:
-- [ ] 다음 주로 넘긴 질문 수:
-
-## 밀린 Day 흡수
-
-- [ ] Day 10 (TypeScript props와 이벤트 타입) 완료 기준을 모두 채웠다
-- [ ] Day 11 (children, composition) 완료 기준을 모두 채웠다
-- [ ] Day 12 (폴더 구조, path alias, lint·prettier) 완료 기준을 모두 채웠다
-- [ ] Day 13 (커스텀 훅, useEffect cleanup) 완료 기준을 모두 채웠다
-- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
-- [ ] 이번 주 커밋이 모두 `<type>: <한국어 요약>` 형식이다
-
 ## 기록(5분)
 
-이번 주 배운 것 3줄:
+배운 것 3줄:
 
-가장 헷갈렸던 개념:
+막힌 점:
 
-다음 주(Day 15 expo-router) 전에 확인할 것:
+## 커밋 단위 제안
+
+- `refactor: 한 화면을 피드와 기록 라우트로 분리`
+- `feat: 샘플 데이터와 화면 이동 링크 추가`
+
+## 웹과 다른 점
+
+파일 경로가 URL이 되는 규칙은 Next.js와 비슷하지만, 앱에서 URL은 주소창이 아니라 화면 스택 이동과 딥링크(Day 17)에 쓰인다.

@@ -1,98 +1,101 @@
-# Day 47 · 12/30 (수) — expo-notifications: 로컬 알림
+# Day 47 · 12/31 (목) — 푸시 토큰과 알림 탭 처리
+
+> 건너뛰기 가능: 푸시 토큰은 실기기와 development build, 플랫폼 자격 증명(iOS는 유료 Apple Developer 계정, Android는 FCM 설정)이 있어야 끝까지 확인할 수 있다. 3일 이상 밀렸으면 "읽기"만 한다. 이 카드의 A부(알림 탭 처리)는 시뮬레이터에서 되므로 시간이 있으면 A부만 해도 의미가 있다.
 
 ## 오늘의 목표
 
-설정 탭에 "매일 기록 알림" 스위치를 만들어 정해진 시각에 로컬 알림을 예약·취소하고, 앱이 열려 있을 때의 표시 방식을 제어한다.
+알림을 탭하면 알림에 담긴 경로로 앱이 이동하게 만들고(A부), 푸시 토큰 발급 코드를 환경 가드와 함께 작성한다(B부).
 
 ## 읽기(15분)
 
-> 확인할 버전: `docs.expo.dev/versions/latest/...` 링크는 최신 문서(SDK 58)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`, `expo-device ~8.0`이다. `setNotificationHandler`가 돌려주는 객체의 필드 이름(`shouldShowBanner`, `shouldShowList`)은 SDK 54 문서 기준이고, 예전 글에 나오는 `shouldShowAlert`는 deprecated다.
+> 확인할 버전: `docs.expo.dev/...` 링크는 최신 문서(SDK 58 기준)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`다. 푸시 관련 사실은 SDK 54 문서 원문에서 확인했지만, 최신 문서와 경고 문구가 다를 수 있다.
 
-1. [Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)
-   - 상단 경고(warning)를 읽는다: 원격 푸시는 SDK 53부터 Android Expo Go에서 쓸 수 없고 development build가 필요하지만, **로컬 알림은 Expo Go에서도 가능**하다. 오늘은 로컬 알림만 다룬다.
-   - "Present a local (in-app) notification to the user" 예제에서 `setNotificationHandler`의 반환 객체(`shouldPlaySound`, `shouldSetBadge`, `shouldShowBanner`, `shouldShowList`)와 `scheduleNotificationAsync({ content, trigger: null })`이 즉시 표시라는 점을 확인한다.
-   - Usage 예제의 `schedulePushNotification`에서 `trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 2 }` 형태를 확인한다. `SchedulableTriggerInputTypes`에 `DAILY`(`hour`, `minute`), `WEEKLY`, `DATE`, `TIME_INTERVAL`이 있다는 점은 API 절에서 확인한다.
-   - Permissions 절의 Android 설명: Android 13에서는 알림 채널이 하나 이상 만들어져야 권한 프롬프트가 뜬다는 문장을 찾는다.
-   - iOS 권한 해석 절: 루트 `status`가 아니라 `ios.status`(`NOT_DETERMINED`, `DENIED`, `AUTHORIZED`, `PROVISIONAL`, `EPHEMERAL`)를 보라는 안내를 확인한다.
-   - `getAllScheduledNotificationsAsync`, `cancelScheduledNotificationAsync`, `cancelAllScheduledNotificationsAsync`가 있는지 API 절에서 확인한다.
-2. [Device](https://docs.expo.dev/versions/latest/sdk/device/)
-   - `Device.isDevice`가 실기기인지 시뮬레이터·에뮬레이터인지 알려 주는 값이라는 설명을 확인한다. Day 48의 푸시 토큰에서 쓸 값이다.
+1. [Notifications — Handle push notifications with navigation](https://docs.expo.dev/versions/latest/sdk/notifications/)
+   - Expo Router 탭의 예제에서 `Notifications.getLastNotificationResponse()`(앱이 알림 탭으로 막 시작됐을 때의 응답)와 `Notifications.addNotificationResponseReceivedListener`(실행 중 탭)를 한 `useEffect` 안에서 함께 쓰는 형태를 확인한다. 반환된 구독의 `remove()`를 cleanup에서 호출하는 줄도 확인한다.
+   - 예제의 `redirect` 함수를 찾는다: `data?.url`이 문자열일 때만 `router.push(url)`을 부르고 `Notifications.clearLastNotificationResponse()`로 처리한 응답을 비운다. 같은 `useEffect`가 앱이 알림으로 켜진 경우(`getLastNotificationResponse`)와 실행 중 알림을 탭한 경우(`addNotificationResponseReceivedListener`)를 모두 처리한다. SDK 54 문서에 있던 주석 두 개("Push the URL. You may want to verify the format before navigating", "Ensure this layout never returns null or the navigation will go unhandled")는 최신 문서에서 빠졌다. URL 형식을 확인하라는 주의는 최신 예제의 `typeof url === 'string'` 검사로 남아 있다.
+   - 상단 경고에서 Android Expo Go의 원격 푸시 제한을 다시 읽는다.
+2. [푸시 알림 설정 가이드](https://docs.expo.dev/push-notifications/push-notifications-setup/)
+   - Prerequisites 경고: Android 에뮬레이터와 iOS 시뮬레이터에서는 푸시가 지원되지 않고 실기기가 필요하다.
+   - 클라이언트가 준비해야 할 두 가지가 "사용자의 푸시 권한"과 "앱의 `ExpoPushToken`"이라는 점, 토큰을 받는 코드에서 `projectId`를 `Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId`로 읽는 부분을 확인한다.
+   - "Get credentials for development builds"에서 iOS는 유료 Apple Developer 계정이 필요하고 Android는 FCM 자격 증명 설정이 필요하다는 문장을 찾는다.
+   - "Test using the push notifications tool" 절에서 Expo의 푸시 알림 테스트 도구로 토큰을 입력해 시험 알림을 보내는 절차를 읽는다.
+3. [알림 종류와 동작(What you need to know)](https://docs.expo.dev/push-notifications/what-you-need-to-know/)
+   - "Remote and Local notifications" 절에서 푸시(원격)와 로컬 알림의 정의, 그리고 푸시는 Expo Go에 내장되어 있지 않아 development build가 필요하다는 문장을 확인한다.
+   - 앱 상태 세 가지(Foreground, Background, Terminated)의 정의와, 알림과 상호작용(탭)했을 때 상태별로 어떤 리스너가 불리는지 보여 주는 표를 읽는다. iOS는 세 상태 모두 `NotificationResponseReceivedListener`이고, Android는 Terminated에서 JS task라는 점을 적는다.
+   - 앱이 종료된 상태에서 알림 탭으로 시작될 때 iOS에서는 리스너를 모듈 최상위처럼 일찍 등록해야 한다는 info 문장을 찾는다.
 
 ## 예측(10분)
 
-1. 앱이 화면에 열려 있는(포그라운드) 상태에서 `setNotificationHandler`를 설정하지 않고 5초 뒤 알림을 예약하면 배너가 보일까?
+1. 앱이 완전히 종료된 상태에서 로컬 알림을 탭해 앱을 켰다. 처음 렌더링된 뒤 어떤 함수로 "방금 탭한 알림"을 알 수 있을까? 앱이 이미 실행 중일 때 탭하는 경우와 API가 같을까, 다를까?
 
 > 내 예측:
 
-2. `DAILY` 트리거로 알림을 예약한 뒤 앱을 완전히 종료하면 예약은 유지될까? 앱을 다시 켰을 때 스위치 상태를 어떻게 복원할 수 있을까?
+2. 시뮬레이터에서 `getExpoPushTokenAsync`를 그대로 호출하면 어떻게 될까? 호출 전에 어떤 값으로 막아야 할까?
 
 > 내 예측:
 
-3. 알림 권한을 거부한 상태에서 `scheduleNotificationAsync`를 호출하면 에러가 날까, 조용히 아무 일도 없을까?
+3. 알림의 `data.url`에 앱에 없는 경로가 담겨 있으면 `router.push(url)`은 어떤 화면으로 가게 될까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-설치:
+### A부. 알림 탭 처리 (시뮬레이터 가능, 25분)
 
-```bash
-npx expo install expo-notifications expo-device
-```
+- `src/hooks/useNotificationObserver.ts` (새 파일): 읽기 1의 예제 형태를 따르는 훅.
+  - `useEffect` 안에서 `getLastNotificationResponse()`로 시작 시 응답을 처리하고, `addNotificationResponseReceivedListener`로 실행 중 응답을 처리한다.
+  - `data.url`이 문자열이고 `/`로 시작할 때만 `router.push(url)`을 호출한다(경로 형식 검증). 검증을 통과하지 못하면 아무것도 하지 않는다.
+  - cleanup에서 구독을 `remove()`한다(Day 12).
+- `app/_layout.tsx`: 루트 레이아웃 컴포넌트에서 이 훅을 호출한다. Day 22의 로그인 보호 로직이 로딩 중에 `null`을 반환하고 있다면, 알림 처리가 놓치지 않도록 훅 호출 위치와 반환 구조를 점검한다.
+- Day 46의 `enableDailyReminder`와 테스트 알림에 넣어 둔 `data: { url: '/(tabs)/write' }`로 탭 이동을 시험한다.
 
-새로 만들/고칠 파일:
+### B부. 푸시 토큰 (코드 작성 15분, 실행은 실기기 + dev build에서만)
 
-- `app/_layout.tsx`(루트 레이아웃): 컴포넌트 밖 최상위에서 `Notifications.setNotificationHandler`를 한 번 호출해 포그라운드에서도 배너와 목록에 표시되게 한다(`shouldShowBanner`, `shouldShowList`는 `true`, 소리·배지는 `false`).
-- `src/lib/notifications.ts` (새 파일): 함수 4개를 만든다.
-  - `ensureNotificationPermission()`: Android이면 먼저 `setNotificationChannelAsync('default', ...)`로 채널을 만들고, `getPermissionsAsync()`로 확인한 뒤 없으면 `requestPermissionsAsync()`로 요청해 허용 여부(`boolean`)를 돌려준다.
-  - `enableDailyReminder(hour, minute)`: 권한을 확인하고 `scheduleNotificationAsync`를 `DAILY` 트리거로 호출한다. 내용(`title`, `body`)은 한국어 문구, `data`에는 `{ url: '/(tabs)/write' }`를 넣는다(Day 48에서 탭 처리에 쓴다).
-  - `disableDailyReminder()`: 예약된 알림을 취소한다.
-  - `isDailyReminderScheduled()`: `getAllScheduledNotificationsAsync()` 결과에 알림이 있는지 돌려준다.
-- `app/(tabs)/settings/index.tsx`: 다음을 추가한다.
-  - "매일 기록 알림" 행: RN `Switch`와 시각 선택(20시, 21시, 22시 같은 고정 선택지 3개를 `Pressable`로). 스위치를 켜면 `enableDailyReminder`, 끄면 `disableDailyReminder`를 부른다.
-  - 앱을 켰을 때 `isDailyReminderScheduled()`로 스위치 초기값을 복원한다(예측 2).
-  - "5초 뒤 테스트 알림" 버튼: `TIME_INTERVAL` 트리거로 `seconds: 5`.
-  - 권한이 거부되어 있고 다시 물을 수 없으면 Day 40처럼 `Alert`와 `Linking.openSettings()`로 안내한다.
-  - `Device.isDevice` 값을 "실행 환경: 실기기/시뮬레이터" 한 줄로 표시한다.
+설치: `expo-notifications`와 `expo-device`는 Day 46에서 설치했다. `expo-constants`는 템플릿에 이미 들어 있는지 `package.json`으로 확인하고, 없을 때만 `npx expo install expo-constants`를 실행한다.
+
+- `src/lib/notifications.ts`(Day 46)에 `registerForPushToken()`을 추가한다. 순서는 다음과 같다.
+  1. `Device.isDevice`가 `false`이면 `{ ok: false, reason: '실기기에서만 발급됩니다' }`를 돌려준다.
+  2. Day 46의 `ensureNotificationPermission()`으로 권한을 확인한다. 거부되면 `{ ok: false, reason: '알림 권한이 필요합니다' }`.
+  3. `projectId`를 읽고 없으면 `{ ok: false, reason: 'EAS projectId가 없습니다' }`.
+  4. `Notifications.getExpoPushTokenAsync({ projectId })`의 `data`를 `{ ok: true, token }`으로 돌려준다.
+- `app/(tabs)/settings/index.tsx`: "푸시 토큰 받기" 버튼과 결과 영역을 추가한다. 성공하면 토큰을 `selectable` 텍스트로, 실패하면 `reason`을 보여 준다.
+- 토큰은 화면 표시와 개발 중 복사 용도로만 쓴다. 저장소, 로그 공유, 스크린샷 공유에 올리지 않는다.
 
 핵심 호출 형태:
 
 ```ts
-await Notifications.scheduleNotificationAsync({
-  content: { title: '오늘 기록 남겼나요?', body: '1분이면 충분해요.', data: { url: '/(tabs)/write' } },
-  trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 21, minute: 0 },
-});
+const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+if (!projectId) return { ok: false, reason: 'EAS projectId가 없습니다' };
+const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 ```
 
 완료 기준:
 
-- [ ] `npx expo install expo-notifications expo-device`로 설치했다.
-- [ ] `setNotificationHandler`를 컴포넌트 안이 아니라 `app/_layout.tsx` 최상위에서 한 번만 호출한다.
-- [ ] 스위치를 켜면 권한을 확인·요청하고 `DAILY` 알림이 예약된다. 끄면 예약이 사라진다.
-- [ ] 앱을 완전히 종료했다 켜도 스위치 상태가 예약 상태와 일치한다.
-- [ ] "5초 뒤 테스트 알림"이 앱이 열려 있을 때와 홈 화면으로 나갔을 때 모두 표시된다.
-- [ ] 권한 거부 시 앱이 죽지 않고 안내가 나온다.
+- [ ] 앱이 실행 중일 때 알림을 탭하면 `data.url`의 화면으로 이동한다.
+- [ ] 앱을 완전히 종료한 상태에서 알림을 탭해 시작해도 같은 화면으로 이동한다.
+- [ ] `data.url`이 문자열이 아니거나 `/`로 시작하지 않으면 이동하지 않는다.
+- [ ] 구독을 cleanup에서 해제한다.
+- [ ] 시뮬레이터에서 "푸시 토큰 받기"를 누르면 앱이 죽지 않고 "실기기에서만 발급됩니다"가 보인다.
+- [ ] (환경이 있을 때만) dev build를 설치한 실기기에서 토큰이 표시된다.
 
 ## 검증(10분)
 
-- 테스트 알림을 눌러 5초 안에 홈 화면으로 나가서 배너가 뜨는지 확인한다. 다시 앱을 연 상태로도 해 본다. 예측 1과 비교한다.
-- `DAILY` 시각을 지금보다 1~2분 뒤로 잡아 실제로 도착하는지 확인한다(확인 후 원래 선택지로 되돌린다).
-- `getAllScheduledNotificationsAsync()` 결과를 `console.log`로 찍어 예약 객체의 모양(`identifier`, `content`, `trigger`)을 적는다.
-- 일부러 깨뜨리기: `setNotificationHandler` 호출을 주석 처리하고 앱을 연 채로 테스트 알림을 눌러 본다. 배너가 나오는지 확인하고 예측 1과 비교한 뒤 되돌린다.
-- Android에서 가능하면 채널 생성 호출을 빼고 첫 권한 프롬프트가 뜨는지 확인한다(Android 13 이상 기기·에뮬레이터에서만 의미가 있다).
+- A부: Day 46의 5초 테스트 알림을 눌러 앱을 완전히 종료(앱 전환기에서 위로 밀어 종료)하고 알림이 뜨면 탭한다. 예측 1과 비교한다. 같은 흐름을 앱이 켜진 상태에서도 해 본다.
+- B부: 시뮬레이터에서 버튼을 눌러 예측 2와 비교한다. 실기기·dev build가 준비되어 있다면 토큰을 얻고, 푸시 가이드의 테스트 도구로 시험 알림을 보내 탭 이동까지 확인한다. 환경이 없으면 "실기기 확인 못 함"이라고 기록 칸에 적는다.
+- 일부러 깨뜨리기: 테스트 알림의 `data.url`을 앱에 없는 경로(예: `/없는경로`)로 바꿔 탭한다. 예측 3과 비교해 Day 19에서 만든 not-found 화면이 뜨는지 보고, 검증 로직을 어떻게 더 엄격하게 할지 한 줄로 적은 뒤 되돌린다.
 
 ## 이해 점검 질문
 
-1. `setNotificationHandler`는 무엇을 결정하고, 왜 컴포넌트 안이 아니라 최상위에서 한 번 호출하는가?
-2. 푸시(원격) 알림과 로컬 알림의 차이는 무엇이며, SDK 54의 Expo Go에서는 각각 어떤 제한이 있는가?
-3. Android 13 이상에서 알림 채널을 만들기 전에 권한을 요청하면 어떻게 되는가? 이를 고려해 `ensureNotificationPermission`은 어떤 순서로 호출해야 하는가?
+1. 알림 탭을 처리할 때 `getLastNotificationResponse()`와 `addNotificationResponseReceivedListener`를 둘 다 써야 하는 이유는 무엇인가?
+2. 푸시 토큰이 시뮬레이터나 Android Expo Go에서 발급되지 않는 이유는 각각 무엇이고, 어떤 환경이 필요한가?
+3. 알림 `data.url`을 검증 없이 `router.push`에 넘기면 안 되는 이유는 무엇인가?
 
 <details>
 <summary>정답</summary>
 
-1. 앱이 포그라운드일 때 도착한 알림을 어떻게 보여 줄지(배너, 목록, 소리, 배지)를 정한다. 핸들러가 없으면 포그라운드에서는 사용자에게 보이지 않을 수 있다. 화면이 다시 그려질 때마다 호출하면 불필요하고 시점이 어긋날 수 있으므로, 알림이 올 수 있는 모든 순간에 적용되도록 앱 시작 시 한 번 등록한다.
-2. 로컬 알림은 앱이 기기 안에서 스스로 예약하고 표시하는 알림이고, 원격 푸시는 서버가 푸시 서비스(FCM·APNs·Expo Push)를 거쳐 보내는 알림이다. SDK 53부터 Android의 Expo Go에서는 원격 푸시를 쓸 수 없어 development build가 필요하지만, 로컬 알림은 Expo Go에서도 쓸 수 있다.
-3. 문서에 따르면 Android 13에서는 알림 채널이 하나 이상 만들어진 뒤에야 권한 프롬프트가 뜬다. 따라서 `setNotificationChannelAsync` -> `getPermissionsAsync` -> (필요하면) `requestPermissionsAsync` 순서로 호출해야 한다.
+1. 실행 중에 탭하면 리스너가 이벤트를 받지만, 앱이 종료된 상태에서 탭해 시작되면 리스너를 등록하기 전에 이미 응답이 발생한 뒤다. `getLastNotificationResponse()`가 그 "시작 시점의 마지막 응답"을 조회하고, 리스너는 이후의 탭을 처리한다. 둘이 서로의 빈틈을 메운다.
+2. 시뮬레이터와 에뮬레이터는 푸시 서비스에 등록할 수 있는 실기기가 아니라서 지원되지 않는다(가이드의 경고). Android Expo Go는 SDK 53부터 원격 푸시가 제거되어 development build가 필요하다. 따라서 실기기 + development build + 플랫폼 자격 증명(iOS는 유료 Apple Developer 계정, Android는 FCM)이 필요하다.
+3. 알림의 `data`는 보낸 쪽이 임의로 채울 수 있는 값이다. 앱에 없는 경로, 인증이 필요한 화면, 외부 주소가 담겨도 그대로 이동하면 예기치 않은 화면이 열린다. 문서 예제도 이동 전에 형식을 검증하라고 안내한다. 최소한 문자열인지, 허용된 경로 형태인지 확인한다.
 
 </details>
 
@@ -102,12 +105,14 @@ await Notifications.scheduleNotificationAsync({
 
 막힌 점:
 
+실기기 + dev build로 토큰까지 확인했는가(예 / 아니오 / 환경 없음):
+
 ## 커밋 단위 제안
 
-- `feat: 설정 탭에 매일 기록 알림 예약 스위치 추가`
-- `feat: 포그라운드 알림 표시 핸들러와 테스트 알림 추가`
-- `chore: expo-notifications, expo-device 설치`
+- `feat: 알림 탭 시 data.url 경로로 이동하는 훅 추가`
+- `feat: 설정 탭에 푸시 토큰 발급 버튼과 환경 가드 추가`
+- `fix: 알림 응답 구독 cleanup 누락 수정`
 
 ## 웹과 다른 점
 
-웹 알림은 사이트별 브라우저 권한을 따르지만, 네이티브 로컬 알림은 앱이 꺼져 있어도 OS가 예약된 시각에 띄운다. 알림 권한은 iOS·Android(13 이상)에서 OS가 별도로 묻는다.
+웹 푸시는 서비스 워커와 구독 객체를 쓰지만, 앱의 푸시는 플랫폼 푸시 서비스(FCM·APNs)에 등록한 토큰을 서버가 알고 있어야 하고, 실기기와 네이티브 자격 증명이 있어야 시험할 수 있다.

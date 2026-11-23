@@ -1,90 +1,105 @@
-# Day 65 · 1/25 (월) — 디버깅 도구: DevTools, 네이티브 로그, 시뮬레이터
+# Day 65 · 1/26 (화) — EAS Build
 
 ## 오늘의 목표
 
-Daily Log에 버그 3개를 일부러 넣고, React Native DevTools(Console·Sources·Network·Components)와 LogBox, 시뮬레이터의 네이티브 로그로 각각의 원인을 찾아 고친다.
+Daily Log에 `expo-dev-client`와 `eas.json`을 추가하고, EAS Build로 iOS 시뮬레이터용 development build를 만들어 설치한 뒤 개발 서버에 연결한다.
 
 ## 읽기(15분)
 
-1. [Expo — Debugging tools](https://docs.expo.dev/debugging/tools/)
-   - 터미널 단축키에서 `M`은 개발자 메뉴, `J`는 React Native DevTools(Hermes 앱)를 연다는 점을 확인한다.
-   - DevTools 탭 구성에 Network가 "Expo 전용"으로 들어 있고, `expo-dev-client`가 설치되어 있거나 Expo Go를 쓸 때만 동작한다는 문장을 찾는다.
-   - iOS 시뮬레이터에서 개발자 메뉴를 여는 단축키(`Cmd + D` 또는 `Ctrl + Cmd + Z`)를 찾는다.
-2. [React Native — Debugging](https://reactnative.dev/docs/debugging)
-   - LogBox 표를 읽고 Fatal Error, Console Error, Console Warning이 각각 어떻게 표시되는지 정리한다.
-   - "DevTools가 열려 있으면 fatal error를 제외한 모든 에러가 LogBox에 표시되지 않는다"는 문장을 찾는다.
-   - DevTools가 Hermes에서만 동작하고 Chrome 또는 Edge가 필요하다는 요구 사항은 RN 0.81 문서에 있던 문장이고 최신(0.88) 문서에서는 삭제됐다. 이 프로젝트(Hermes, RN 0.81.5)에서 `J`로 DevTools가 실제로 열리는지 확인하고, 안 열리면 그 조건을 막힌 점에 적는다.
-3. [Expo — Debugging runtime issues](https://docs.expo.dev/debugging/runtime-issues/)
-   - 네이티브 로그를 보는 방법을 찾는다. Android는 `adb logcat`, iOS는 macOS의 Console 앱에서 기기 또는 시뮬레이터를 고르고 Start streaming이다.
-   - 프로덕션 오류를 다룰 때 가장 먼저 "로컬에서 재현"하고, 어려우면 `npx expo start --no-dev --minify`로 프로덕션 모드를 실행해 본다는 순서를 찾는다.
+1. [Expo — Create your first build](https://docs.expo.dev/build/setup/)
+   - `npx eas-cli@latest`로 전역 설치 없이 실행할 수 있고, 로그인은 `eas login`, 확인은 `eas whoami`라는 점을 찾는다.
+   - Expo 계정은 무료 플랜에서도 쓸 수 있고, 스토어 업로드를 하려면 Google Play 개발자 등록(일회성 25달러)과 Apple Developer Program(연 99달러)이 필요하다는 문장을 찾는다.
+   - iOS 시뮬레이터용 빌드는 스토어 계정 없이 만들 수 있다는 문장을 찾는다.
+2. [Expo — eas.json (Build profiles)](https://docs.expo.dev/build/eas-json/)
+   - `development`는 `developmentClient: true`와 `distribution: "internal"`, `preview`는 `distribution: "internal"`, `production`은 빈 객체라는 기본 프로필 3종의 용도를 정리한다.
+   - `ios.simulator: true`를 쓰면 시뮬레이터용 빌드가 되고, 시뮬레이터 빌드와 실기기용 빌드는 프로필을 따로 두는 것이 권장된다는 문장을 찾는다.
+3. [Expo — Introduction to development builds](https://docs.expo.dev/develop/development-builds/introduction/)
+   - `npx expo install expo-dev-client` 후 `eas build --platform ios --profile development` 순서를 확인한다.
+   - 빌드가 끝나면 CLI가 시뮬레이터 설치를 묻고, 그 뒤 `npx expo start`를 실행하면 Expo Go 대신 development build를 대상으로 한다는 문장을 찾는다.
+   - 클라우드 빌드 대신 Xcode가 있을 때 `npx expo run:ios`로 로컬 빌드할 수 있다는 대안을 찾는다.
 
 ## 예측(10분)
 
-1. 글 카드의 `onPress` 핸들러 안에서 `undefined`의 속성을 읽는 TypeError가 나면, 시뮬레이터 화면에는 LogBox가 어떤 모양으로 보일까? (전체 화면 / 빨간 배지 / 노란 배지 중에서)
+1. development build와 Expo Go는 무엇이 다를까? 한 문장으로 적는다.
 
    > 내 예측:
 
-2. DevTools를 열어 둔 상태에서 `keyExtractor`가 같은 값을 반환해 생기는 중복 key 경고는 시뮬레이터의 LogBox에 보일까, DevTools Console에만 보일까?
+2. `ios.simulator: true`로 만든 빌드를 내 iPhone 실기기에 설치할 수 있을까?
 
    > 내 예측:
 
-3. Expo Go로 실행 중일 때 DevTools의 Network 탭은 보일까? 그때 피드 요청이 404면 탭의 어느 칸에서 알 수 있을까?
+3. 빌드를 설치한 뒤 피드 화면의 JS 코드 한 줄을 고치면 앱을 다시 빌드해야 할까? `app.json`의 `name`을 고치면 홈 화면 앱 이름이 바뀔까?
 
    > 내 예측:
 
 ## 만들기(40분)
 
-새 기능은 없다. 버그를 하나씩 넣고 도구로 찾은 뒤 바로 원복한다. 매 단계마다 "어느 도구의 어느 칸에서 원인을 봤는지"를 기록에 적는다.
+클라우드 빌드는 시간이 걸리므로 설정을 마치는 즉시 빌드를 걸어 두고, 기다리는 동안 EAS 대시보드의 빌드 로그를 읽는다.
 
-**준비**
-- 터미널에서 `npx expo start` 후 시뮬레이터에서 Daily Log를 연다. `j`로 DevTools를 열고 Console·Sources·Network·Components 탭이 모두 보이는지 확인한다.
+**1. 패키지와 앱 식별자**
+- 설치(이 Day에서 처음 설치한다): `npx expo install expo-dev-client`
+- `app.json`의 `expo`에 식별자를 추가한다. 스토어에서 고유해야 하는 값이므로 본인만 쓰는 이름으로 정한다.
 
-**버그 1: 잘못된 URL (Network 탭)**
-- Day 27에서 만든 API 클라이언트 모듈의 글 목록 경로를 오타로 바꾼다(예: `/posts`를 `/postz`로).
-- 피드 탭의 에러 상태가 뜨면, DevTools Network 탭에서 해당 요청의 URL과 상태 코드를 찾아 적는다. 앱 쪽 에러 메시지만 보고 짐작한 원인과 Network 탭이 알려 준 원인이 같은지 비교한다.
+  ```json
+  "ios": { "supportsTablet": true, "bundleIdentifier": "com.본인아이디.dailylog" },
+  "android": { "package": "com.본인아이디.dailylog" }
+  ```
 
-**버그 2: 핸들러 안의 TypeError (Console, Sources)**
-- 글 카드의 `onPress`(Day 16의 상세 이동 핸들러)에서 `post.author.name`처럼 존재하지 않는 값을 읽게 바꾼다.
-- 카드를 눌러 에러를 만들고 LogBox 모양과 DevTools Console의 스택 트레이스를 확인한다.
-- 같은 핸들러 첫 줄에 `debugger;`를 넣고 다시 누른다. Sources 탭에서 실행이 멈추면 Scope 패널에서 `post`의 실제 모양을 확인하고, Step 버튼으로 한 줄씩 진행해 본다. 확인이 끝나면 `debugger;`를 지운다.
+  기존 `ios`/`android` 객체에 필드를 추가하는 것이고 기존 값은 지우지 않는다.
 
-**버그 3: 중복 key (경고와 Components)**
-- 피드 `FlatList`의 `keyExtractor`가 항상 같은 값을 반환하게 바꾼다.
-- 시뮬레이터 LogBox와 DevTools Console에서 경고가 어디에 어떻게 보이는지 기록한다.
-- Components 탭의 "Select element" 버튼을 누르고 시뮬레이터에서 글 카드를 탭해 그 카드의 props를 확인한다.
+**2. EAS 로그인과 설정**
+- `npx eas-cli@latest login`, `npx eas-cli@latest whoami`로 로그인을 확인한다.
+- `npx eas-cli@latest build:configure`로 프로젝트를 설정한다. 생성·변경된 파일을 `git diff`와 `git status`로 확인해 적는다(`eas.json`이 생겨야 한다).
 
-**네이티브 로그 맛보기**
-- macOS Console 앱을 열고 왼쪽 목록에서 실행 중인 iOS 시뮬레이터를 고른 뒤 Start streaming을 누른다. 검색창에 앱 이름을 넣어 걸러 낸 뒤, 시뮬레이터에서 앱을 껐다 켜며 찍히는 줄 3개를 옮겨 적는다. (Android 에뮬레이터가 있으면 `adb logcat`으로 같은 일을 해도 된다.)
+**3. development 프로필을 시뮬레이터용으로**
+- `eas.json`의 `build.development`에 시뮬레이터 설정을 추가한다.
 
-**마무리**: `git diff`로 임시 변경이 모두 사라졌는지 확인한다.
+  ```json
+  "development": {
+    "developmentClient": true,
+    "distribution": "internal",
+    "ios": { "simulator": true }
+  }
+  ```
+
+**4. 빌드와 설치**
+- `npx eas-cli@latest build --platform ios --profile development`
+- 빌드가 끝나면 CLI의 설치 질문에 Y로 답해 시뮬레이터에 설치한다. 설치 질문이 나오지 않으면 expo.dev 대시보드의 빌드 페이지에서 받는 방법을 문서에서 찾는다.
+- 클라우드 큐 대기가 길면(무료 플랜 빌드 횟수와 대기 시간은 문서에서 확인 필요) 대안으로 `npx expo run:ios`를 쓴다. 이 경우 Xcode가 필요하고 프로젝트에 `ios` 폴더가 생기지만 `.gitignore`에 이미 들어 있다.
+
+**5. 연결**
+- `npx expo start`를 실행하고 시뮬레이터의 development build에서 개발 서버에 연결해 Daily Log 3탭이 뜨는지 확인한다.
+
+(선택) Android: `eas build --platform android --profile development`로 APK를 만들어 에뮬레이터가 있을 때 설치한다.
 
 완료 기준
-- [ ] 버그 3개 각각에 대해 "원인을 확인한 도구와 칸"이 기록에 있다.
-- [ ] Sources 탭에서 `debugger;`로 실행을 멈추고 Scope에서 변수 값을 본 적이 있다.
-- [ ] 네이티브 로그에서 옮겨 적은 줄 3개가 기록에 있다.
-- [ ] `git diff`가 비어 있다(임시 버그와 `debugger;`가 남아 있지 않다).
+- [ ] `app.json`에 `ios.bundleIdentifier`와 `android.package`가 있다.
+- [ ] `eas.json`의 `development` 프로필에 `developmentClient: true`와 `ios.simulator: true`가 있다.
+- [ ] EAS 대시보드에 성공한 빌드 1개가 있고 시뮬레이터에 Daily Log가 설치되어 있다.
+- [ ] development build가 개발 서버(`npx expo start`)에 연결되어 3탭이 뜬다.
+- [ ] 인증서·키 파일(`*.jks`, `*.p12`, `*.p8` 등)이 저장소에 추가되지 않았다.
 
 ## 검증(10분)
 
+- 시뮬레이터 앱에서 `j`로 DevTools를 열어 Day 64에서 쓴 Network 탭이 development build에서도 동작하는지 확인한다.
 - 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- LogBox만 보고 알 수 있는 것과 DevTools를 열어야 알 수 있는 것을 각각 한 줄로 정리한다.
 
 > 실제 결과 / 예측과 다른 지점:
 
-**깨뜨려 보는 실험**: DevTools를 연 채로 터미널의 Metro(`npx expo start`)를 `Ctrl+C`로 종료한다. 어떤 대화상자가 뜨는지 적고, Metro를 다시 띄운 뒤 Reconnect로 연결이 복구되는지 확인한다.
+**깨뜨려 보는 실험**: 피드 화면 텍스트 한 줄을 고쳐 저장해 재빌드 없이 반영되는지 본다. 그다음 `app.json`의 `name`을 바꾸고 `npx expo start`를 다시 띄운 뒤 시뮬레이터 홈 화면의 앱 이름이 바뀌는지 관찰해 기록한다. 끝나면 `name`을 되돌린다.
 
 ## 이해 점검 질문
 
-1. LogBox의 Fatal Error, Console Error, Console Warning은 각각 어떻게 표시되고, DevTools를 열어 두면 무엇이 달라지는가?
-2. DevTools의 Network 탭이 동작하는 조건은 무엇이고, 이 조건이 Day 66에서 만들 development build와 어떤 관련이 있는가?
-3. 프로덕션에서만 나는 오류를 만났을 때 가장 먼저 해야 할 일과, 그것이 어려울 때 확인할 것 두 가지는?
+1. Expo Go 대신 development build가 필요해지는 경우는 언제이고, 이 커리큘럼에서 어느 Day가 그런가?
+2. `development`, `preview`, `production` 프로필의 용도 차이는?
+3. iOS 시뮬레이터용 빌드와 실기기용 빌드는 계정 요건과 설치 방식에서 어떻게 다른가?
 
 <details>
 <summary>정답</summary>
 
-1. Fatal Error(예: JS 구문 오류)는 위치와 함께 LogBox가 열리고 닫을 수 없다. 코드를 고치고 리로드하면 사라진다. Console Error는 빨간 배지와 개수로 표시되며 탭하면 상세를 볼 수 있다. Console Warning은 노란 배지 배너만 보이고 상세는 DevTools에서 봐야 한다. DevTools가 열려 있으면 fatal error를 제외한 에러·경고는 LogBox에 표시되지 않고 DevTools Console로 간다.
-2. Expo 문서 기준으로 Network 탭은 `expo-dev-client`가 설치되어 있거나 Expo Go를 쓸 때만 동작한다. 그래서 Day 66에서 `expo-dev-client`를 넣은 development build를 만들어도 Network 탭을 계속 쓸 수 있다. `expo-dev-client`가 없는 빌드(예: production)에서는 이 탭에 기대하면 안 된다.
-3. 먼저 로컬에서 재현한다. 재현되면 개발 오류와 같은 방식으로 찾는다. 로컬 재현이 어려우면 플랫폼별 크래시 리포트(Google Play Console, Xcode Crashes Organizer), 네이티브 로그(`adb logcat`, Console 앱), `npx expo start --no-dev --minify`로 프로덕션 모드 실행, Sentry·BugSnag 같은 에러 리포팅 서비스 중에서 확인한다.
+1. Expo Go에 이미 들어 있지 않은 네이티브 코드가 필요할 때다. development build는 프로젝트가 쓰는 네이티브 라이브러리를 직접 컴파일해 넣고 `expo-dev-client`로 개발 서버에 연결한다. 이 커리큘럼에서는 Day 45(`react-native-maps`)이 dev build를 요구한다. 푸시 토큰(Day 47)은 추가로 실기기가 필요하다.
+2. `development`는 `developmentClient: true`에 `distribution: "internal"`로, 개발 도구가 들어간 빌드를 만들어 스토어에 올리지 않는다. `preview`는 `distribution: "internal"`로, 개발 도구 없이 팀원이 프로덕션과 비슷한 환경에서 테스트하는 용도다(Android는 APK 권장). `production`은 스토어 제출이나 TestFlight 같은 스토어 기반 테스트용이다.
+3. 시뮬레이터 빌드는 스토어 계정이 없어도 만들 수 있지만 실기기에는 설치할 수 없다(그래서 프로필을 분리한다). 실기기용 iOS 빌드는 유료 Apple Developer 계정과 기기 UDID 등록(ad hoc)이 필요하다. Android internal 빌드는 APK로 만들어져 보안 경고를 수락하면 직접 설치할 수 있다.
 
 </details>
 
@@ -96,8 +111,9 @@ Daily Log에 버그 3개를 일부러 넣고, React Native DevTools(Console·Sou
 
 ## 커밋 단위 제안
 
-- `docs: 디버깅 도구별 원인 확인 방법 기록`
+- `chore: expo-dev-client 추가`
+- `chore: EAS 빌드 설정과 앱 식별자 추가`
 
 ## 웹과 다른 점
 
-브라우저 개발자 도구와 달리 앱 화면 위에 LogBox가 별도로 뜨고, 네이티브 계층(Xcode·Android Studio·Console 앱)의 로그는 DevTools 밖에 있다. Network 탭도 모든 환경에서 쓸 수 있는 것이 아니라 Expo Go 또는 `expo-dev-client`가 있어야 한다.
+웹은 빌드 결과를 서버에 올리면 끝이지만 모바일 앱은 OS가 요구하는 바이너리 서명과 앱 식별자가 필요하고, 네이티브 코드나 설정이 바뀌면 JS 수정과 달리 새 빌드가 필요하다.

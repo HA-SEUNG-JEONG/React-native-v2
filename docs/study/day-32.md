@@ -1,89 +1,85 @@
-# Day 32 · 12/9 (수) — useInfiniteQuery + FlatList 무한 스크롤
+# Day 32 · 12/10 (목) — 쿼리 키 설계, staleTime·gcTime, focusManager·onlineManager의 RN 연동
 
-> 전제: Day 28의 `src/hooks/usePosts.ts`(키 `['posts', { userId }]`)와 피드(`app/(tabs)/index.tsx`, 사용자 필터 칩), Day 7·8의 `FlatList`·`RefreshControl`, Day 31의 `src/hooks/useDeletePost.ts`가 있다.
+> 전제: Day 27의 `app/_layout.tsx`(모듈 최상단 `queryClient`, `QueryClientProvider`), `src/hooks/usePost.ts`(키 `['post', id]`)와 상세 `app/post/[id].tsx`, Day 31의 `src/hooks/usePosts.ts`(키 `['posts', 'infinite', { userId }]`), Day 29·31의 `src/hooks/useCreatePost.ts`·`src/hooks/useDeletePost.ts`가 있다.
 
 ## 오늘의 목표
 
-피드를 10개씩 페이지로 불러오고, 목록 끝에 가까워지면 다음 페이지를 자동으로 이어 붙인다.
+쿼리 키를 한곳에서 관리하고, `staleTime`·`gcTime`이 화면 전환에서 만드는 차이를 확인하며, 앱이 백그라운드에서 돌아올 때와 오프라인일 때 Query가 어떻게 반응하는지 RN용으로 연결한다.
 
 ## 읽기(15분)
 
-- https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries
-  - v5의 `useInfiniteQuery`는 `initialPageParam`이 필수이고, `queryFn`은 `({ pageParam })`을 받으며, `getNextPageParam`이 다음 페이지 파라미터를 돌려준다. `undefined`나 `null`을 돌려주면 다음 페이지가 없는 것이다.
-  - `data`는 배열이 아니라 `{ pages, pageParams }` 객체다. `fetchNextPage`, `hasNextPage`, `isFetchingNextPage`로 다음 페이지 상태를 다룬다.
-  - 하나의 무한 쿼리는 캐시 항목 하나를 공유하므로 동시에 하나의 요청만 돈다. 사용자가 직접 호출하지 않는 곳에서는 `fetchNextPage` 전에 `isFetching`을 확인해야 한다.
-  - 다시 가져올 때는 첫 페이지부터 순서대로 가져온다. `setQueryData`로 직접 고칠 때는 `{ pages, pageParams }` 구조를 유지해야 한다.
-- https://reactnative.dev/docs/virtualizedlist (Props의 `onEndReached`, `onEndReachedThreshold`)
-  - `onEndReachedThreshold`의 단위는 픽셀이 아니라 리스트 보이는 길이의 배수이고, 기본값은 2다. 0.5이면 끝이 화면 절반 길이 안으로 들어올 때 `onEndReached`가 호출된다.
-- https://reactnative.dev/docs/flatlist
-  - `ListFooterComponent`는 모든 항목 아래에, `ListEmptyComponent`는 항목이 없을 때 그려진다.
-
-JSONPlaceholder 페이지네이션: 공식 가이드(https://jsonplaceholder.typicode.com/guide/)에는 설명이 없지만, `/posts?_page=2&_limit=5`는 해당 구간만 돌려주고 `x-total-count` 헤더(전체 100)를 준다. `userId=1`과 함께 쓸 수도 있고 그 사용자의 글은 10개뿐이다(2026-10-27 직접 요청으로 확인). 따라서 칩 "전체"는 10페이지, 사용자 칩은 1페이지다.
+- https://tanstack.com/query/latest/docs/framework/react/guides/query-keys
+  - 키는 배열이고 JSON으로 직렬화할 수 있어야 한다. 객체 안의 속성 순서는 무시되지만 배열 항목의 순서는 키를 바꾼다.
+  - 쿼리 함수가 쓰는 변수는 키에 넣어야 변수마다 캐시 항목이 따로 생기고, 변수가 바뀌면 다시 요청된다.
+- https://tanstack.com/query/latest/docs/framework/react/guides/caching
+  - `staleTime` 기본값은 0이라 받자마자 stale이고, `gcTime` 기본값은 5분이다. 마지막으로 쓰는 컴포넌트가 사라지면 `gcTime` 타이머가 시작되고, 타이머 전에 다시 쓰이면 캐시를 바로 보여 주면서 뒤에서 다시 요청한다.
+- https://tanstack.com/query/latest/docs/framework/react/react-native
+  - RN에서는 `AppState`를 `focusManager.setFocused(status === 'active')`에 연결해야 앱 복귀 때 재요청이 동작한다. 웹이 아닐 때만 연결한다(`Platform.OS !== 'web'`).
+  - `onlineManager.setEventListener`에 NetInfo(`@react-native-community/netinfo`) 구독을 넘겨 온라인 상태를 연결한다. NetInfo는 Day 57에서 설치하므로 오늘은 연결 방법만 읽고 설치하지 않는다.
 
 ## 예측(10분)
 
-1. 앱을 처음 열었을 때 `/posts?_page=...` 요청은 몇 번 나갈까? `onEndReachedThreshold`를 기본값(2)으로 둘 때와 0.5로 둘 때를 따로 적는다.
+1. 키를 `['posts', 'detail', 3]`처럼 `['posts']` 아래에 두면, Day 30의 삭제 mutation이 쓰는 `setQueriesData({ queryKey: ['posts'] }, (old) => old?.filter(...))`는 상세 캐시에도 적용된다. 이때 어떤 일이 생길까?
 
 > 내 예측:
 
-2. 3페이지까지 불러온 상태에서 아래로 당겨 새로고침(`refetch`)하면 요청은 몇 번, 어떤 순서로 나갈까?
+2. 상세 화면에 들어갔다가 뒤로 갔다 다시 들어올 때, `staleTime: 0`(기본)과 `staleTime: 30_000`에서 각각 로딩 스피너가 보일까, 요청이 다시 나갈까?
 
 > 내 예측:
 
-3. 칩 "전체"에서 10페이지를 받은 뒤 `getNextPageParam`이 다음 페이지 번호를 항상 돌려주면 어떻게 될까?
+3. 상세 쿼리에 `gcTime: 5000`을 주고 상세를 떠나 10초 뒤 다시 들어가면 무엇이 달라질까? 또 오프라인 상태(`onlineManager.setOnline(false)`)에서 처음 상세에 들어가면 `status`와 `fetchStatus`는 각각 무엇일까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-피드를 `useInfiniteQuery`로 바꾼다.
-
 새로 만들거나 고칠 파일:
-- `src/api/posts.ts`: `getPostsPage({ userId, page, signal })` 추가. `GET /posts?_page=${page}&_limit=10`에 `userId`가 있으면 `&userId=...`를 붙이고 본문(`Post[]`)을 돌려준다. Day 27의 `request`를 그대로 쓴다.
-- `src/hooks/usePosts.ts`: `useQuery`를 `useInfiniteQuery`로 교체한다. 키는 `['posts', 'infinite', { userId }]`로 한다(Day 30의 `['posts']` 무효화가 접두사로 함께 적용된다). `queryFn`은 `({ pageParam, signal })`을 받는다.
-- `app/(tabs)/index.tsx`: `FlatList`의 `data`를 `data?.pages.flat() ?? []`로 만들고 `onEndReached`, `ListFooterComponent`, Day 8의 `RefreshControl`을 연결한다.
-- `src/hooks/useDeletePost.ts`: Day 31의 `setQueriesData` updater는 `Post[]`를 가정한다. 무한 쿼리 캐시는 `{ pages, pageParams }`이므로 각 페이지를 `map`으로 돌며 필터링하도록 고친다.
+- `src/api/queryKeys.ts`: 글 쿼리 키 팩토리 `postKeys`. 항목은 `all`(`['posts']`), `lists`(`['posts', 'infinite']`), `list(userId)`(`['posts', 'infinite', { userId }]`), `detail(id)`(`['posts', 'detail', id]`)로 한다. 상세 키를 `['post', id]`에서 `['posts', 'detail', id]`로 옮겨 `['posts']` 무효화가 상세에도 적용되게 한다. `src/hooks/usePosts.ts`, `src/hooks/usePost.ts`, `useCreatePost`, `useDeletePost`의 키 리터럴을 전부 `postKeys`로 바꾼다.
+- `src/hooks/useDeletePost.ts`: 예측 1의 문제를 피하려고 `getQueriesData`·`setQueriesData`의 필터를 `postKeys.lists`로 좁힌다. `cancelQueries`는 `postKeys.all` 그대로 둔다.
+- `app/_layout.tsx`: `new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } })`로 바꾼다. 같은 파일의 `RootLayout` 안에 `AppState` 연결 `useEffect`를 추가한다.
+- `src/hooks/usePost.ts`: 실험용으로 `gcTime: 5000`을 임시로 준다. `app/post/[id].tsx` 상단에 `fetchStatus`와 `isPaused`를 `Text`로 임시 표시한다.
+- 설정 탭(`app/(tabs)/settings/index.tsx`): 개발용 임시 `Switch` "오프라인 흉내". 값이 바뀔 때 `onlineManager.setOnline(!value)`를 호출한다(`setOnline`은 온라인 상태를 수동으로 바꾸는 메서드이며, https://tanstack.com/query/latest/docs/framework/react/reference/interfaces/OnlineManager 에서 확인한다. 검증 후 지운다).
 
 핵심 호출 형태:
 
 ```ts
-const query = useInfiniteQuery({
-  queryKey: ['posts', 'infinite', { userId }],
-  queryFn: ({ pageParam, signal }) => getPostsPage({ userId, page: pageParam, signal }),
-  initialPageParam: 1,
-  getNextPageParam: (lastPage, _all, lastPageParam) => (lastPage.length === 0 ? undefined : lastPageParam + 1),
-});
+useEffect(() => {
+  const sub = AppState.addEventListener('change', (status) => {
+    if (Platform.OS !== 'web') focusManager.setFocused(status === 'active');
+  });
+  return () => sub.remove();
+}, []);
 ```
 
 완료 기준:
-- [ ] 칩 "전체"에서 첫 화면에 10개가 보이고, 아래로 스크롤하면 11번째부터 이어 붙는다.
-- [ ] `onEndReached`에서 `hasNextPage && !isFetchingNextPage`일 때만 `fetchNextPage()`를 호출한다.
-- [ ] 다음 페이지를 받는 동안 목록 아래에 `ActivityIndicator`가 보인다(`ListFooterComponent`).
-- [ ] 100개를 모두 받으면 더 요청하지 않는다. 마지막 응답이 빈 배열이어서 `getNextPageParam`이 `undefined`를 돌려주는 흐름을 설명할 수 있다.
-- [ ] 사용자 칩으로 바꾸면 그 사용자의 글만 나오고, 칩마다 캐시가 따로 유지된다.
-- [ ] 당겨서 새로고침이 동작한다(`RefreshControl`에 `refetch`, `isRefetching`을 연결한다).
-- [ ] Day 31의 낙관적 삭제가 무한 쿼리 구조에서도 동작하고, 실패 시 롤백된다.
+- [ ] 코드에 `['posts', ...]`, `['post', ...]` 형태의 키 리터럴이 남아 있지 않고 모두 `postKeys`를 거친다.
+- [ ] 삭제 mutation이 상세 캐시를 건드리지 않는다(상세를 한 번 본 뒤 목록에서 다른 글을 삭제해도 에러가 없다).
+- [ ] `staleTime: 30_000`에서 상세 재진입 시 재요청이 나가지 않고, `staleTime: 0`으로 낮추면 캐시를 보여 주면서 뒤에서 재요청이 나가는 것을 로그로 확인했다.
+- [ ] `gcTime: 5000`일 때 10초 뒤 재진입하면 캐시가 사라져 로딩부터 시작하는 것을 확인했다. 확인 후 `gcTime` 임시 설정을 지운다.
+- [ ] 앱을 백그라운드로 보냈다가(시뮬레이터 홈 버튼) 30초 이상 뒤에 돌아오면 stale인 active 쿼리가 다시 요청된다.
+- [ ] 오프라인 스위치를 켠 채로 상세에 들어가면 `fetchStatus`가 `paused`이고, 스위치를 끄면 요청이 이어지는 것을 확인했다.
+- [ ] NetInfo 연결은 코드에 넣지 않았고, Day 57에서 `onlineManager.setEventListener`로 바꿀 자리를 주석 한 줄로 표시했다.
 
 ## 검증(10분)
 
-1. 임시 `console.log(pageParam)`을 `queryFn`에 넣어 첫 로드 때 요청 횟수를 세고 예측 1과 비교한다.
-2. 칩 "전체"에서 끝까지 스크롤해 100번째 글까지 도달하는지, 그 뒤 추가 요청이 멈추는지 본다.
-3. 3페이지까지 불러온 뒤 당겨서 새로고침하고 요청 순서를 로그로 확인한다(예측 2).
-4. 깨뜨려 보기: `getNextPageParam`이 항상 `lastPageParam + 1`을 돌려주게 바꾼다. 끝에 도달했을 때 빈 배열 요청이 반복되는지, `hasNextPage`가 어떻게 되는지 확인하고 되돌린다. 확인 후 임시 로그를 지운다.
+1. 상세 진입 → 뒤로 → 재진입을 `staleTime` 값별로 반복하며 요청 로그를 센다.
+2. 홈 버튼으로 앱을 내렸다가 30초 이상 뒤에 돌아온다. 요청이 다시 나가는지 본다.
+3. 오프라인 스위치로 예측 3의 후반부(`status`와 `fetchStatus`)를 확인한다.
+4. 깨뜨려 보기: `AppState` 연결 `useEffect`를 주석 처리하고 같은 백그라운드 복귀 실험을 다시 한다. 재요청이 나가는지 관찰한 결과를 적고 되돌린다. 이 결과를 RN 문서가 `AppState` 연결을 안내하는 이유와 연결해 한 줄로 적는다.
 
 > 다른 지점:
 
 ## 이해 점검 질문
 
-1. `data`가 `Post[]`가 아니라 `{ pages, pageParams }`인 이유는? 그래서 어떤 코드를 바꿔야 했는가?
-2. `onEndReached`에서 `fetchNextPage()` 앞에 `hasNextPage && !isFetchingNextPage`를 확인하는 이유는?
-3. 당겨서 새로고침하면 왜 첫 페이지만이 아니라 불러온 페이지를 순서대로 다시 요청하는가?
+1. 쿼리 키를 `['posts', id]`처럼 변수를 넣어 만드는 이유는? 변수를 빼고 `['posts']`로 두면 어떤 증상이 생기는가?
+2. `staleTime`과 `gcTime`은 각각 무엇을 정하는가? 둘이 어떻게 다른가?
+3. 오프라인일 때 쿼리의 `status`가 `error`가 아니라 `pending` + `fetchStatus: 'paused'`가 되는 이유는?
 
 <details><summary>정답</summary>
 
-1. 페이지마다 응답을 따로 보관하고(`pages`), 각 페이지를 요청할 때 쓴 파라미터(`pageParams`)도 함께 기억해야 첫 페이지부터 같은 파라미터로 다시 받을 수 있기 때문이다. 그래서 목록으로 쓸 때 `pages.flat()`이 필요했고, 삭제 mutation의 `setQueriesData`도 각 페이지를 `map`으로 돌며 필터링하도록 고쳐야 했다.
-2. `onEndReached`는 스크롤 중 여러 번 호출될 수 있고, 무한 쿼리는 요청을 하나만 돌릴 수 있다. 이미 받는 중(`isFetchingNextPage`)이거나 다음 페이지가 없는데(`hasNextPage`가 false) 호출하면 중복·불필요한 요청이 생기거나 진행 중인 요청이 취소될 수 있다(`fetchNextPage`의 `cancelRefetch` 기본값이 true이기 때문이다).
-3. 문서는 다시 가져올 때 첫 페이지부터 순서대로 가져와야 커서(페이지 파라미터)가 유효하게 이어진다고 설명한다. 한 캐시 항목에 여러 페이지가 묶여 있어서, 일부만 새로 받으면 페이지 사이가 어긋날 수 있기 때문이다.
+1. 키가 캐시 항목의 이름이라서, 변수를 넣어야 변수마다 별도의 캐시가 생기고 변수가 바뀔 때 재요청이 일어난다. `['posts']`로 두면 글 1의 상세와 글 2의 상세가 같은 캐시를 공유해, 다른 글을 열어도 이전 글 내용이 보이거나 재요청이 일어나지 않는다.
+2. `staleTime`은 받은 데이터를 "신선하다"고 볼 시간으로, 그 안에는 재요청하지 않는다(기본 0). `gcTime`은 쓰는 곳이 없어진(inactive) 캐시를 메모리에서 지우기까지 기다리는 시간이다(기본 5분). 하나는 재요청 여부, 다른 하나는 캐시 보관 기간이다.
+3. 오프라인은 서버가 거부한 것이 아니라 요청을 아직 못 보낸 상태이기 때문이다. `networkMode: 'online'`에서는 연결이 없으면 `queryFn`을 실행하지 않고 대기(`paused`)하다가 연결이 돌아오면 이어서 실행한다. `status`는 데이터를 아직 못 받았다는 뜻의 `pending`으로 남는다. 그래서 스피너를 `pending`만 보고 그리면 오프라인에서 영원히 도는 것처럼 보인다. (근거: https://tanstack.com/query/latest/docs/framework/react/guides/network-mode 의 `fetchStatus` 설명)
 
 </details>
 
@@ -95,5 +91,10 @@ const query = useInfiniteQuery({
 
 ## 커밋 단위 제안
 
-- `feat: 피드를 useInfiniteQuery로 바꿔 무한 스크롤 구현`
-- `fix: 낙관적 삭제가 무한 쿼리 pages 구조를 다루도록 수정`
+- `refactor: 글 쿼리 키를 postKeys 팩토리로 모으기`
+- `feat: AppState를 focusManager에 연결하고 staleTime 기본값 설정`
+- `chore: 오프라인 흉내 스위치와 확인용 표시 제거`
+
+## 웹과 다른 점
+
+웹의 Query는 브라우저 창 포커스와 `online`/`offline` 이벤트를 자동으로 감지하지만, RN에는 브라우저 이벤트가 없어 `AppState`와 NetInfo를 직접 `focusManager`·`onlineManager`에 연결해야 한다.

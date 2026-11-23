@@ -1,73 +1,78 @@
-# Day 22 · 11/25 (수) — useReducer + Context 상태 관리
+# Day 22 · 11/26 (목) — 인증 흐름과 보호된 라우트(모의 로그인)
 
 ## 오늘의 목표
 
-내 기록 목록을 `useReducer` reducer와 Context(state용, dispatch용 둘)로 관리해서, 기록 탭에서 쓴 글이 피드 탭 헤더의 "내 기록 N개"에 바로 반영되게 한다.
+모의 로그인으로 토큰 문자열을 `AuthContext`에 넣고, `Stack.Protected`로 로그인 전에는 로그인 화면만, 로그인 후에는 탭 화면만 보이게 만든다.
 
 ## 읽기(15분)
 
-1. https://react.dev/learn/scaling-up-with-reducer-and-context — reducer와 Context를 합치는 방법.
-   - 확인할 사실: state용 context와 dispatch용 context를 따로 만든다. `TasksProvider`가 `useReducer`를 소유하고 두 context로 감싼다. `useTasks()`, `useTasksDispatch()` 같은 커스텀 훅으로 `useContext`를 감싼다.
-   - 확인할 사실: 문서가 둘로 나누는 이유 — dispatch만 쓰는 컴포넌트는 목록이 바뀌어도 다시 렌더될 필요가 없다.
-2. https://react.dev/reference/react/useReducer — reducer 규칙.
-   - 확인할 사실: reducer는 순수 함수여야 한다. Strict Mode(개발 환경)에서는 reducer를 두 번 호출한다.
-   - 확인할 사실: state를 직접 바꾸고 같은 객체를 반환하면 `Object.is` 비교가 같아서 React가 업데이트를 무시한다.
-   - 확인할 사실: `dispatch`는 identity가 안정적이다.
+1. https://docs.expo.dev/router/advanced/authentication/ — Context 세션 + `Stack.Protected` 예제.
+   - 확인할 사실: 모든 라우트는 항상 정의되어 있고, 런타임에 인증 상태로 접근을 막는다. `RootNavigator` 안에서 `<Stack.Protected guard={!!session}>`와 `<Stack.Protected guard={!session}>`로 화면 묶음을 나눈다.
+   - 확인할 사실: 로그아웃 화면에서는 `signOut()`만 호출하면 가드가 리다이렉트를 처리한다.
+2. https://docs.expo.dev/router/advanced/protected/ — 가드가 `false`가 될 때의 동작.
+   - 확인할 사실: 가드가 `true`에서 `false`로 바뀌면 그 화면의 history 항목이 모두 제거되고, 사용자는 anchor 라우트(보통 `index`) 또는 사용 가능한 첫 화면으로 보내진다.
+   - 확인할 사실: 보호된 화면은 클라이언트에서만 평가되며 서버 접근 제어를 대체하지 못한다.
+   - 주의: 이 두 페이지는 최신 문서다. `redirectTo` prop은 SDK 58+라고 적혀 있으니 쓰지 않는다. `Stack.Protected`가 SDK 54에서 그대로 동작하는지는 직접 실행해서 확인하고, 안 되면 "문서에서 확인 필요"로 막힌 점에 적는다.
 
 ## 예측(10분)
 
-1. reducer의 `added` case를 `state.push(action.log); return state;`로 쓰면 저장 버튼을 눌렀을 때 목록이 갱신되는가? 갱신된다면(또는 안 된다면) 왜인가?
+1. 로그인 성공 직후 `signIn()`만 호출하고 `router.replace`는 호출하지 않는다. 탭 화면으로 넘어가는가?
    > 내 예측:
-2. 저장 핸들러 안에서 `dispatch({ type: 'added', ... })`를 같은 내용으로 연달아 두 번 호출하고 id를 `Date.now().toString()`으로 만들면 목록과 콘솔에 무엇이 보이는가?
+2. 로그인한 상태에서 설정 탭의 "로그아웃"을 누르면 어느 화면이 보이는가? 그 상태에서 Android 하드웨어 뒤로가기(또는 iOS 스와이프 뒤로)를 하면 탭 화면이 다시 나오는가?
    > 내 예측:
-3. 입력창과 저장 버튼만 있는 컴포넌트가 `useLogsDispatch()`만 쓰고 `useLogs()`는 쓰지 않는다. 글이 추가될 때 이 컴포넌트가 다시 렌더되는가?
+3. 로그아웃한 뒤 다시 로그인하면, Day 21에서 저장한 내 기록은 남아 있는가 사라지는가? 그 이유는 `LogsProvider`가 어디에 있기 때문인가?
    > 내 예측:
 
 ## 만들기(40분)
 
-기록 탭에서 글을 쓰고, 목록에서 삭제·고정할 수 있게 한다. 피드 탭 헤더에는 "내 기록 N개"를 보여 준다. 피드의 글 목록은 Day 25에서 공개 API로 바꾸므로 오늘은 건드리지 않는다.
+Daily Log에 로그인 화면을 추가하고, 탭 3개와 상세 화면은 로그인 후에만 보이게 한다. 서버는 없다. 토큰은 메모리(state)에만 있고 앱을 다시 켜면 사라진다. 저장은 Day 35에서 한다.
 
 **새 파일**
-- `src/state/logsReducer.ts`: 순수 함수 `logsReducer(state: LogEntry[], action: LogsAction): LogEntry[]`. 액션은 `{ type: 'added'; log: LogEntry }`, `{ type: 'removed'; id: string }`, `{ type: 'pinToggled'; id: string }` 세 가지(discriminated union). 새 배열을 반환하고 `state`를 바꾸지 않는다. 새 `LogEntry`의 id는 reducer 안이 아니라 저장 핸들러에서 만들어 action에 담아 보낸다.
-- `src/contexts/LogsContext.tsx`: `LogsContext`와 `LogsDispatchContext` 두 개, `LogsProvider`(내부에서 `useReducer(logsReducer, [])`), 훅 `useLogs()`, `useLogsDispatch()`(Day 21의 `useProfile`처럼 Provider 밖이면 throw).
-
-```ts
-type LogsAction =
-  | { type: 'added'; log: LogEntry }
-  | { type: 'removed'; id: string }
-  | { type: 'pinToggled'; id: string };
-```
+- `src/contexts/AuthContext.tsx`: `AuthProvider`, `useAuth()`(Provider 밖이면 throw). 값은 `{ token: string | null; signIn: (email: string, password: string) => Promise<void>; signOut: () => void }`. `signIn`은 `setTimeout` 600ms로 서버 응답을 흉내 낸 뒤, 이메일이 비었거나 비밀번호가 4자 미만이면 `throw new Error('...')`, 아니면 `` `mock-${Date.now()}` `` 같은 문자열을 token으로 저장한다.
+- `app/sign-in.tsx`: 이메일·비밀번호 `TextInput`(Day 5, `secureTextEntry`), "로그인" 버튼. 제출 중에는 버튼을 비활성화하고 `ActivityIndicator`를 보이며, `signIn`이 던진 에러 메시지를 화면에 표시한다.
 
 **고칠 파일**
-- `src/types/log.ts`: Day 10의 `LogEntry`(`id: string`, `title`, `body`, `createdAt: number`)에 `pinned: boolean`을 추가한다. 새 타입을 만들지 않고 `text` 필드도 쓰지 않는다.
-- `app/_layout.tsx`의 `RootLayout`: `LogsProvider`를 `ProfileProvider`와 같은 높이에 둔다.
-- 기록 탭 `app/(tabs)/write.tsx`: Day 5·6의 `TextInput`과 저장 버튼에 `dispatch({ type: 'added', ... })`를 연결하고, 저장 후 입력을 비운다. 그 아래에 Day 10의 기록 `FlatList`와 `LogItem`으로 내 기록 목록을 그린다. 각 행의 "고정"(`pinToggled`)과 "삭제"(`removed`) 버튼은 `LogItem`의 콜백 props로 받는다. 고정된 글이 위로 오게 정렬한다(정렬은 reducer가 아니라 렌더 쪽에서 해도 된다).
-- 피드 탭 `app/(tabs)/index.tsx`: 헤더(Day 21의 인사 문구 옆)에 `내 기록 {logs.length}개`.
+- `app/_layout.tsx`: `AuthProvider`를 `ProfileProvider`, `LogsProvider`와 같은 높이(`Stack` 위)에 둔다. `Stack`은 `RootNavigator` 컴포넌트로 빼서 안에서 `useAuth()`를 쓴다.
+
+```tsx
+<Stack.Protected guard={!!token}>
+  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+  <Stack.Screen name="post/[id]" />
+  <Stack.Screen name="about" options={{ presentation: 'modal' }} />
+</Stack.Protected>
+<Stack.Protected guard={!token}>
+  <Stack.Screen name="sign-in" />
+</Stack.Protected>
+```
+
+Day 15·18에서 `app/_layout.tsx`의 `Stack`에 달았던 `Stack.Screen` 옵션(`post/[id]`의 기본 제목, `about`의 `presentation: 'modal'`)은 `RootNavigator` 안의 이 `Stack.Screen`들로 옮긴다.
+
+- 설정 탭 `app/(tabs)/settings/index.tsx`: "로그아웃" 버튼에서 `signOut()` 호출. 현재 로그인 토큰의 앞부분을 작게 보여 주는 `Text`를 하나 둔다(디버깅용).
 
 완료 기준
-- [ ] reducer가 `state`를 변경하지 않고 매번 새 배열을 반환한다(`push`, `splice`, `sort`를 state에 직접 쓰지 않는다).
-- [ ] 기록 탭에서 저장하면 피드 탭 헤더의 개수가 바로 늘고, 삭제하면 줄어든다.
-- [ ] 고정 토글이 동작하고 고정된 글이 목록 맨 위에 보인다.
-- [ ] 컴포넌트는 `useReducer`를 직접 부르지 않고 `useLogs()`/`useLogsDispatch()`만 쓴다.
-- [ ] 같은 내용을 빠르게 두 번 저장해도 key 경고가 없다(경고가 나면 id 생성 방식을 고친다).
+- [ ] 앱을 켜면 로그인 화면이 먼저 보이고 탭 바는 없다.
+- [ ] 잘못된 입력(빈 이메일, 4자 미만 비밀번호)이면 에러 문구가 보이고 화면이 안 넘어간다.
+- [ ] 로그인 성공 시 `router.replace`를 직접 호출하지 않았는데도 탭 화면이 나온다.
+- [ ] 로그아웃하면 로그인 화면이 나오고, 뒤로가기로 탭 화면에 돌아갈 수 없다.
+- [ ] 제출 중에는 버튼이 눌리지 않는다(연타해도 `signIn`이 한 번만 실행된다).
 
 ## 검증(10분)
 
-- 기록 탭에서 글 3개를 저장 → 하나 고정 → 하나 삭제하고, 피드 탭의 개수가 매번 맞는지 확인한다.
-- 예측 1·2·3의 실제 결과를 적는다. 3번은 입력 컴포넌트 맨 위에 `console.log('입력 render')`를 달아 센다(확인 후 삭제).
-- 일부러 깨뜨리기: `added` case를 `state.push(action.log); return state;`로 바꾸고 저장해 본다. 목록이 갱신되는지, 개발 환경에서 항목이 두 번 들어가는지 확인한 뒤 원복한다.
+- 위 완료 기준 순서대로 시뮬레이터에서 눌러 본다. 예측 1·2의 실제 결과를 적는다.
+- 내 기록을 2개 만든 뒤 로그아웃 → 다시 로그인한다. 기록이 남아 있는지 확인한다(예측 3). 남아 있다면 다른 계정이 로그인해도 보인다는 문제가 있다. `LogsProvider`를 `app/(tabs)/_layout.tsx`로 옮기고 같은 순서를 반복해서 기록이 사라지는지 확인한다(가드가 `false`가 되면 보호된 화면이 제거되므로 그 안의 Provider state도 사라지는지 실험으로 판단한다). 최종 위치는 직접 결정하고 이유를 기록 칸에 적는다.
+- 일부러 깨뜨리기: 두 `Stack.Protected` 가드를 모두 `true`로 바꿔 보고 어떤 화면이 첫 화면으로 보이는지 확인한다.
 
 ## 이해 점검 질문
 
-1. reducer에서 `state.push(...)`로 바꾸고 `return state`하면 왜 화면이 안 바뀌거나 항목이 중복되는가?
-2. 왜 state context와 dispatch context를 나누는가? 합쳐서 `{ logs, dispatch }` 하나로 내려주면 어떤 차이가 생기는가?
-3. 새 글의 id를 reducer 안에서 `Date.now()`로 만들면 안 되는 이유는 무엇인가?
+1. 로그인 후 `router.replace('/')` 없이 화면이 바뀌는 이유는 무엇인가?
+2. 가드가 `false`가 될 때 해당 화면들의 history가 제거되는 것이 로그아웃 후 보안/UX에 왜 중요한가?
+3. 이 방식의 보호가 하지 못하는 일은 무엇인가? (서버, 토큰 보관 측면에서)
 
 <details><summary>정답</summary>
 
-1. React는 이전 state와 다음 state를 `Object.is`로 비교하고, 같으면 업데이트를 무시한다. 같은 배열을 변경해서 반환하면 참조가 같으므로 화면이 안 바뀐다. 또 Strict Mode(개발)는 reducer를 두 번 호출하므로, 직접 변경하는 reducer는 항목이 두 번 들어가는 식으로 실수가 드러난다. 해결은 `[...state, action.log]`처럼 새 배열을 만드는 것이다.
-2. dispatch는 identity가 안정적이라 바뀌지 않는다. dispatch만 필요한 컴포넌트(입력창)가 state context까지 구독하면 목록이 바뀔 때마다 불필요하게 다시 렌더된다. 합쳐서 하나의 객체로 내리면 `value`가 렌더마다 새 객체가 되어 dispatch만 쓰는 소비자도 같이 렌더된다. 나누면 dispatch 소비자는 state 변화에 영향받지 않는다.
-3. reducer는 순수해야 하는데 `Date.now()`는 호출할 때마다 값이 달라지는 부수 효과다. Strict Mode에서 reducer가 두 번 불리면 결과가 달라질 수 있다. id는 이벤트 핸들러(저장 버튼)에서 만들어 action에 담아야 한다. 같은 밀리초에 두 번 저장하면 `Date.now()` id가 겹치므로 id 생성 방식(카운터 등)도 함께 고려한다.
+1. `token`이 바뀌면 `AuthProvider`가 다시 렌더되어 `RootNavigator`의 가드 값(`!!token`, `!token`)이 바뀐다. 라우터는 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 사용 가능하게 한 뒤, 현재 위치가 막히면 anchor 또는 첫 사용 가능 화면으로 보낸다. 상태가 화면을 결정하므로 이동을 명령할 필요가 없다.
+2. 가드가 `false`가 되면 history 항목이 지워지므로 로그아웃 뒤 뒤로가기로 이전 로그인 화면(탭, 상세)에 돌아갈 수 없다. history가 남아 있으면 다른 사용자가 이전 사용자의 화면을 볼 수 있다.
+3. `Stack.Protected`는 클라이언트에서만 화면 접근을 막을 뿐 서버 접근 제어를 대체하지 못한다. 실제 데이터 보호는 서버가 토큰을 검증해야 한다. 또 오늘의 토큰은 메모리에만 있어서 앱을 재시작하면 로그인이 풀린다(Day 35 SecureStore에서 보관한다).
 
 </details>
 
@@ -79,6 +84,6 @@ type LogsAction =
 
 ## 커밋 단위 제안
 
-- `feat: 기록 reducer와 LogsContext 추가`
-- `feat: 기록 탭에 저장·삭제·고정 연결`
-- `feat: 피드 헤더에 내 기록 개수 표시`
+- `feat: AuthContext와 모의 로그인 화면 추가`
+- `feat: Stack.Protected로 로그인 전후 라우트 분리`
+- `feat: 설정 탭에 로그아웃 추가`

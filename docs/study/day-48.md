@@ -1,118 +1,83 @@
-# Day 48 · 12/31 (목) — 푸시 토큰과 알림 탭 처리
-
-> 건너뛰기 가능: 푸시 토큰은 실기기와 development build, 플랫폼 자격 증명(iOS는 유료 Apple Developer 계정, Android는 FCM 설정)이 있어야 끝까지 확인할 수 있다. 3일 이상 밀렸으면 "읽기"만 한다. 이 카드의 A부(알림 탭 처리)는 시뮬레이터에서 되므로 시간이 있으면 A부만 해도 의미가 있다.
+# Day 48 · 1/1 (금) — 버퍼 + 10주차 점검
 
 ## 오늘의 목표
 
-알림을 탭하면 알림에 담긴 경로로 앱이 이동하게 만들고(A부), 푸시 토큰 발급 코드를 환경 가드와 함께 작성한다(B부).
+이번 주(Day 44~47)에서 가장 헷갈린 개념을 정답을 가리고 풀어 보고, 밀린 Day를 흡수한다. 건너뛴 Day(46, 48)가 있다면 읽기만이라도 여기서 채운다.
 
-## 읽기(15분)
+## 주간 점검 퀴즈(30분)
 
-> 확인할 버전: `docs.expo.dev/...` 링크는 최신 문서(SDK 58 기준)를 보여 준다. SDK 54에 고정되는 패키지는 `expo-notifications ~0.32`다. 푸시 관련 사실은 SDK 54 문서 원문에서 확인했지만, 최신 문서와 경고 문구가 다를 수 있다.
+정답을 가리고 먼저 답을 쓴다. 답을 이 카드에 먼저 적고, 채점 결과는 `docs/rules.md`의 규칙대로 `docs/quiz/2027-01-01-day-49.md`에 `AGENTS.md`의 상세 구조(문항별 내 답, 문제점, 정답, 암기 고리, 근거 절 + 종합 약점 패턴 + 재복습 일정)로 기록한다.
 
-1. [Notifications — Handle push notifications with navigation](https://docs.expo.dev/versions/latest/sdk/notifications/)
-   - Expo Router 탭의 예제에서 `Notifications.getLastNotificationResponse()`(앱이 알림 탭으로 막 시작됐을 때의 응답)와 `Notifications.addNotificationResponseReceivedListener`(실행 중 탭)를 한 `useEffect` 안에서 함께 쓰는 형태를 확인한다. 반환된 구독의 `remove()`를 cleanup에서 호출하는 줄도 확인한다.
-   - 예제의 `redirect` 함수를 찾는다: `data?.url`이 문자열일 때만 `router.push(url)`을 부르고 `Notifications.clearLastNotificationResponse()`로 처리한 응답을 비운다. 같은 `useEffect`가 앱이 알림으로 켜진 경우(`getLastNotificationResponse`)와 실행 중 알림을 탭한 경우(`addNotificationResponseReceivedListener`)를 모두 처리한다. SDK 54 문서에 있던 주석 두 개("Push the URL. You may want to verify the format before navigating", "Ensure this layout never returns null or the navigation will go unhandled")는 최신 문서에서 빠졌다. URL 형식을 확인하라는 주의는 최신 예제의 `typeof url === 'string'` 검사로 남아 있다.
-   - 상단 경고에서 Android Expo Go의 원격 푸시 제한을 다시 읽는다.
-2. [푸시 알림 설정 가이드](https://docs.expo.dev/push-notifications/push-notifications-setup/)
-   - Prerequisites 경고: Android 에뮬레이터와 iOS 시뮬레이터에서는 푸시가 지원되지 않고 실기기가 필요하다.
-   - 클라이언트가 준비해야 할 두 가지가 "사용자의 푸시 권한"과 "앱의 `ExpoPushToken`"이라는 점, 토큰을 받는 코드에서 `projectId`를 `Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId`로 읽는 부분을 확인한다.
-   - "Get credentials for development builds"에서 iOS는 유료 Apple Developer 계정이 필요하고 Android는 FCM 자격 증명 설정이 필요하다는 문장을 찾는다.
-   - "Test using the push notifications tool" 절에서 Expo의 푸시 알림 테스트 도구로 토큰을 입력해 시험 알림을 보내는 절차를 읽는다.
-3. [알림 종류와 동작(What you need to know)](https://docs.expo.dev/push-notifications/what-you-need-to-know/)
-   - "Remote and Local notifications" 절에서 푸시(원격)와 로컬 알림의 정의, 그리고 푸시는 Expo Go에 내장되어 있지 않아 development build가 필요하다는 문장을 확인한다.
-   - 앱 상태 세 가지(Foreground, Background, Terminated)의 정의와, 알림과 상호작용(탭)했을 때 상태별로 어떤 리스너가 불리는지 보여 주는 표를 읽는다. iOS는 세 상태 모두 `NotificationResponseReceivedListener`이고, Android는 Terminated에서 JS task라는 점을 적는다.
-   - 앱이 종료된 상태에서 알림 탭으로 시작될 때 iOS에서는 리스너를 모듈 최상위처럼 일찍 등록해야 한다는 info 문장을 찾는다.
+1. (Day 44) `requestForegroundPermissionsAsync()`가 `status: 'granted'`를 돌려줘도 설정 탭에서 `ios.scope`나 `android.accuracy`를 함께 보여 주는 이유를 쓰시오. 그리고 `getCurrentPositionAsync`와 `getLastKnownPositionAsync`를 언제 각각 쓰는지 쓰시오.
 
-## 예측(10분)
+> 내 답:
 
-1. 앱이 완전히 종료된 상태에서 로컬 알림을 탭해 앱을 켰다. 처음 렌더링된 뒤 어떤 함수로 "방금 탭한 알림"을 알 수 있을까? 앱이 이미 실행 중일 때 탭하는 경우와 API가 같을까, 다를까?
+2. (Day 44) 사용자가 설정 앱에서 위치 권한을 끄고 돌아왔는데 설정 탭의 권한 표시가 그대로다. 원인과 해결 방법을 쓰시오.
 
-> 내 예측:
+> 내 답:
 
-2. 시뮬레이터에서 `getExpoPushTokenAsync`를 그대로 호출하면 어떻게 될까? 호출 전에 어떤 값으로 막아야 할까?
+3. (Day 45) 지도 코드가 Expo Go에서는 추가 설정 없이 동작하는데 스토어용 Android 바이너리에서는 무엇을 추가로 해야 하는가? `MapView`가 화면에 보이지 않는 대표적인 원인 한 가지도 쓰시오.
 
-> 내 예측:
+> 내 답:
 
-3. 알림의 `data.url`에 앱에 없는 경로가 담겨 있으면 `router.push(url)`은 어떤 화면으로 가게 될까?
+4. (Day 46) 앱이 포그라운드일 때 로컬 알림 배너를 보이게 하려면 무엇을 어디에 설정해야 하는가? `DAILY` 트리거로 21시 알림을 예약하는 호출 형태와, Android 13 이상에서 권한 요청 전에 해야 할 일을 쓰시오.
 
-> 내 예측:
+> 내 답:
 
-## 만들기(40분)
+5. (Day 47) 알림을 탭해 앱 안의 특정 화면으로 이동시키려면 어떤 두 API를 함께 써야 하는가? 푸시 토큰이 시뮬레이터에서 발급되지 않는 이유와, 알림 `data.url`을 `router.push`에 넘기기 전에 해야 할 일을 쓰시오.
 
-### A부. 알림 탭 처리 (시뮬레이터 가능, 25분)
-
-- `src/hooks/useNotificationObserver.ts` (새 파일): 읽기 1의 예제 형태를 따르는 훅.
-  - `useEffect` 안에서 `getLastNotificationResponse()`로 시작 시 응답을 처리하고, `addNotificationResponseReceivedListener`로 실행 중 응답을 처리한다.
-  - `data.url`이 문자열이고 `/`로 시작할 때만 `router.push(url)`을 호출한다(경로 형식 검증). 검증을 통과하지 못하면 아무것도 하지 않는다.
-  - cleanup에서 구독을 `remove()`한다(Day 13).
-- `app/_layout.tsx`: 루트 레이아웃 컴포넌트에서 이 훅을 호출한다. Day 23의 로그인 보호 로직이 로딩 중에 `null`을 반환하고 있다면, 알림 처리가 놓치지 않도록 훅 호출 위치와 반환 구조를 점검한다.
-- Day 47의 `enableDailyReminder`와 테스트 알림에 넣어 둔 `data: { url: '/(tabs)/write' }`로 탭 이동을 시험한다.
-
-### B부. 푸시 토큰 (코드 작성 15분, 실행은 실기기 + dev build에서만)
-
-설치: `expo-notifications`와 `expo-device`는 Day 47에서 설치했다. `expo-constants`는 템플릿에 이미 들어 있는지 `package.json`으로 확인하고, 없을 때만 `npx expo install expo-constants`를 실행한다.
-
-- `src/lib/notifications.ts`(Day 47)에 `registerForPushToken()`을 추가한다. 순서는 다음과 같다.
-  1. `Device.isDevice`가 `false`이면 `{ ok: false, reason: '실기기에서만 발급됩니다' }`를 돌려준다.
-  2. Day 47의 `ensureNotificationPermission()`으로 권한을 확인한다. 거부되면 `{ ok: false, reason: '알림 권한이 필요합니다' }`.
-  3. `projectId`를 읽고 없으면 `{ ok: false, reason: 'EAS projectId가 없습니다' }`.
-  4. `Notifications.getExpoPushTokenAsync({ projectId })`의 `data`를 `{ ok: true, token }`으로 돌려준다.
-- `app/(tabs)/settings/index.tsx`: "푸시 토큰 받기" 버튼과 결과 영역을 추가한다. 성공하면 토큰을 `selectable` 텍스트로, 실패하면 `reason`을 보여 준다.
-- 토큰은 화면 표시와 개발 중 복사 용도로만 쓴다. 저장소, 로그 공유, 스크린샷 공유에 올리지 않는다.
-
-핵심 호출 형태:
-
-```ts
-const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-if (!projectId) return { ok: false, reason: 'EAS projectId가 없습니다' };
-const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-```
-
-완료 기준:
-
-- [ ] 앱이 실행 중일 때 알림을 탭하면 `data.url`의 화면으로 이동한다.
-- [ ] 앱을 완전히 종료한 상태에서 알림을 탭해 시작해도 같은 화면으로 이동한다.
-- [ ] `data.url`이 문자열이 아니거나 `/`로 시작하지 않으면 이동하지 않는다.
-- [ ] 구독을 cleanup에서 해제한다.
-- [ ] 시뮬레이터에서 "푸시 토큰 받기"를 누르면 앱이 죽지 않고 "실기기에서만 발급됩니다"가 보인다.
-- [ ] (환경이 있을 때만) dev build를 설치한 실기기에서 토큰이 표시된다.
-
-## 검증(10분)
-
-- A부: Day 47의 5초 테스트 알림을 눌러 앱을 완전히 종료(앱 전환기에서 위로 밀어 종료)하고 알림이 뜨면 탭한다. 예측 1과 비교한다. 같은 흐름을 앱이 켜진 상태에서도 해 본다.
-- B부: 시뮬레이터에서 버튼을 눌러 예측 2와 비교한다. 실기기·dev build가 준비되어 있다면 토큰을 얻고, 푸시 가이드의 테스트 도구로 시험 알림을 보내 탭 이동까지 확인한다. 환경이 없으면 "실기기 확인 못 함"이라고 기록 칸에 적는다.
-- 일부러 깨뜨리기: 테스트 알림의 `data.url`을 앱에 없는 경로(예: `/없는경로`)로 바꿔 탭한다. 예측 3과 비교해 Day 20에서 만든 not-found 화면이 뜨는지 보고, 검증 로직을 어떻게 더 엄격하게 할지 한 줄로 적은 뒤 되돌린다.
-
-## 이해 점검 질문
-
-1. 알림 탭을 처리할 때 `getLastNotificationResponse()`와 `addNotificationResponseReceivedListener`를 둘 다 써야 하는 이유는 무엇인가?
-2. 푸시 토큰이 시뮬레이터나 Android Expo Go에서 발급되지 않는 이유는 각각 무엇이고, 어떤 환경이 필요한가?
-3. 알림 `data.url`을 검증 없이 `router.push`에 넘기면 안 되는 이유는 무엇인가?
+> 내 답:
 
 <details>
 <summary>정답</summary>
 
-1. 실행 중에 탭하면 리스너가 이벤트를 받지만, 앱이 종료된 상태에서 탭해 시작되면 리스너를 등록하기 전에 이미 응답이 발생한 뒤다. `getLastNotificationResponse()`가 그 "시작 시점의 마지막 응답"을 조회하고, 리스너는 이후의 탭을 처리한다. 둘이 서로의 빈틈을 메운다.
-2. 시뮬레이터와 에뮬레이터는 푸시 서비스에 등록할 수 있는 실기기가 아니라서 지원되지 않는다(가이드의 경고). Android Expo Go는 SDK 53부터 원격 푸시가 제거되어 development build가 필요하다. 따라서 실기기 + development build + 플랫폼 자격 증명(iOS는 유료 Apple Developer 계정, Android는 FCM)이 필요하다.
-3. 알림의 `data`는 보낸 쪽이 임의로 채울 수 있는 값이다. 앱에 없는 경로, 인증이 필요한 화면, 외부 주소가 담겨도 그대로 이동하면 예기치 않은 화면이 열린다. 문서 예제도 이동 전에 형식을 검증하라고 안내한다. 최소한 문자열인지, 허용된 경로 형태인지 확인한다.
+1. `granted`여도 접근 범위가 다르다. iOS는 `whenInUse`와 `always`가 있고(`Allow Once`도 `whenInUse`로 보여 구분되지 않는다), Android는 정밀(`fine`)과 대략(`coarse`) 위치를 구분한다. `getCurrentPositionAsync`는 새로 측정하므로 정확하지만 몇 초 걸릴 수 있어 "지금 위치를 기록에 붙일 때" 쓰고, `getLastKnownPositionAsync`는 마지막 값을 바로 돌려주므로 빠르지만 오래됐거나 `null`일 수 있어 빠른 초기 표시용으로 쓴다.
+2. 권한 상태는 한 번 조회해 `state`에 둔 값일 뿐이라 설정 앱에서 바뀐 것을 React가 알지 못한다. `AppState`가 `active`로 바뀔 때 권한을 다시 조회(`useForegroundPermissions`가 돌려주는 `get`)해 상태를 갱신하고, 구독은 cleanup에서 해제한다.
+3. 스토어용 Android 바이너리는 Google Cloud에서 받은 API 키를 `app.json`의 `android.config.googleMaps.apiKey`에 넣고(최신 SDK 58 문서는 `plugins`의 `react-native-maps` 설정에 `androidGoogleMapsApiKey`를 넣는 방식으로 안내한다. SDK 54에서는 앞의 방식이다) `provider={PROVIDER_GOOGLE}`을 지정한 뒤 앱을 다시 빌드해야 한다(SDK 54 문서). 지도가 안 보이는 대표 원인은 `MapView`나 부모에 폭·높이가 정해지지 않아 크기가 0이 되는 것이다.
+4. 앱 최상위(`app/_layout.tsx`의 컴포넌트 밖)에서 `Notifications.setNotificationHandler`를 호출하고 `shouldShowBanner`, `shouldShowList`를 `true`로 반환한다(`shouldShowAlert`는 deprecated). 예약은 `scheduleNotificationAsync({ content, trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 21, minute: 0 } })`다. Android 13 이상은 알림 채널이 하나 이상 만들어져야 권한 프롬프트가 뜨므로 `setNotificationChannelAsync`를 먼저 호출한다.
+5. 앱 시작 시의 응답을 얻는 `getLastNotificationResponse()`와 실행 중 탭을 받는 `addNotificationResponseReceivedListener`를 함께 쓴다. 시뮬레이터·에뮬레이터는 푸시 서비스에 등록할 수 있는 실기기가 아니라서 지원되지 않는다. `data.url`은 보낸 쪽이 채우는 값이므로 문자열인지, 허용된 경로 형태(예: `/`로 시작)인지 검증한 뒤에만 이동한다.
 
 </details>
+
+채점 후 틀린 문항은 해당 Day 카드의 이해 점검 질문과 근거 읽기 절을 다시 읽는다.
+
+## 구술 1주제(15분)
+
+주제: "기록 작성 화면에서 현재 위치를 붙이고, 매일 알림을 받고, 알림을 탭하면 기록 탭으로 돌아오기까지"를 소리 내어 3분 안에 설명한다. 아래 핵심어를 모두 포함한다.
+
+- `requestForegroundPermissionsAsync`와 `canAskAgain`
+- `getCurrentPositionAsync`와 `reverseGeocodeAsync`
+- `setNotificationHandler`
+- `DAILY` 트리거
+- `getLastNotificationResponse`와 `data.url` 검증
+
+설명하다 막힌 지점을 아래에 적는다.
+
+> 막힌 지점:
+
+## 질문 목록 처리(15분)
+
+`docs/questions.md`에 쌓인 질문 중 이번 주(Day 44~47)에 적은 것부터 처리한다. 각 질문마다 아래 순서를 지킨다.
+
+1. 에러 메시지 원문으로 검색한다.
+2. 공식 문서의 해당 절을 읽는다.
+3. 해결하면 질문 옆에 답을 한 줄로 적고, 못 풀면 다음 주 버퍼로 넘긴다고 표시한다.
+
+- [ ] 이번 주 질문 전부를 열어 봤다.
+- [ ] 해결한 질문에 답을 적었다.
+- [ ] 못 푼 질문은 이월 표시를 했다.
+
+## 밀린 Day 흡수
+
+달력이 아니라 Day 번호가 기준이다. 밀린 Day가 있다면 남는 시간에 한다. Day 45과 Day 47은 건너뛸 수 있는 Day이므로, 건너뛰었다면 카드의 읽기 절만 읽고 아래에 체크한다.
+
+- [ ] Day 44(expo-location)
+- [ ] Day 45(react-native-maps) 만들기 또는 읽기만
+- [ ] Day 46(로컬 알림)
+- [ ] Day 47(푸시 토큰과 알림 탭 처리) 만들기 또는 읽기만
 
 ## 기록(5분)
 
 배운 것 3줄:
 
 막힌 점:
-
-실기기 + dev build로 토큰까지 확인했는가(예 / 아니오 / 환경 없음):
-
-## 커밋 단위 제안
-
-- `feat: 알림 탭 시 data.url 경로로 이동하는 훅 추가`
-- `feat: 설정 탭에 푸시 토큰 발급 버튼과 환경 가드 추가`
-- `fix: 알림 응답 구독 cleanup 누락 수정`
-
-## 웹과 다른 점
-
-웹 푸시는 서비스 워커와 구독 객체를 쓰지만, 앱의 푸시는 플랫폼 푸시 서비스(FCM·APNs)에 등록한 토큰을 서버가 알고 있어야 하고, 실기기와 네이티브 자격 증명이 있어야 시험할 수 있다.

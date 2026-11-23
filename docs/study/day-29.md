@@ -1,93 +1,101 @@
-# Day 29 · 12/4 (금) — 버퍼 + 6주차 점검
+# Day 29 · 12/7 (월) — useMutation과 캐시 무효화
+
+> 전제: Day 26의 `src/api/client.ts`(`request`, `ApiError`)와 `src/api/posts.ts`(`getPosts`, `getPost`), Day 27의 `src/hooks/usePosts.ts`(키 `['posts', { userId }]`)와 `app/_layout.tsx`의 `QueryClientProvider`, Day 21의 기록 탭(`app/(tabs)/write.tsx`)이 있다.
 
 ## 오늘의 목표
 
-6주차(Day 25~28: fetch 상태 관리, 취소와 경쟁 상태, API 모듈과 에러 모델, `useQuery`) 내용을 정답을 가리고 풀어 보고, 밀린 Day와 질문 목록을 정리한다.
+기록 탭에서 쓴 글을 `useMutation`으로 서버에 게시하고, 성공하면 피드 쿼리를 무효화해 다시 불러오게 한다.
 
-## 주간 점검 퀴즈(30분)
+## 읽기(15분)
 
-정답은 접힌 상태에서 먼저 자기 답을 적은 뒤 연다. 결과는 `docs/quiz/2026-12-04-day-29.md`에 `AGENTS.md`의 상세 구조(문항별 내 답 → 문제점 → 정답 → 암기 고리 → 근거 절, 종합 약점 패턴, 재복습 일정)로 기록한다.
+- https://tanstack.com/query/latest/docs/framework/react/guides/mutations
+  - `useMutation`은 쓰기(생성·수정·삭제) 전용이고 `status`는 `idle`, `pending`, `error`, `success` 중 하나다. v5에서는 진행 중 플래그 이름이 `isPending`이다.
+  - `mutate(variables)`는 바로 반환되고, `mutateAsync(variables)`는 Promise를 돌려주며 실패하면 throw한다.
+  - 콜백 실행 순서는 `onMutate` → `onSuccess`/`onError` → `onSettled`이고, 콜백이 Promise를 반환하면 다음 콜백 전에 기다린다.
+- https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations
+  - `onSuccess`에서 `queryClient.invalidateQueries({ queryKey: ['todos'] })`를 쓴다. 이 Promise를 `await`하거나 반환하면 재요청이 끝날 때까지 mutation이 `isPending`으로 남는다.
+- https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation
+  - `invalidateQueries`는 일치하는 쿼리를 stale로 표시하고, 지금 화면에서 쓰이는(active) 쿼리는 백그라운드에서 다시 가져온다.
+  - `['todos']`는 `['todos', { page: 1 }]`처럼 그 키로 시작하는 쿼리 전부와 일치한다(접두사 일치). 정확히 같은 키만 대상으로 하려면 `exact: true`를 쓴다.
 
-**Q1 (Day 25).** `fetch('.../postz')`가 404를 받았는데 `catch`에 들어오지 않는다. 왜 그런가, 그리고 어떻게 에러로 처리하는가?
+확인할 버전: 위 문서의 콜백 시그니처는 최신 v5 기준(`onSuccess(data, variables, onMutateResult, context)`)이다. 설치된 `@tanstack/react-query` 버전은 `npm ls @tanstack/react-query`로 확인하고, 콜백 인자가 문서와 다르면 에디터에서 `useMutation` 타입 정의를 열어 맞춘다.
 
-> 내 답:
+## 예측(10분)
+
+코드를 짜기 전에 적는다.
+
+1. 글을 게시해 서버가 성공 응답을 주고 `onSuccess`에서 `['posts']`를 무효화하면, 피드 화면에 방금 쓴 글이 나타날까? 나타난다면/아니라면 왜인가? (JSONPlaceholder의 쓰기 요청 동작은 https://jsonplaceholder.typicode.com/guide/ 의 "Write requests" 부분에서 확인한다.)
+
+> 내 예측:
+
+2. 게시 버튼에 `disabled={isPending}`를 달지 않고 빠르게 두 번 누르면 `mutationFn`은 몇 번 호출될까?
+
+> 내 예측:
+
+3. `onSuccess`에서 `invalidateQueries(...)`를 `return` 하지 않고(`await`도 하지 않고) 호출만 하면, `isPending`이 `false`가 되는 시점은 어떻게 달라질까?
+
+> 내 예측:
+
+## 만들기(40분)
+
+Daily Log의 기록 탭(`app/(tabs)/write.tsx`)에 "서버에 게시" 버튼을 추가한다. Day 21의 "저장"(로컬 기록 추가)은 그대로 둔다.
+
+새로 만들거나 고칠 파일:
+- `src/api/posts.ts`: `createPost(input: { title: string; body: string })` 추가(`POST /posts`). Day 26의 `request`가 `GET`만 다룬다면 `method`와 `body`를 받도록 옵션을 넓힌다. body에 `userId: 1`을 함께 보내고, 반환 타입은 `Post`(Day 24의 `src/types/post.ts`)로 한다.
+- `src/hooks/useCreatePost.ts`: Day 12의 커스텀 훅 패턴으로 `useMutation`을 감싼다(Day 27의 `src/hooks/usePosts.ts`와 같은 모양).
+- `app/(tabs)/write.tsx`: "서버에 게시" `Pressable`을 추가하고 Day 5의 제목·본문 상태를 `mutate`에 넘긴다.
+- `src/hooks/usePosts.ts`: `queryFn` 첫 줄에 확인용 `console.log('fetch posts')`를 임시로 넣는다(오늘 검증 후 지운다).
+
+핵심 호출 형태:
+
+```ts
+const queryClient = useQueryClient();
+return useMutation({
+  mutationFn: createPost,
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+});
+```
+
+완료 기준:
+- [ ] "서버에 게시"를 누르면 `mutate({ title, body })`가 호출된다. 제목이 비었거나 공백뿐이면 Day 5의 저장 버튼처럼 비활성화된다.
+- [ ] `isPending` 동안 버튼이 비활성화되고 라벨이 "게시 중..."으로 바뀐다.
+- [ ] 성공하면 서버가 돌려준 `id`를 화면 하단에 한 줄로 보여 준다. 입력칸은 비우지 않는다(로컬 "저장"과 독립적이다).
+- [ ] 실패하면 Day 26의 `getErrorMessage`에 `error`를 넘겨 나온 메시지를 `Text`로 보여 준다.
+- [ ] `onSuccess`가 `['posts']`를 무효화하고 그 Promise를 반환한다. 키 `['posts', { userId }]`가 접두사로 일치하므로 칩별 캐시가 모두 stale이 된다.
+- [ ] 게시 후 Metro 로그에 `fetch posts`가 한 번 더 찍히는지 확인했다.
+
+## 검증(10분)
+
+1. 시뮬레이터에서 기록 탭에 제목과 본문을 쓰고 "서버에 게시"를 누른다. 버튼 라벨이 바뀌는지, 응답 `id`가 101로 오는지 본다.
+2. 피드 탭으로 이동해 새 글이 보이는지 확인하고 예측 1과 비교한다. Metro 로그의 `fetch posts` 횟수도 센다.
+3. 예측 2·3을 실제로 확인한다. 예측 3은 `return`을 빼고 중괄호 본문에서 `invalidateQueries`만 호출하도록 바꿔 비교한 뒤 되돌린다.
+4. 깨뜨려 보기: `createPost` 안에서 일부러 `throw new Error('boom')` 한다. `onSuccess`가 호출되지 않고 피드가 다시 요청되지 않는지, 에러 문구가 화면에 나오는지 확인한 뒤 되돌린다.
+
+예측과 실제가 다른 지점을 적는다.
+
+> 다른 지점:
+
+## 이해 점검 질문
+
+1. `mutate`와 `mutateAsync`는 어떻게 다르고, 어느 쪽에서 `try/catch`가 필요한가?
+2. 무효화 후 피드가 다시 요청되는데도 방금 쓴 글이 목록에 없을 수 있다. 이유는?
+3. `invalidateQueries({ queryKey: ['posts'] })`는 `['posts', { userId: 2 }]`도 무효화하는가? 그 범위를 좁히려면 어떻게 하는가?
 
 <details><summary>정답</summary>
 
-`fetch`는 네트워크 수준 실패에서만 reject한다. 서버가 404/500을 응답하면 응답은 정상 도착한 것이어서 Promise가 성공하고 `response.ok`가 `false`가 된다. `if (!response.ok) throw new Error(...)`로 직접 던져서 `catch`에서 한 곳으로 처리한다.
+1. `mutate`는 결과를 돌려주지 않고 에러를 Query가 상태(`isError`, `error`)로 보관한다. `mutateAsync`는 Promise를 돌려주고 실패하면 throw하므로 `await` 하는 쪽에서 `try/catch`(또는 `.catch`)가 필요하다. 화면에 상태로만 보여 주면 되면 `mutate`가 단순하고, 다른 비동기 작업과 순서를 맞춰야 하면 `mutateAsync`를 쓴다.
+2. 무효화는 "서버에서 다시 받아 와라"일 뿐이다. JSONPlaceholder는 POST 응답만 그럴듯하게 꾸며 주고 실제로 저장하지 않으므로 다시 받아 온 목록에는 새 글이 없다. 실제 서버라면 새 글이 포함된다. 즉 재요청은 일어났지만 서버 데이터가 그대로라서다.
+3. 포함한다. 키는 앞부분부터 일치(접두사 일치)하므로 `['posts']`는 `['posts', { userId: 2 }]`도 대상으로 삼는다. 정확히 같은 키만 대상으로 하려면 `exact: true`를 주거나, `['posts', { userId: 2 }]`처럼 더 구체적인 키를 넘긴다.
 
 </details>
-
-**Q2 (Day 25).** 개발 환경에서 `useEffect` 안의 `fetch`가 두 번 실행되는 것처럼 보인다. 이것은 버그인가? 어떻게 대응하는 것이 맞는가?
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-React 문서에 따르면 개발 환경(Strict Mode)에서는 Effect를 마운트 직후 한 번 더 실행해 cleanup 누락을 찾는다. 프로덕션에서는 한 번이다. 요청이 한 번만 나가게 숨기는 대신, Effect가 다시 실행되어도 안전하도록 cleanup에서 이전 요청을 무시/취소하게 만든다. 이 앱에서 Day 26이 그 작업이다. 실제로 몇 번 찍히는지는 환경에 따라 다를 수 있으므로 Day 25 검증에서 직접 센 값을 기준으로 한다.
-
-</details>
-
-**Q3 (Day 26).** 사용자 칩 "1"을 누른 직후 "2"를 눌렀는데 화면에는 1번 사용자의 글이 보인다. 원인과 `ignore` 플래그 해법을 설명하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-요청 순서와 응답 도착 순서가 같다는 보장이 없어, 느린 1번 요청의 응답이 나중에 도착해 2번 결과를 덮어썼다(경쟁 상태). `useEffect` 안에서 `let ignore = false`를 두고 cleanup에서 `true`로 바꾸며, 응답 처리 시 `if (!ignore)`일 때만 state를 갱신한다. 의존성(`userId`)이 바뀔 때 이전 Effect의 cleanup이 먼저 실행되므로 오래된 응답이 무시된다.
-
-</details>
-
-**Q4 (Day 27).** `ApiError`에 `kind`와 `status`를 두는 이유와, `AbortError`를 `ApiError`로 감싸지 않고 그대로 던지는 이유를 설명하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-화면이 연결 문제(`network`)와 서버가 돌려준 오류(`http`, `status`)를 다르게 안내하려면 문자열 `message`가 아니라 안정적인 필드가 필요하다. `AbortError`는 의도적인 취소라 에러 화면을 띄우면 안 되므로, `ApiError`로 감싸지 않고 호출자가 이름으로 걸러내게 한다.
-
-</details>
-
-**Q5 (Day 28).** `useQuery({ queryKey: ['posts'], queryFn: () => getPosts({ userId }) })`처럼 `queryKey`에서 `userId`를 뺐을 때 생기는 문제를 설명하고, `isPending`과 `isFetching`의 차이도 한 문장으로 말하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-`queryKey`가 같으면 같은 캐시 항목으로 취급되어, 칩을 바꿔도 새로 가져오지 않고 이전 사용자의 글이 보인다. `queryFn`이 쓰는 변하는 값은 키에 넣어야 한다(`['posts', { userId }]`). `isPending`은 아직 캐시에 데이터가 없는 상태이고, `isFetching`은 데이터 유무와 상관없이 `queryFn`이 실행 중이면 참이다.
-
-</details>
-
-## 구술 1주제(15분)
-
-주제: "피드 화면이 열릴 때 서버 글이 화면에 보이기까지를, 수동 `useEffect` fetch 방식과 `useQuery` 방식으로 나눠 비교해 설명한다."
-
-포함할 핵심어: `response.ok`, 경쟁 상태, `AbortController`, `queryKey`, `isPending`
-
-설명 후 빠뜨린 핵심어를 적는다:
-
-## 질문 목록 처리(15분)
-
-`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 에러 원문과 시도한 것을 다시 읽고, 공식 문서에서 해당 절을 찾아 답을 적는다. Day 26의 "RN 0.81 문서에 `AbortController` 근거가 없었다"와 Day 28 예측 3의 "백그라운드 복귀 시 refetch 여부"가 질문 목록에 있다면 이번에 정리하고, 후자는 Day 33(`focusManager`)까지 보류해도 된다.
-
-- [ ] 이번 주 질문 전부 읽었다
-- [ ] 해결한 질문에 답과 근거 문서 링크를 적었다
-- [ ] 못 푼 질문 개수:
-
-## 밀린 Day 흡수
-
-달력이 아니라 Day 번호 기준이다. 1~2일 밀렸으면 여기서 하나만 한다(한 번에 Day 둘 금지).
-
-- [ ] Day 25 fetch + useEffect, 로딩·에러 상태
-- [ ] Day 26 AbortController와 경쟁 상태
-- [ ] Day 27 API 클라이언트 모듈과 에러 모델
-- [ ] Day 28 TanStack Query: useQuery
-- [ ] 이전 주에서 밀린 Day:
 
 ## 기록(5분)
 
-이번 주 가장 헷갈린 개념:
+배운 것 3줄:
 
-틀린 퀴즈와 이유:
+막힌 점:
 
-다음 주(7주차 데이터 2: mutation, 낙관적 업데이트, 무한 스크롤) 전에 고칠 것:
+## 커밋 단위 제안
+
+- `feat: 글 게시 useMutation과 피드 쿼리 무효화 추가`
+- `chore: 피드 queryFn 확인용 로그 제거`

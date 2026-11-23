@@ -1,92 +1,90 @@
-# Day 55 · 1/11 (월) — 접근성: accessibilityLabel·role, 스크린 리더 확인
+# Day 55 · 1/12 (화) — 반응형: useWindowDimensions, 키보드·SafeArea 다듬기
 
 ## 오늘의 목표
 
-피드 카드, 글 상세의 좋아요 버튼, 기록 항목 삭제에 `accessibilityLabel`·`accessibilityRole`·`accessibilityState`·`accessibilityActions`를 붙여, 제스처 없이도 스크린 리더로 모든 기능을 쓸 수 있게 만든다.
+`useWindowDimensions`로 피드를 화면 너비에 따라 1열/2열로 바꾸고, 기록 작성 화면에서 SafeArea 하단 여백과 키보드 동작을 iOS·Android에서 비교해 다듬는다.
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/accessibility
-   - 확인할 사실: 터치 가능한 요소는 기본적으로 `accessible`이고, `accessibilityLabel`을 주지 않으면 라벨은 자식 `Text` 내용을 공백으로 이어 붙여 만들어진다. `accessibilityRole`은 요소의 용도를 알려 주며 `button`, `header`, `image`, `switch` 같은 값이 있다. 같은 목적의 `role` 속성은 `accessibilityRole`보다 우선하고 `heading`, `img`처럼 웹식 이름을 쓴다. `accessibilityState`는 `disabled`, `selected`, `checked`, `busy`, `expanded`를 가진다. `accessibilityActions`를 정의하고 `onAccessibilityAction`을 구현하면 스크린 리더 사용자에게 스와이프 같은 제스처의 대체 동작을 제공할 수 있다. 하단의 테스트 절에서 시뮬레이터/에뮬레이터별 스크린 리더 사용 가능 여부를 확인한다.
-2. https://reactnative.dev/docs/accessibilityinfo
-   - 확인할 사실: `AccessibilityInfo.isScreenReaderEnabled()`와 `isReduceMotionEnabled()`는 Promise를 돌려주고, `addEventListener('screenReaderChanged' | 'reduceMotionChanged', handler)`는 구독 객체를 돌려주므로 `useEffect` 정리 함수에서 `remove()`를 불러야 한다.
-3. https://reactnative.dev/docs/pressable
-   - 확인할 사실: `hitSlop`은 요소 바깥으로 터치를 인식하는 영역을 넓히되, 부모 뷰의 경계 밖까지는 확장되지 않는다.
+1. https://reactnative.dev/docs/usewindowdimensions
+   - 확인할 사실: 반환 필드는 `width`, `height`, `scale`, `fontScale`이다. 화면 크기나 글자 크기 설정이 바뀌면 값이 자동으로 갱신된다. `Dimensions.get`이 호출 시점의 스냅샷인 것과 달리 이 훅은 구독해 리렌더한다는 차이를 `Dimensions` 문서(https://reactnative.dev/docs/dimensions)와 비교해 확인한다.
+2. https://reactnative.dev/docs/flatlist
+   - 확인할 사실: `numColumns`는 `horizontal={false}`일 때만 쓸 수 있고, 모든 항목이 같은 높이여야 한다(masonry 불가). `columnWrapperStyle`은 `numColumns > 1`인 행에 주는 스타일이다. `numColumns`를 실행 중에 바꿀 때의 제약은 이 페이지에 적혀 있지 않다. 이 제약은 직접 만들기에서 에러 메시지로 확인한다.
+3. https://docs.expo.dev/versions/latest/sdk/safe-area-context/
+   - 확인할 사실: Expo Router는 `SafeAreaProvider`를 자동으로 설정한다. `SafeAreaView`는 안전 영역을 패딩으로 적용한 `View`이고 문서가 가능하면 이쪽을 우선하라고 한다. `useSafeAreaInsets()`는 `top`·`right`·`bottom`·`left`를 돌려주는 더 세밀한 선택지다.
 
 ## 예측(10분)
 
-1. 라벨 없이 `Ionicons` 하트 아이콘만 든 `Pressable`을 스크린 리더로 훑으면 무엇이라고 읽을까? 글자 `Text`가 든 피드 카드는 어떻게 읽을까?
+1. 피드가 1열일 때 `numColumns`를 2로 바꾸는 코드를 `key` 없이 조건부로만 바꾸면 어떻게 될까?
 
 > 내 예측:
 
-2. 피드 카드 `Pressable` 안의 제목 `Text`와 작성자 `Text`는 스크린 리더에서 하나의 요소로 읽힐까, 둘로 나뉠까?
+2. 2열 피드에서 글이 홀수 개(예: 5개)이면 마지막 행의 카드는 어떤 폭으로 보일까? 카드에 `flex: 1`을 줬다고 가정한다.
 
 > 내 예측:
 
-3. 스와이프로만 삭제되는 기록 행을 스크린 리더로 탐색하면 삭제할 수 있을까? 어떻게 알 수 있을까?
+3. 기록 작성 화면의 저장 버튼을 화면 맨 아래에 붙였을 때, 홈 인디케이터가 있는 iPhone과 제스처 내비게이션 Android에서 버튼은 각각 어떻게 가려질까? 키보드가 올라오면 버튼은 어떻게 될까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-먼저 도구를 정한다. iOS 시뮬레이터에는 VoiceOver가 없다(문서에 명시). Xcode의 Accessibility Inspector(메뉴 이름은 Xcode 버전에 따라 다를 수 있다)로 시뮬레이터 요소의 라벨·트레이트를 확인한다. Android는 Play Store가 있는 에뮬레이터 이미지에 TalkBack을 설치해 설정에서 켠다. 어느 쪽이든 한 가지로 끝까지 확인하고, 사용한 도구를 기록 칸에 적는다.
-
-1. 피드 카드(피드 탭의 카드 `Pressable`): 카드가 하나의 요소로 읽히게 하고 `accessibilityRole="button"`, `accessibilityHint`로 "상세 화면으로 이동" 같은 결과를 알린다. 자식 `Text`를 이어 붙인 기본 라벨이 어색하면 `accessibilityLabel`을 직접 쓴다("제목, 작성자 N번"처럼 읽을 순서를 정한다).
-2. 글 상세 화면(Day 16에서 만든 동적 라우트 파일): 제목 `Text`에 `accessibilityRole="header"`를 준다. 이미지가 있다면 장식이면 숨기고 내용이면 라벨을 준다.
-3. 좋아요 버튼 신설: Day 50의 더블탭은 스크린 리더 사용자에게 사실상 쓸 수 없는 제스처다. `LikeHeart`를 `Pressable`로 감싼 버튼을 만들어 `onPress`에서 `liked`를 뒤집는다.
-   - `accessibilityRole="button"`, `accessibilityLabel="좋아요"`, `accessibilityState={{ selected: liked }}`.
-   - 터치 영역이 작으면 `hitSlop`으로 넓힌다.
-4. 기록 탭 항목 삭제: Day 52의 `SwipeableRow`가 감싼 행에 스와이프 대체 동작을 준다. Day 52를 건너뛰었다면 `SwipeableRow`가 없으므로 이 코드는 생략하고, 코드 블록 아래의 삭제 버튼 안내를 따른다.
-
-```tsx
-accessible
-accessibilityActions={[{ name: 'delete', label: '삭제' }]}
-onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'delete') onDelete(); }}
-```
-
-   Day 52를 건너뛰었다면 각 행의 삭제 버튼(없으면 이번에 추가)에 `accessibilityRole="button"`과 `accessibilityLabel="기록 삭제"`를 준다.
-5. 선택(시간이 남을 때): `AccessibilityInfo.isReduceMotionEnabled()`로 모션 줄이기가 켜져 있는지 읽어, 켜져 있으면 `LikeHeart`의 팝 애니메이션 대신 즉시 전환한다. Reanimated의 `useReducedMotion()`은 앱 시작 시점의 값만 돌려주고 실행 중 설정 변경에는 리렌더되지 않는다는 점이 문서에 있으므로, 실행 중 변경을 반영하려면 `AccessibilityInfo`의 `reduceMotionChanged` 구독을 쓴다.
+1. 피드 탭(`app/(tabs)/index.tsx`)에서 `useWindowDimensions().width`로 `numColumns`를 구한다. 기준 너비는 상수 하나(예: 600)로 두고, 그 이상이면 2, 아니면 1이다.
+   - `FlatList`의 `numColumns`에 넘기고, `key`에도 열 개수를 넣어 열 수가 바뀔 때 목록이 새로 만들어지게 한다(실행 중에 `numColumns`만 바꾸면 에러가 난다. 메시지 원문을 기록 칸에 적는다).
+   - 열이 2개일 때만 `columnWrapperStyle`을 준다. 열이 1개일 때 `columnWrapperStyle`을 넘기면 에러가 난다.
+   - 카드 폭이 열 수에 맞게 나뉘도록 하고, 홀수 개일 때 마지막 카드만 넓어지는 문제는 카드의 폭을 열 수에 맞춘 퍼센트 값으로 고정해 해결한다.
+2. 글 상세 화면(Day 15에서 만든 동적 라우트 파일)에서 큰 화면일 때 본문이 한 줄로 너무 길게 늘어나지 않도록, 본문 컨테이너에 `maxWidth` 상수를 주고 가운데 정렬한다.
+3. 기록 작성 화면(`app/(tabs)/write.tsx`)을 다듬는다.
+   - 저장 버튼 영역의 하단 패딩을 `useSafeAreaInsets().bottom`과 기본 여백 중 큰 값으로 준다.
+   - Day 6의 `KeyboardAvoidingView`가 있다면 `behavior`를 플랫폼별로 직접 지정했는지 확인한다. 문서는 Android와 iOS가 이 속성을 다르게 처리하므로 양쪽 모두 `behavior`를 설정하라고 한다. 값은 두 플랫폼에서 실제로 시험해 정한다.
+   - 헤더가 있다면 `keyboardVerticalOffset`을 헤더 높이만큼 주어야 하는지 확인한다.
+4. 글자 크기 설정이 커졌을 때 카드가 잘리지 않는지 본다. 카드 높이를 고정값으로 주었다면 `minHeight`로 바꾸거나 제거한다. `useWindowDimensions().fontScale` 값을 임시로 화면에 찍어 설정 변경이 반영되는지 확인한다.
+5. `app.json`의 `orientation`은 템플릿에서 `portrait`이다. 가로 회전을 직접 시험하려면 `default`로 바꾸면 되지만, 이 변경이 개발 환경에서 즉시 적용되는지는 문서에서 확인 필요하다(적용되지 않으면 이 항목은 생략하고 iPad 시뮬레이터로 큰 화면만 확인한다).
 
 완료 기준
 
-- [ ] 피드 카드가 하나의 버튼으로 읽히고 읽는 순서가 자연스럽다
-- [ ] 상세 화면 제목이 헤더로 인식된다
-- [ ] 좋아요를 더블탭 없이 버튼으로 켜고 끌 수 있고, 켜짐 상태가 스크린 리더/인스펙터에 전달된다
-- [ ] 아이콘만 있는 모든 `Pressable`에 라벨이 있다
-- [ ] 삭제를 스와이프 없이 스크린 리더의 동작 메뉴(또는 삭제 버튼)로 수행할 수 있다
-- [ ] 사용한 확인 도구와 확인한 요소의 라벨/트레이트를 기록 칸에 적었다
+- [ ] 폭이 600 미만이면 1열, 이상이면 2열로 피드가 바뀐다
+- [ ] 2열에서 홀수 개일 때 마지막 카드가 넓어지지 않는다
+- [ ] 열 수가 바뀔 때 `numColumns` 관련 에러가 나지 않는다
+- [ ] 큰 화면에서 상세 본문이 `maxWidth`에서 멈추고 가운데에 놓인다
+- [ ] 기록 작성 화면의 저장 버튼이 홈 인디케이터/내비게이션 막대에 가려지지 않고, 키보드가 올라와도 입력창과 저장 버튼이 보인다
+- [ ] 글자 크기를 키워도 피드 카드 글자가 잘리지 않는다
+- [ ] iOS와 Android에서 키보드 동작 차이를 기록 칸에 적었다
 
 ## 검증(10분)
 
 확인할 동작
 
-- Accessibility Inspector(또는 TalkBack)로 피드 카드, 상세 제목, 좋아요 버튼, 기록 행을 하나씩 가리켜(또는 한 번씩 이동해) 라벨, 역할(트레이트), 상태, 동작 목록이 의도대로인지 본다. 예측 1, 2와 비교한다.
-- 좋아요 버튼을 켠 뒤 상태 표시가 바뀌는지, 기록 행에서 삭제 동작이 목록에 나타나는지 확인한다. 예측 3과 비교한다.
+- 큰 화면 확인: iPad 시뮬레이터(또는 태블릿 Android 에뮬레이터)에서 앱을 열어 피드가 2열인지 본다(기기를 고르는 방법은 Expo CLI 안내를 따른다). 시뮬레이터가 없으면 `npm run web`으로 열어 브라우저 창 너비를 조절해 열 수 변화를 확인한다. 이 경우는 레이아웃만 확인하고 안전 영역·키보드는 확인할 수 없다는 점을 기록한다.
+- 글자 크기: iOS 시뮬레이터 설정의 글자 크기(접근성 > 디스플레이 및 텍스트 크기)를 키우거나 Android 설정의 글꼴 크기를 키운 뒤 피드와 상세를 본다.
+- 키보드: 기록 작성 화면에서 입력창을 눌러 키보드를 올리고 저장 버튼과 마지막 입력창이 보이는지, 두 플랫폼에서 비교한다.
 
 일부러 깨뜨려 보는 실험
 
-- 좋아요 `Pressable`에서 `accessibilityLabel`을 지우고 같은 요소를 다시 가리켜(또는 이동해) 읽는 내용이 어떻게 바뀌는지 적는다. 그 다음 `accessibilityState`만 지우고 켜짐/꺼짐이 전달되는지 본다. 확인 후 둘 다 되돌린다.
+- 피드 `FlatList`에서 `key`를 지우고 화면 너비를 600 경계 위아래로 바꿔(iPad ↔ 폰, 웹 창 크기) `numColumns` 변경 에러를 일으킨다. 에러 메시지 원문을 적고 `key`를 되돌린다. 예측 1과 비교한다.
 
-> 실험 결과:
+> 에러 원문:
+>
+> 예측과 달랐던 점:
 
 ## 이해 점검 질문
 
-1. `accessibilityLabel`을 주지 않은 `Pressable` 카드는 스크린 리더가 무엇이라고 읽고, 그 기본 동작이 왜 충분하지 않은 경우가 있을까?
-2. `accessibilityRole`과 `accessibilityState`는 각각 무엇을 알려 주고, 좋아요 버튼에는 어떻게 함께 쓰일까?
-3. 스와이프 삭제 행에 `accessibilityActions`를 추가해야 하는 이유는 무엇이고, 이를 구현하는 두 가지(속성)는 무엇일까?
+1. `Dimensions.get('window')`와 `useWindowDimensions()`는 어떻게 다르고, 왜 컴포넌트에서는 후자를 쓸까?
+2. 실행 중에 `numColumns`를 바꾸려면 왜 `FlatList`에 `key`를 줘야 하고, 열이 1개일 때 `columnWrapperStyle`을 주면 어떻게 될까?
+3. `SafeAreaView`와 `useSafeAreaInsets()`는 각각 언제 쓰고, 저장 버튼 하단 여백을 `Math.max(insets.bottom, 기본 여백)`으로 주는 이유는 무엇일까?
 
 <details>
 <summary>정답</summary>
 
-1. 터치 가능한 요소는 기본적으로 접근 가능하며 라벨은 자식 `Text` 내용을 공백으로 이어 붙여 만든다. 카드 안의 텍스트 순서가 읽기 좋으면 충분하지만, 아이콘만 있거나 "N번" 같은 약어·숫자만 있어서 문장이 되지 않거나, 시각적 배치와 읽는 순서가 다르면 의미가 전달되지 않는다. 이럴 때 `accessibilityLabel`로 읽을 문장을 직접 준다.
-2. `accessibilityRole`은 요소의 용도(버튼, 헤더 등)를, `accessibilityState`는 현재 상태(선택됨, 비활성 등)를 알려 준다. 좋아요 버튼은 역할 `button`과 상태 `{ selected: liked }`를 함께 줘서 "좋아요, 버튼, 선택됨"처럼 전달되게 한다. 라벨을 `liked`에 따라 바꾸면 상태가 중복 전달될 수 있으므로 하나를 고른다.
-3. 스와이프는 화면을 눈으로 보고 손가락으로 끌 수 있다는 가정에서 만든 제스처인데, 스크린 리더는 자체 제스처(스와이프로 이동, 더블탭으로 활성화)를 쓰기 때문에 같은 동작을 수행할 수 없다. 그래서 같은 기능을 `accessibilityActions`(동작 이름·라벨 목록)로 노출하고, `onAccessibilityAction`에서 `event.nativeEvent.actionName`을 보고 실제 삭제를 수행한다. 두 속성을 모두 구현해야 동작한다.
+1. `Dimensions.get('window')`는 호출한 순간의 스냅샷이라 회전·분할 화면·글자 크기 변경 후에도 값이 자동으로 바뀌지 않는다. `useWindowDimensions()`는 변경을 구독해 값이 바뀌면 컴포넌트를 다시 렌더하므로, 렌더에서 레이아웃을 결정하는 컴포넌트에서는 이 훅이 맞다.
+2. `FlatList`는 `numColumns`가 바뀌면 `Changing numColumns on the fly is not supported. Change the key prop on FlatList when changing the number of columns to force a fresh render of the component.`라는 에러를 낸다(RN 0.81 소스의 invariant 메시지). `key`를 바꾸면 목록이 새로 마운트되어 이 검사를 피한다. `columnWrapperStyle`은 `numColumns > 1`에서만 허용되어 단일 열에서 넘기면 `columnWrapperStyle not supported for single column lists` 에러가 난다.
+3. `SafeAreaView`는 안전 영역을 패딩으로 자동 적용하는 `View`라서 화면 전체를 감싸는 단순한 경우에 쓰고, 문서도 네이티브로 구현되어 있어 가능하면 이쪽을 우선하라고 한다. `useSafeAreaInsets()`는 `top`·`bottom` 같은 값을 직접 받아 특정 요소의 패딩을 따로 계산해야 할 때 쓴다. 홈 인디케이터가 없는 기기는 `insets.bottom`이 0이라 버튼이 바닥에 붙어 답답해 보이므로, 기본 여백과 큰 값을 취해 어떤 기기에서도 최소 여백을 보장한다.
 
 </details>
 
 ## 기록(5분)
 
-사용한 확인 도구:
+iOS와 Android의 키보드 동작 차이:
 
 배운 것 3줄:
 
@@ -98,10 +96,9 @@ onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'delete') onDel
 
 ## 커밋 단위 제안
 
-- `feat: 피드 카드와 상세 화면에 접근성 라벨과 역할 추가`
-- `feat: 좋아요 버튼 추가로 더블탭 없이 좋아요 토글`
-- `feat: 기록 항목 삭제에 접근성 동작 추가`
+- `feat: 피드를 화면 너비에 따라 1열/2열로 전환`
+- `style: 상세 본문 최대 너비와 기록 작성 하단 여백 다듬기`
 
 ## 웹과 다른 점
 
-웹은 시맨틱 HTML(`button`, `h1`)과 `aria-*`가 접근성의 기본이지만, RN은 모든 것이 `View`/`Text`라서 `accessibilityRole`·`accessibilityLabel` 같은 속성을 직접 붙여야 하고 `role`은 웹식 이름을 쓰는 보조 속성이다.
+웹은 CSS 미디어 쿼리와 `rem`/`vh` 단위로 반응형을 선언하지만, RN에는 미디어 쿼리가 없어서 `useWindowDimensions` 값을 JS로 읽어 레이아웃을 분기하고 SafeArea 여백도 직접 값으로 받아 쓴다.

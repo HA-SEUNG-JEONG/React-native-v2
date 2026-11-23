@@ -1,95 +1,80 @@
-# Day 13 · 11/12 (목) — 커스텀 훅과 useEffect 기초, cleanup
+# Day 13 · 11/13 (금) — 버퍼 + 3주차 점검
 
 ## 오늘의 목표
 
-`useEffect`로 타이머와 키보드 이벤트를 구독하고 cleanup으로 해제하는 커스텀 훅 `useNow`, `useKeyboardVisible`을 만들어 Daily Log에 붙인다.
+3주차(Day 10~12) 내용을 정답을 가리고 풀어 보고, 밀린 Day를 흡수하며, 가장 헷갈린 개념 하나를 소리 내어 설명한다.
 
-## 읽기(15분)
+## 주간 점검 퀴즈(30분)
 
-1. React 공식 문서, Effect 동기화: https://react.dev/learn/synchronizing-with-effects
-   - 확인할 사실: Effect가 시작한 일을 되돌려야 하면 함수를 반환한다. 그 cleanup은 Effect가 다시 실행되기 직전과 컴포넌트가 사라질 때 호출된다. 의존성 배열이 `[]`이면 마운트 때 한 번, `[a, b]`이면 값이 바뀔 때마다 다시 실행된다. cleanup이 필요 없는 Effect도 있다.
-2. React 공식 문서, 커스텀 훅: https://react.dev/learn/reusing-logic-with-custom-hooks
-   - 확인할 사실: 훅 이름은 `use`로 시작해야 한다. 커스텀 훅은 상태 로직을 공유하지만 상태 자체를 공유하지 않는다. 같은 훅을 두 번 호출하면 서로 독립된 상태가 생긴다.
-3. `Keyboard` 문서: https://reactnative.dev/docs/keyboard
-   - 확인할 사실: `Keyboard.addListener(eventName, callback)`은 구독 객체를 돌려주고, 문서 예제는 정리할 때 `.remove()`를 호출한다. Android에서는 `keyboardDidShow`, `keyboardDidHide`만 쓸 수 있다. `keyboardWillShow`류는 iOS 전용이다.
+정답을 가리고 먼저 답을 적는다. 결과는 `docs/quiz/2026-11-13-day-14.md`에 `AGENTS.md`의 상세 구조(문항별 상세, 종합 약점 패턴, 재복습 일정)로 기록한다.
 
-## 예측(10분)
-
-1. `setInterval`을 시작하는 Effect에 cleanup을 쓰지 않고, 그 컴포넌트를 화면에서 사라지게(언마운트) 하면 타이머는 멈추는가?
-
-> 내 예측:
-
-2. 서로 다른 두 컴포넌트가 각각 `useNow(1000)`을 호출하면 두 컴포넌트가 받는 `now` 값은 같은 상태를 공유하는가, 각자 따로인가?
-
-> 내 예측:
-
-3. Effect의 의존성 배열에 `intervalMs`를 빼고 `[]`로 두었는데 코드 안에서 `intervalMs`를 쓰고 있다면 `npx expo lint`가 어떤 반응을 보이는가?
-
-> 내 예측:
-
-## 만들기(40분)
-
-Day 12에서 정리한 `src/` 구조에 훅 폴더를 만들고, 글 목록에 "방금 전 / N분 전" 표시를 얹는다.
-
-새로 만들 파일:
-- `src/hooks/useNow.ts` — `useNow(intervalMs: number): number`. 현재 시각(`Date.now()`)을 상태로 들고, `setInterval`로 `intervalMs`마다 갱신하고, cleanup에서 `clearInterval`한다.
-- `src/hooks/useKeyboardVisible.ts` — `useKeyboardVisible(): boolean`. `keyboardDidShow`와 `keyboardDidHide`를 구독하고 cleanup에서 두 구독을 모두 `remove()`한다. Day 6에서 화면에 직접 쓴 `Keyboard` 코드가 있으면 이 훅으로 옮긴다.
-- `src/utils/formatRelative.ts` — `formatRelative(createdAt: number, now: number): string`. 1분 미만이면 `방금 전`, 이후는 `N분 전`, 60분 이상은 `N시간 전`. 순수 함수다.
-
-핵심 형태:
+1. (Day 10) 아래 코드에서 `entries`의 타입은 무엇이고, 마지막 줄은 왜 문제인가? 고치는 방법은?
 
 ```tsx
-useEffect(() => {
-  const id = setInterval(() => setNow(Date.now()), intervalMs);
-  return () => clearInterval(id);
-}, [intervalMs]);
+const [entries, setEntries] = useState([]);
+setEntries([...entries, { id: '1', title: '첫 글', body: '', createdAt: 0 }]);
 ```
 
-고칠 파일:
-- `app/index.tsx` — 화면에서 `useNow(10_000)`을 한 번만 호출하고 `now`를 `LogItem`에 props로 내려 준다. `FlatList`에는 `extraData={now}`를 준다. 입력창이 있는 영역에는 `useKeyboardVisible()`이 `true`일 때만 "키보드 닫기" `AppButton`을 보여 주고, 누르면 `Keyboard.dismiss()`를 호출한다.
-- `src/components/LogItem.tsx` — props에 `now: number`를 추가하고 작성 시각 줄에 `formatRelative(entry.createdAt, now)`를 쓴다.
+> 내 답:
 
-항목마다 `useNow`를 따로 호출하면 항목 수만큼 타이머가 생긴다. 그래서 화면에서 한 번만 호출해 내려 준다(점검 질문 2번).
+2. (Day 10) `TextInput`의 `onChangeText`와 `onSubmitEditing`에 넘기는 핸들러의 인자는 각각 무엇인가?
 
-완료 기준:
-- [ ] `useNow`와 `useKeyboardVisible`이 `src/hooks/`에 있고 이름이 `use`로 시작한다
-- [ ] 두 훅의 Effect가 모두 cleanup을 반환한다
-- [ ] 글 항목에 "방금 전"이 보이고, 시간이 지나면 "1분 전"으로 바뀐다(테스트용으로 `createdAt`을 5분 전 값으로 만들어 확인해도 된다)
-- [ ] 입력창을 누르면 "키보드 닫기" 버튼이 나타나고, 누르면 키보드와 버튼이 같이 사라진다
-- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다(의존성 배열 경고 포함)
+> 내 답:
 
-## 검증(10분)
+3. (Day 11) `Card` 컴포넌트가 `<Card><Text>안녕</Text></Card>`로 쓰이려면 props 타입과 본문에서 무엇이 필요한가? 그리고 `style` prop을 `[styles.card, style]`로 합치는 순서의 이유는?
 
-- 시뮬레이터에서 글을 추가하고 "방금 전"이 바뀌는 것을 본다. 키보드를 올렸다 내리며 버튼이 따라오는지 본다.
-- 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- 일부러 깨뜨려 보기: 화면에 `visible` 상태로 토글되는 임시 컴포넌트를 만들어, 그 안에서 `useNow` 대신 Effect에 `console.log('tick')`을 찍는 `setInterval`을 쓰되 cleanup을 뺀다. 컴포넌트를 껐다 켜며 로그가 어떻게 되는지 보고, cleanup을 넣은 뒤 다시 비교한다. 확인이 끝나면 임시 컴포넌트를 지운다.
+> 내 답:
 
-## 이해 점검 질문
+4. (Day 12) `src/components/Card.tsx`를 `@/components/Card`로 import하려면 어디를 고치는가? `app/` 폴더 안에 `Card.tsx`를 두면 왜 안 되는가?
 
-1. cleanup 없이 `setInterval`을 쓴 컴포넌트가 사라지면 어떤 문제가 생기고, cleanup은 언제 호출되는가?
-2. 같은 커스텀 훅 `useNow`를 두 컴포넌트에서 각각 호출하면 상태를 공유하는가? 이 때문에 `useNow`를 화면에서 한 번만 호출해 내려 주는가?
-3. `useKeyboardVisible`에서 `keyboardWillShow` 대신 `keyboardDidShow`를 쓰는 이유는 무엇인가?
+> 내 답:
+
+5. (Day 12) `useEffect` 안에서 `setInterval`을 쓰고 cleanup을 빼면 어떤 일이 생기는가? 같은 커스텀 훅을 두 컴포넌트에서 호출하면 상태는 공유되는가?
+
+> 내 답:
 
 <details>
 <summary>정답</summary>
 
-1. 컴포넌트가 사라져도 타이머는 JS 런타임에 남아 계속 실행되며 낭비와 중복 실행을 낳는다. 다시 마운트될 때마다 타이머가 하나씩 더 쌓인다. cleanup은 의존성이 바뀌어 Effect가 다시 실행되기 직전과 컴포넌트가 언마운트될 때 호출된다.
-2. 공유하지 않는다. 커스텀 훅은 로직만 공유하고 상태는 호출마다 독립적이다. 그래서 항목마다 호출하면 항목 수만큼 상태와 타이머가 생긴다. 화면에서 한 번 호출해 `props`로 내려 주면 타이머가 하나이고 모든 항목이 같은 `now`를 본다.
-3. `keyboardWillShow`는 iOS에서만 발생하고 Android에서는 `keyboardDidShow`와 `keyboardDidHide`만 발생한다. 양쪽 플랫폼에서 같은 훅이 동작하려면 공통으로 지원되는 Did 이벤트를 써야 한다.
+1. `useState([])`는 빈 배열 리터럴에서 요소 타입을 알 수 없어 `never[]`로 추론된다. 그래서 객체를 넣는 마지막 줄은 `never`에 할당할 수 없다는 타입 오류가 난다. `useState<LogEntry[]>([])`처럼 제네릭으로 요소 타입을 알려 준다.
+2. `onChangeText`는 변경된 텍스트를 문자열 하나로 받는다. `onSubmitEditing`은 `{ nativeEvent: { text, eventCount, target } }` 모양의 이벤트 객체를 받으므로 `e.nativeEvent.text`로 값을 읽는다. 인자가 달라서 핸들러 타입도 다르다.
+3. props 타입에 `children`을 포함해야 하고 `PropsWithChildren<...>`가 이를 더해 준다. 본문에서는 `{children}`을 렌더한다. `style`은 뒤의 값이 앞의 같은 속성을 덮어쓰므로 기본 스타일을 앞에, 부모가 넘긴 `style`을 뒤에 둬야 부모가 필요한 부분만 바꿀 수 있다.
+4. `tsconfig.json`의 `paths`에 `"@/*": ["src/*"]`를 쓴다. Expo CLI가 이 설정을 자동으로 읽어 Metro에서도 동작한다. `app/` 안의 파일은 기본 export가 곧 라우트가 되고 파일 경로가 URL이 되므로, 컴포넌트를 두면 화면이 아닌 파일이 라우트로 취급된다.
+5. 컴포넌트가 사라져도 타이머가 계속 돌고, 다시 마운트될 때마다 타이머가 하나씩 쌓인다. cleanup(`clearInterval`)은 언마운트 때와 의존성이 바뀌어 Effect가 다시 실행되기 직전에 호출된다. 커스텀 훅은 로직만 공유하고 상태는 호출마다 독립적이므로, 두 컴포넌트가 훅을 따로 호출하면 상태를 공유하지 않는다.
 
 </details>
 
+## 구술 1주제(15분)
+
+주제: "Effect를 쓰면 왜 cleanup을 신경 써야 하는가"를 Daily Log의 `useNow`와 `useKeyboardVisible`을 예로 1분 안에 소리 내어 설명한다.
+
+설명에 포함할 핵심어: 구독, 해제(cleanup), 언마운트, 의존성 배열, 상태 비공유(커스텀 훅)
+
+- [ ] 핵심어 5개를 모두 썼다
+- [ ] 막힌 부분을 아래에 적었다
+
+막힌 부분:
+
+## 질문 목록 처리(15분)
+
+`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 해결한 질문은 해결 방법 한 줄을 적고, 그래도 안 풀린 질문은 에러 원문과 시도한 것을 남겨 다음 주 금요일로 넘긴다.
+
+- [ ] 해결한 질문 수:
+- [ ] 다음 주로 넘긴 질문 수:
+
+## 밀린 Day 흡수
+
+- [ ] Day 10 (TypeScript props와 이벤트 타입) 완료 기준을 모두 채웠다
+- [ ] Day 11 (children, composition) 완료 기준을 모두 채웠다
+- [ ] Day 12 (폴더 구조, path alias, lint·prettier) 완료 기준을 모두 채웠다
+- [ ] Day 12 (커스텀 훅, useEffect cleanup) 완료 기준을 모두 채웠다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
+- [ ] 이번 주 커밋이 모두 `<type>: <한국어 요약>` 형식이다
+
 ## 기록(5분)
 
-배운 것 3줄:
+이번 주 배운 것 3줄:
 
-막힌 점:
+가장 헷갈렸던 개념:
 
-## 커밋 단위 제안
-
-- `feat: useNow 훅과 상대 시간 표시 추가`
-- `feat: useKeyboardVisible 훅과 키보드 닫기 버튼 추가`
-
-## 웹과 다른 점
-
-브라우저처럼 `window.addEventListener('resize')`에 쓰는 DOM 이벤트가 없다. RN은 `Keyboard`, `AppState` 같은 모듈에 `addListener`로 구독하고, 반환된 구독 객체의 `remove()`로 해제한다.
+다음 주(Day 14 expo-router) 전에 확인할 것:

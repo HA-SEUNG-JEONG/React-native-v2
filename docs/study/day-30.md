@@ -1,91 +1,89 @@
-# Day 30 · 12/7 (월) — useMutation과 캐시 무효화
+# Day 30 · 12/8 (화) — 낙관적 업데이트와 롤백
 
-> 전제: Day 27의 `src/api/client.ts`(`request`, `ApiError`)와 `src/api/posts.ts`(`getPosts`, `getPost`), Day 28의 `src/hooks/usePosts.ts`(키 `['posts', { userId }]`)와 `app/_layout.tsx`의 `QueryClientProvider`, Day 22의 기록 탭(`app/(tabs)/write.tsx`)이 있다.
+> 전제: Day 29의 `src/hooks/useCreatePost.ts`와 `src/api/posts.ts`, Day 27의 `src/hooks/usePosts.ts`(키 `['posts', { userId }]`, 데이터는 `Post[]`)와 피드(`app/(tabs)/index.tsx`)가 있다.
 
 ## 오늘의 목표
 
-기록 탭에서 쓴 글을 `useMutation`으로 서버에 게시하고, 성공하면 피드 쿼리를 무효화해 다시 불러오게 한다.
+피드에서 글을 삭제할 때 서버 응답을 기다리지 않고 목록에서 먼저 지우고, 실패하면 원래대로 되돌린다.
 
 ## 읽기(15분)
 
+- https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
+  - 방법이 두 가지다. `variables`를 이용해 UI에서만 임시 항목을 그리는 방법(캐시를 건드리지 않음)과, `onMutate`에서 캐시를 직접 고치는 방법이다. 여러 화면이 같은 데이터를 보면 캐시 방식을 쓴다.
+  - 캐시 방식의 순서는 `cancelQueries` → `getQueryData`로 이전 값 저장 → `setQueryData`로 낙관적 값 쓰기 → `onMutate`가 이전 값을 반환 → `onError`에서 그 값으로 복원 → `onSettled`에서 `invalidateQueries`다.
+  - `cancelQueries`는 진행 중인 재요청이 낙관적 값을 덮어쓰지 못하게 막는다.
 - https://tanstack.com/query/latest/docs/framework/react/guides/mutations
-  - `useMutation`은 쓰기(생성·수정·삭제) 전용이고 `status`는 `idle`, `pending`, `error`, `success` 중 하나다. v5에서는 진행 중 플래그 이름이 `isPending`이다.
-  - `mutate(variables)`는 바로 반환되고, `mutateAsync(variables)`는 Promise를 돌려주며 실패하면 throw한다.
-  - 콜백 실행 순서는 `onMutate` → `onSuccess`/`onError` → `onSettled`이고, 콜백이 Promise를 반환하면 다음 콜백 전에 기다린다.
-- https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations
-  - `onSuccess`에서 `queryClient.invalidateQueries({ queryKey: ['todos'] })`를 쓴다. 이 Promise를 `await`하거나 반환하면 재요청이 끝날 때까지 mutation이 `isPending`으로 남는다.
-- https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation
-  - `invalidateQueries`는 일치하는 쿼리를 stale로 표시하고, 지금 화면에서 쓰이는(active) 쿼리는 백그라운드에서 다시 가져온다.
-  - `['todos']`는 `['todos', { page: 1 }]`처럼 그 키로 시작하는 쿼리 전부와 일치한다(접두사 일치). 정확히 같은 키만 대상으로 하려면 `exact: true`를 쓴다.
+  - `onMutate`가 반환한 값이 `onError`, `onSuccess`, `onSettled`의 `onMutateResult`(세 번째 인자)로 전달된다. 롤백용 스냅샷을 여기에 담는다.
+- https://tanstack.com/query/latest/docs/framework/react/reference/classes/QueryClient
+  - 우리 피드는 칩마다 캐시가 따로(`['posts', { userId: 1 }]`, `['posts', { userId: null }]` 등) 있다. `getQueriesData(filters)`는 일치하는 캐시 전부를 `[queryKey, data]` 쌍의 배열로 돌려주고, `setQueriesData(filters, updater)`는 일치하는 기존 캐시 전부를 한 번에 고친다(새 캐시는 만들지 않는다). updater는 불변으로 새 값을 만들어야 하고, 현재 값은 `undefined`일 수 있다.
 
-확인할 버전: 위 문서의 콜백 시그니처는 최신 v5 기준(`onSuccess(data, variables, onMutateResult, context)`)이다. 설치된 `@tanstack/react-query` 버전은 `npm ls @tanstack/react-query`로 확인하고, 콜백 인자가 문서와 다르면 에디터에서 `useMutation` 타입 정의를 열어 맞춘다.
+확인할 버전: 최신 문서의 `onMutate(variables, context)`는 `context.client`를 주지만, 이 카드는 `useQueryClient()`로 얻은 `queryClient`를 클로저로 쓴다. 이 방식은 버전과 무관하게 동작한다. 콜백 인자 순서는 설치된 버전의 타입 정의로 확인한다.
 
 ## 예측(10분)
 
-코드를 짜기 전에 적는다.
-
-1. 글을 게시해 서버가 성공 응답을 주고 `onSuccess`에서 `['posts']`를 무효화하면, 피드 화면에 방금 쓴 글이 나타날까? 나타난다면/아니라면 왜인가? (JSONPlaceholder의 쓰기 요청 동작은 https://jsonplaceholder.typicode.com/guide/ 의 "Write requests" 부분에서 확인한다.)
+1. 삭제 버튼을 누른 직후, 서버 응답이 오기 전에 목록에서 그 글이 사라질까? 사라진다면 어떤 코드 때문인가?
 
 > 내 예측:
 
-2. 게시 버튼에 `disabled={isPending}`를 달지 않고 빠르게 두 번 누르면 `mutationFn`은 몇 번 호출될까?
+2. 서버가 실패했을 때 롤백(`setQueryData`)을 하지 않고 `invalidateQueries`만 호출하면 화면은 어떻게 보일까? 롤백을 하면 무엇이 달라질까?
 
 > 내 예측:
 
-3. `onSuccess`에서 `invalidateQueries(...)`를 `return` 하지 않고(`await`도 하지 않고) 호출만 하면, `isPending`이 `false`가 되는 시점은 어떻게 달라질까?
+3. JSONPlaceholder는 DELETE를 저장하지 않는다. 삭제 성공 뒤 `onSettled`에서 `['posts']`를 무효화하면 삭제한 글은 어떻게 될까? (https://jsonplaceholder.typicode.com/guide/ 의 "Write requests" 부분을 다시 본다.)
 
 > 내 예측:
 
 ## 만들기(40분)
 
-Daily Log의 기록 탭(`app/(tabs)/write.tsx`)에 "서버에 게시" 버튼을 추가한다. Day 22의 "저장"(로컬 기록 추가)은 그대로 둔다.
+피드 항목에 삭제 버튼을 달고 낙관적 삭제를 구현한다.
 
 새로 만들거나 고칠 파일:
-- `src/api/posts.ts`: `createPost(input: { title: string; body: string })` 추가(`POST /posts`). Day 27의 `request`가 `GET`만 다룬다면 `method`와 `body`를 받도록 옵션을 넓힌다. body에 `userId: 1`을 함께 보내고, 반환 타입은 `Post`(Day 25의 `src/types/post.ts`)로 한다.
-- `src/hooks/useCreatePost.ts`: Day 13의 커스텀 훅 패턴으로 `useMutation`을 감싼다(Day 28의 `src/hooks/usePosts.ts`와 같은 모양).
-- `app/(tabs)/write.tsx`: "서버에 게시" `Pressable`을 추가하고 Day 5의 제목·본문 상태를 `mutate`에 넘긴다.
-- `src/hooks/usePosts.ts`: `queryFn` 첫 줄에 확인용 `console.log('fetch posts')`를 임시로 넣는다(오늘 검증 후 지운다).
+- `src/api/posts.ts`: `deletePost(id: number)` 추가(`DELETE /posts/:id`, Day 29처럼 `request`에 `method` 옵션이 필요하다). 낙관적 업데이트가 눈에 보이도록 요청 전에 800ms 지연(`await new Promise(r => setTimeout(r, 800))`)을 임시로 넣고, `id % 5 === 0`이면 지연 후 `throw new Error('삭제 실패')` 하게 한다. 둘 다 오늘 검증 후 지운다.
+- `src/hooks/useDeletePost.ts`: Day 29의 `useCreatePost`와 같은 모양의 훅. 낙관적 업데이트는 여기서 한다.
+- Day 11에서 분리한 피드 항목 컴포넌트(`src/components/PostCard.tsx`): 삭제 `Pressable`을 추가한다. `accessibilityLabel`로 "글 삭제"를 준다.
+- `app/(tabs)/index.tsx`: `useDeletePost()`를 쓰고 항목 컴포넌트에 `onDelete(id)`를 내려 준다.
 
 핵심 호출 형태:
 
 ```ts
-const queryClient = useQueryClient();
-return useMutation({
-  mutationFn: createPost,
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
-});
+onMutate: async (id: number) => {
+  await queryClient.cancelQueries({ queryKey: ['posts'] });
+  const previous = queryClient.getQueriesData<Post[]>({ queryKey: ['posts'] });
+  queryClient.setQueriesData<Post[]>({ queryKey: ['posts'] }, (old) => old?.filter((p) => p.id !== id));
+  return { previous };
+},
+onError: (_e, _id, onMutateResult) =>
+  onMutateResult?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data)),
 ```
 
 완료 기준:
-- [ ] "서버에 게시"를 누르면 `mutate({ title, body })`가 호출된다. 제목이 비었거나 공백뿐이면 Day 5의 저장 버튼처럼 비활성화된다.
-- [ ] `isPending` 동안 버튼이 비활성화되고 라벨이 "게시 중..."으로 바뀐다.
-- [ ] 성공하면 서버가 돌려준 `id`를 화면 하단에 한 줄로 보여 준다. 입력칸은 비우지 않는다(로컬 "저장"과 독립적이다).
-- [ ] 실패하면 Day 27의 `getErrorMessage`에 `error`를 넘겨 나온 메시지를 `Text`로 보여 준다.
-- [ ] `onSuccess`가 `['posts']`를 무효화하고 그 Promise를 반환한다. 키 `['posts', { userId }]`가 접두사로 일치하므로 칩별 캐시가 모두 stale이 된다.
-- [ ] 게시 후 Metro 로그에 `fetch posts`가 한 번 더 찍히는지 확인했다.
+- [ ] 삭제를 누르면 지연 시간(800ms) 전에 항목이 사라진다.
+- [ ] 칩 "전체"에서 `id` 1 글을 삭제한 직후 칩 "1"로 바꾸면, 캐시가 먼저 보이는 순간에는 그 글이 없다(칩별 캐시를 모두 고쳤기 때문). 곧이어 stale 재요청이 끝나면 서버가 삭제를 저장하지 않으므로 글이 다시 나타난다. 이 두 순간을 모두 관찰했다.
+- [ ] `id`가 5의 배수인 글을 삭제하면 사라졌다가 실패 후 원래 자리로 돌아온다.
+- [ ] 실패 시 사용자에게 "삭제하지 못했습니다" 문구를 보여 준다(`Alert.alert` 또는 화면 `Text`).
+- [ ] JSONPlaceholder가 삭제를 저장하지 않으므로, `onSettled`에서 무효화하면 삭제된 글이 되살아나는 현상을 직접 확인했다.
+- [ ] 위 현상을 피하려고 이 학습 앱에서는 무효화를 `onError` 안으로 옮기고, "실제 서버라면 `onSettled`에서 무효화해 서버 확정값과 맞춘다"는 이유를 주석 한 줄로 남겼다.
 
 ## 검증(10분)
 
-1. 시뮬레이터에서 기록 탭에 제목과 본문을 쓰고 "서버에 게시"를 누른다. 버튼 라벨이 바뀌는지, 응답 `id`가 101로 오는지 본다.
-2. 피드 탭으로 이동해 새 글이 보이는지 확인하고 예측 1과 비교한다. Metro 로그의 `fetch posts` 횟수도 센다.
-3. 예측 2·3을 실제로 확인한다. 예측 3은 `return`을 빼고 중괄호 본문에서 `invalidateQueries`만 호출하도록 바꿔 비교한 뒤 되돌린다.
-4. 깨뜨려 보기: `createPost` 안에서 일부러 `throw new Error('boom')` 한다. `onSuccess`가 호출되지 않고 피드가 다시 요청되지 않는지, 에러 문구가 화면에 나오는지 확인한 뒤 되돌린다.
-
-예측과 실제가 다른 지점을 적는다.
+1. 시뮬레이터 피드에서 `id`가 1인 글을 삭제한다. 지연 시간 전에 사라지는지 본다.
+2. `id`가 5인 글을 삭제한다. 사라졌다가 되돌아오는지, 실패 문구가 뜨는지 본다.
+3. 예측 3을 확인한다. `onSettled`에 무효화를 둔 상태에서 `id` 1 글을 삭제하고 되살아나는지 본다.
+4. 깨뜨려 보기: `onError`의 롤백(`setQueryData`) 줄만 주석 처리하고(무효화는 둔다) `id` 5를 삭제한다. 글이 롤백 없이 사라진 상태로 남는 시간과, 그 뒤 무효화로 돌아오는 시점을 비교한 뒤 되돌린다. 롤백이 하는 일이 "서버 재요청을 기다리지 않는 즉시 복구"임을 확인한다.
 
 > 다른 지점:
 
 ## 이해 점검 질문
 
-1. `mutate`와 `mutateAsync`는 어떻게 다르고, 어느 쪽에서 `try/catch`가 필요한가?
-2. 무효화 후 피드가 다시 요청되는데도 방금 쓴 글이 목록에 없을 수 있다. 이유는?
-3. `invalidateQueries({ queryKey: ['posts'] })`는 `['posts', { userId: 2 }]`도 무효화하는가? 그 범위를 좁히려면 어떻게 하는가?
+1. `onMutate` 맨 앞에서 `cancelQueries`를 호출하는 이유는?
+2. 롤백에 쓸 스냅샷을 `onMutate`의 반환값에 담는 이유는? 컴포넌트 상태 변수에 담으면 어떤 문제가 있는가?
+3. 낙관적 업데이트를 "캐시 방식"과 "`variables` 방식" 중 어느 쪽으로 할지는 무엇으로 정하는가?
 
 <details><summary>정답</summary>
 
-1. `mutate`는 결과를 돌려주지 않고 에러를 Query가 상태(`isError`, `error`)로 보관한다. `mutateAsync`는 Promise를 돌려주고 실패하면 throw하므로 `await` 하는 쪽에서 `try/catch`(또는 `.catch`)가 필요하다. 화면에 상태로만 보여 주면 되면 `mutate`가 단순하고, 다른 비동기 작업과 순서를 맞춰야 하면 `mutateAsync`를 쓴다.
-2. 무효화는 "서버에서 다시 받아 와라"일 뿐이다. JSONPlaceholder는 POST 응답만 그럴듯하게 꾸며 주고 실제로 저장하지 않으므로 다시 받아 온 목록에는 새 글이 없다. 실제 서버라면 새 글이 포함된다. 즉 재요청은 일어났지만 서버 데이터가 그대로라서다.
-3. 포함한다. 키는 앞부분부터 일치(접두사 일치)하므로 `['posts']`는 `['posts', { userId: 2 }]`도 대상으로 삼는다. 정확히 같은 키만 대상으로 하려면 `exact: true`를 주거나, `['posts', { userId: 2 }]`처럼 더 구체적인 키를 넘긴다.
+1. 삭제 직전에 이미 진행 중이던 목록 재요청이 있으면, 그 응답이 나중에 도착해 방금 지운 항목을 다시 캐시에 써 넣을 수 있다. `cancelQueries`로 그 요청을 취소해 낙관적 값이 덮어써지지 않게 한다.
+2. `onMutate`의 반환값은 같은 mutation 호출의 `onError`, `onSettled`에 그대로 전달되므로 호출마다 자기 스냅샷을 갖는다. 컴포넌트 변수나 `useRef`에 담으면 빠르게 연달아 삭제할 때 앞 호출의 스냅샷을 뒤 호출이 덮어써서 엉뚱한 값으로 되돌릴 수 있다.
+3. 그 데이터를 화면 한 곳에서만 쓰면 캐시를 건드리지 않는 `variables` 방식이 코드가 짧고 롤백도 필요 없다. 여러 화면(목록과 상세, 칩별 목록 등)이 같은 데이터를 보면 캐시를 직접 고쳐야 모두 즉시 바뀐다. 오늘 피드 삭제는 칩마다 따로 있는 목록 캐시를 함께 고쳐야 하므로 캐시 방식으로 연습한다.
 
 </details>
 
@@ -97,5 +95,5 @@ return useMutation({
 
 ## 커밋 단위 제안
 
-- `feat: 글 게시 useMutation과 피드 쿼리 무효화 추가`
-- `chore: 피드 queryFn 확인용 로그 제거`
+- `feat: 피드 글 삭제 낙관적 업데이트와 롤백 추가`
+- `chore: 삭제 지연·실패 재현용 임시 코드 제거`

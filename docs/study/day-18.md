@@ -1,94 +1,76 @@
-# Day 18 · 11/19 (목) — Modal, 헤더 설정, 딥링크 scheme 기본
+# Day 18 · 11/20 (금) — 버퍼 + 4주차 점검
 
 ## 오늘의 목표
 
-설정 탭에서 여는 "앱 정보" 모달 라우트를 만들고 헤더 오른쪽 닫기 버튼을 달며, `scheme`과 `exp://` 주소로 상세 화면을 딥링크로 열어 본다.
+4주차(Day 14~17) 내용을 정답을 가리고 풀어 보고, Daily Log의 라우트 트리를 직접 그려 설명하며, 밀린 Day를 흡수한다.
 
-## 읽기(15분)
+## 주간 점검 퀴즈(30분)
 
-1. 모달 만들기: https://docs.expo.dev/router/advanced/modals/
-   - 확인할 사실: 모달은 `app/` 아래 일반 라우트 파일이고, 루트 `_layout.tsx`의 `Stack.Screen`에서 `presentation: 'modal'`을 주면 모달로 열린다. 열 때는 `Link href`를 쓴다. Android는 뒤로가기 버튼, iOS는 아래로 쓸어내려 닫고, 웹은 닫는 동작을 직접 만들어야 한다. 모달을 코드로 닫는 방법은 이 문서에 없으므로, Day 15에서 읽은 페이지 이동 문서(https://docs.expo.dev/router/basics/navigation/)의 `router.back`을 쓴다.
-2. Stack 헤더 옵션: https://docs.expo.dev/router/advanced/stack/
-   - 확인할 사실: `headerRight`는 헤더 오른쪽에 그릴 React 요소를 돌려주는 함수이고, `screenOptions`는 Stack 전체 화면에 공통 옵션을 준다. `presentation` 값은 `card`, `modal`, `formSheet` 등이다. 플랫폼별 지원 범위는 문서에서 모호하므로 `presentation` 옵션 설명을 읽고 시뮬레이터에서 확인한다.
-3. 딥링크 연결: https://docs.expo.dev/linking/into-your-app/
-   - 확인할 사실: `app.json`의 `scheme`은 개발 빌드나 스토어 빌드에서 `myapp://` 링크로 앱을 열게 한다. Expo Go에서는 `exp://` 스킴을 쓰고, 경로가 있을 때 `/--/`가 붙는다. `npx uri-scheme open <주소> --ios`로 시뮬레이터에서 링크를 연다. `scheme`은 Expo Go에서는 효과가 없는 빌드 시점 설정이다(공식 앱 설정 문서: https://docs.expo.dev/versions/latest/config/app/ 의 `scheme` 항목).
+정답을 가리고 먼저 답을 적는다. 결과는 `docs/quiz/2026-11-20-day-19.md`에 `AGENTS.md`의 상세 구조(문항별 상세, 종합 약점 패턴, 재복습 일정)로 기록한다.
 
-## 예측(10분)
+1. (Day 14) `app/profile/index.tsx`, `app/(auth)/login.tsx`, `app/post/[id].tsx`의 URL을 각각 쓰고, `app/` 안에 컴포넌트 파일을 두면 안 되는 이유를 말하라.
 
-1. 모달 화면을 닫는 방법은 iOS와 Android에서 각각 무엇인가? 그리고 헤더의 `닫기` 버튼은 어떤 함수를 호출해야 하는가?
+> 내 답:
 
-> 내 예측:
+2. (Day 15) `/post/3`으로 이동한 화면에서 `id`를 읽는 코드를 쓰고, `MOCK_POSTS.find((p) => p.id === id)`가 글을 못 찾는 이유와 고치는 방법을 말하라.
 
-2. `app.json`에 `"scheme": "dailylog"`를 넣고 Expo Go를 쓰는 중에 `dailylog://post/3`을 열면 상세 화면이 열리는가? 열리지 않는다면 Expo Go에서는 어떤 주소를 써야 하는가?
+> 내 답:
 
-> 내 예측:
+3. (Day 16) `(tabs)/_layout.tsx`와 루트 `_layout.tsx`가 각각 무엇을 렌더하고, 루트에서 `(tabs)`에 `headerShown: false`를 주는 이유는 무엇인가?
 
-3. 앱이 완전히 꺼진 상태에서 딥링크로 `/post/3`을 바로 열면, 상세 화면의 헤더에 뒤로가기 버튼이 보이는가?
+> 내 답:
 
-> 내 예측:
+4. (Day 16) 헤더를 끈 화면에서 상태바·노치와 겹치지 않게 하려면 무엇을 어디서 import해서 쓰는가? RN의 `SafeAreaView`를 쓰지 않는 이유는 무엇인가?
 
-## 만들기(40분)
+> 내 답:
 
-새로 만들 파일:
-- `app/about.tsx` — 모달 화면 `AboutScreen`. `Card` 안에 앱 이름, 버전 문구(코드에 직접 쓴 문자열), 한 줄 설명을 둔다. 하단에 `AppButton title="닫기"`가 `router.back()`을 호출한다.
+5. (Day 17) 모달 라우트를 만드는 두 가지(파일, 설정)를 말하라. 그리고 Expo Go에서 `dailylog://post/3`이 열리지 않는 이유와 대신 쓸 주소 형태는 무엇인가?
 
-고칠 파일:
-- `app/_layout.tsx` — `Stack` 안에 `about`을 추가해 `presentation: 'modal'`, `title: '앱 정보'`를 주고 `headerRight`에 `닫기` 글자 버튼(`Pressable`)을 만든다. `screenOptions`에 공통 헤더 옵션 하나(예: 제목 굵기)를 줘서 정적 옵션과 공통 옵션을 구분해 본다.
-- `app/(tabs)/settings.tsx` — `Card` 안에 `<Link href="/about">앱 정보</Link>` 줄을 추가한다.
-- `app.json` — `expo.scheme`이 이미 있으면 값을 확인만 하고, 없으면 `"scheme": "dailylog"`를 추가한다.
-
-딥링크 실습:
-1. Expo Go 사용 중이면 Metro 터미널에 표시된 `exp://` 주소(호스트와 포트)를 확인하고, 아래 형태로 연다. Android는 `--ios` 대신 `--android`.
-
-```sh
-npx uri-scheme open "exp://<Metro 주소>/--/post/3" --ios
-```
-
-2. 개발 빌드를 쓰는 경우에는 `npx uri-scheme open dailylog://post/3 --ios`를 쓴다(빌드에 `scheme`이 들어간 뒤에만 동작).
-3. 앱 안에서 `import * as Linking from 'expo-linking'` 후 `Linking.createURL('/post/3')`의 결과를 콘솔에 찍어 실행 환경별 주소 모양을 확인한다. 템플릿에 `expo-linking`이 없으면 `npx expo install expo-linking`으로 설치한다.
-
-완료 기준:
-- [ ] 설정 탭의 `앱 정보`를 누르면 `app/about.tsx`가 모달로 올라온다
-- [ ] 헤더 오른쪽 `닫기`와 하단 `닫기` 버튼이 모달을 닫는다
-- [ ] 딥링크 명령으로 상세 화면 `/post/3`이 열린다(Expo Go는 `exp://` 주소, 개발 빌드는 `scheme` 주소)
-- [ ] `Linking.createURL('/post/3')` 결과를 아래 기록 절에 적었다
-- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
-
-## 검증(10분)
-
-- 시뮬레이터에서 모달을 열고 iOS는 아래로 쓸어내려, Android는 뒤로가기로 닫아 본다. 딥링크는 앱이 켜져 있을 때와 꺼져 있을 때 각각 열어 상세 화면이 맞게 열리는지, 뒤로가기 버튼이 보이는지 적는다.
-- 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- 일부러 깨뜨려 보기: Expo Go 상태에서 `npx uri-scheme open dailylog://post/3 --ios`를 실행해 아무 일도 일어나지 않는 것을 확인하고, 이유를 `scheme` 문서 문장으로 적는다.
-- 선택 과제: 앱이 꺼진 상태의 딥링크에서 뒤로가기가 없는 문제는 `unstable_settings`의 `anchor`와 관련이 있다. 공유 라우트 문서(https://docs.expo.dev/router/advanced/shared-routes/)에서 `anchor`가 무엇을 정하는지 읽고 적는다. 문서에서 확인 필요한 부분이므로 적용은 하지 않아도 된다.
-
-## 이해 점검 질문
-
-1. 모달 라우트를 일반 화면과 구분해 주는 설정은 무엇이고 어디에 쓰는가?
-2. 같은 상세 화면을 여는 딥링크 주소가 Expo Go와 개발 빌드에서 다른 이유는 무엇인가?
-3. 파일 기반 라우팅을 쓰면 딥링크 경로를 따로 등록하지 않아도 되는 이유는 무엇인가?
+> 내 답:
 
 <details>
 <summary>정답</summary>
 
-1. 루트 `_layout.tsx`의 `Stack.Screen`에서 해당 화면의 `options`에 `presentation: 'modal'`을 준다. 파일 자체는 일반 라우트와 같은 `app/about.tsx`이고, 열고 닫는 방식만 모달로 바뀐다.
-2. 개발 빌드나 스토어 빌드는 `app.json`의 `scheme`을 자기 앱의 스킴으로 등록하므로 `dailylog://post/3`으로 열린다. Expo Go는 여러 앱을 실행하는 하나의 앱이라 자체 스킴 `exp://`를 쓰고, `scheme`은 빌드 시점 설정이라 Expo Go에서는 효과가 없다. Expo Go에서 경로를 지정하면 `/--/`가 붙는다.
-3. 파일 경로가 곧 URL이고, 그 URL이 딥링크 경로로도 그대로 쓰이기 때문이다. `app/post/[id].tsx`가 있으면 `/post/3`이 딥링크 경로가 된다. 따로 매핑 표를 만들 필요가 없다.
+1. `/profile`, `/login`, `/post/<id 값>`이다. `index`는 폴더 기본 화면이라 URL에 안 붙고, 괄호 그룹 `(auth)`는 URL에 포함되지 않으며, `[id]`는 동적 세그먼트다. `app/` 안의 파일은 기본 export가 곧 화면이 되고 경로가 URL이 되므로, 컴포넌트를 두면 화면이 아닌 파일이 라우트로 취급된다.
+2. `const { id } = useLocalSearchParams<{ id: string }>();`로 읽는다. 라우트 파라미터는 URL에서 오므로 항상 문자열이라 숫자 `id`와 `===` 비교가 거짓이 된다. `Number(id)`로 바꿔 비교한다. `tsc`가 이 비교의 타입 불일치를 지적해 준다.
+3. 루트 `_layout.tsx`는 `Stack`을 렌더해 `(tabs)`와 `post/[id]`, `about`을 쌓는다. `(tabs)/_layout.tsx`는 `Tabs`를 렌더해 피드·기록·설정 탭을 만든다. 탭 화면이 자기 헤더를 가지므로 바깥 Stack 헤더까지 보이면 헤더가 두 겹이 되어, 루트에서 `(tabs)`의 헤더를 숨긴다.
+4. `react-native-safe-area-context`의 `SafeAreaView`(필요한 가장자리만 `edges`로 지정) 또는 `useSafeAreaInsets()`를 쓴다. RN 0.81에서 `react-native`의 `SafeAreaView`는 deprecated이고 문서가 이 라이브러리를 쓰라고 안내한다.
+5. 모달 라우트는 `app/` 아래 일반 라우트 파일을 만들고, 루트 `_layout.tsx`의 `Stack.Screen`에 `presentation: 'modal'` 옵션을 주면 된다. `scheme`은 빌드 시점 설정이라 Expo Go에서는 효과가 없고 Expo Go는 `exp://` 스킴을 쓴다. 따라서 `exp://<Metro 주소>/--/post/3` 형태로 연다.
 
 </details>
 
+## 구술 1주제(15분)
+
+주제: Daily Log의 라우트 트리(루트 Stack, `(tabs)` 3탭, 상세, 모달)를 종이에 그리고, 피드에서 글을 눌러 상세로 가는 흐름을 1분 안에 소리 내어 설명한다.
+
+설명에 포함할 핵심어: 파일 기반 라우팅, `_layout`, `(tabs)` 그룹, 동적 라우트 `[id]`와 `useLocalSearchParams`, `presentation: 'modal'`
+
+- [ ] 핵심어 5개를 모두 썼다
+- [ ] 라우트 트리 그림을 기록 절에 사진이나 텍스트로 남겼다
+
+막힌 부분:
+
+## 질문 목록 처리(15분)
+
+`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 해결한 질문은 해결 방법 한 줄을 적고, 그래도 안 풀린 질문은 에러 원문과 시도한 것을 남겨 다음 주 금요일로 넘긴다.
+
+- [ ] 해결한 질문 수:
+- [ ] 다음 주로 넘긴 질문 수:
+
+## 밀린 Day 흡수
+
+- [ ] Day 14 (expo-router 파일 기반 라우팅) 완료 기준을 모두 채웠다
+- [ ] Day 15 (Stack, 동적 라우트) 완료 기준을 모두 채웠다
+- [ ] Day 16 (Tabs, SafeArea) 완료 기준을 모두 채웠다
+- [ ] Day 17 (Modal, 헤더, 딥링크) 완료 기준을 모두 채웠다
+- [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
+- [ ] 이번 주 커밋이 모두 `<type>: <한국어 요약>` 형식이다
+- [ ] 다음 주 Day 19 전에, 기록 화면에서 쓴 글이 피드·상세에 나타나지 않는 문제를 한 줄로 적어 두었다(Day 20에서 해결한다)
+
 ## 기록(5분)
 
-`Linking.createURL('/post/3')` 결과:
+이번 주 배운 것 3줄:
 
-배운 것 3줄:
+가장 헷갈렸던 개념:
 
-막힌 점:
-
-## 커밋 단위 제안
-
-- `feat: 앱 정보 모달 라우트 추가`
-- `chore: 딥링크 scheme 설정`
-
-## 웹과 다른 점
-
-웹의 모달은 보통 DOM에 올려놓는 UI이지만, Expo Router의 모달은 화면 스택의 한 화면으로 올라오는 라우트라 URL로도 열린다.
+라우트 트리 그림:
