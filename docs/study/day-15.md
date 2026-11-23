@@ -1,80 +1,77 @@
-# Day 15 · 11/16 (월) — expo-router 파일 기반 라우팅
+# Day 15 · 11/17 (화) — Stack, 동적 라우트, 파라미터
 
 ## 오늘의 목표
 
-한 화면이던 Daily Log를 `app/` 폴더의 파일 두 개(피드 `index.tsx`, 기록 `write.tsx`)로 나누고, `Link`로 오가는 것을 확인한다.
+피드에서 글을 누르면 `app/post/[id].tsx` 상세 화면으로 이동해 URL 파라미터로 글 하나를 보여 주고, Stack 헤더 제목을 글 제목으로 바꾼다.
 
 ## 읽기(15분)
 
-1. Expo Router 핵심 개념: https://docs.expo.dev/router/basics/core-concepts/
-   - 확인할 사실: `app`의 파일은 기본 export가 곧 화면이고, 파일 경로가 URL이 된다(`profile/friends.tsx`는 `/profile/friends`). `index.tsx`는 그 폴더의 기본 화면이다. 루트 `_layout.tsx`는 어떤 화면보다 먼저 렌더되고 예전 `App.jsx` 자리를 대신한다. 이 문서는 `src/app`으로 쓰여 있지만 이 프로젝트는 루트의 `app/`이다.
-2. 라우트 표기법: https://docs.expo.dev/router/basics/notation/
-   - 확인할 사실: `index`, `_layout`, `[param]`, `(group)`, `+not-found`가 각각 무엇을 뜻하는지 표로 정리한다. 특히 `(group)` 폴더 이름은 URL에 포함되지 않는다.
+1. URL 파라미터: https://docs.expo.dev/router/reference/url-parameters/
+   - 확인할 사실: `[user].tsx` 같은 파일 이름이 동적 세그먼트이고, `useLocalSearchParams`가 현재 화면의 파라미터를 돌려준다. 파라미터는 항상 문자열이다. `useLocalSearchParams<{ user: string }>()`처럼 제네릭으로 타입을 준다. `useLocalSearchParams`는 현재 화면의 값을, `useGlobalSearchParams`는 주소 전체의 값을 돌려준다.
+2. Stack 레이아웃: https://docs.expo.dev/router/advanced/stack/
+   - 확인할 사실: `_layout.tsx`의 `<Stack.Screen name="..." options={{...}} />`로 화면별 옵션을 정적으로 정하고, 화면 파일 안에서 `<Stack.Screen options={{ title: ... }} />`를 렌더하면 파라미터에 따라 옵션을 동적으로 정할 수 있다. `title`을 안 주면 화면 이름이 제목이 된다.
 3. 페이지 사이 이동: https://docs.expo.dev/router/basics/navigation/
-   - 확인할 사실: `<Link href="/about">`이 기본 이동 수단이다. `Link`는 기본적으로 자식을 `Text`로 감싸므로, `View`나 `Pressable`을 자식으로 쓰려면 `asChild`가 필요하다. 명령형 이동은 `router.push`, `router.replace`, `router.back`이다.
+   - 확인할 사실: `router.push`는 새 화면을 스택에 쌓고 `router.back`은 이전 화면으로 돌아간다. 동적 라우트로 이동할 때 `typedRoutes`가 켜져 있으면 문자열 대신 객체 `href`가 필요할 수 있는데, 정확한 형식은 https://docs.expo.dev/router/reference/typed-routes/ 에서 확인한다.
 
 ## 예측(10분)
 
-1. `app/write.tsx`를 만들고 어디에서도 import하지 않았을 때, 앱에서 `/write` 화면에 갈 수 있는가?
+1. `/post/3`으로 이동했을 때 `useLocalSearchParams<{ id: string }>()`가 돌려준 `id`를 `typeof`로 찍으면 무엇인가? 그리고 `MOCK_POSTS.find((p) => p.id === id)`는 글을 찾는가?
 
 > 내 예측:
 
-2. `app/` 안에 `Card.tsx`처럼 기본 export가 없는 일반 파일을 두면 어떻게 되는가? (Day 12에서 `components`를 `src/`로 옮긴 이유와 연결해 적는다)
+2. 피드에서 글을 눌러 상세로 갔다가 뒤로 오면, 피드 화면 컴포넌트는 언마운트되었다가 다시 마운트되는가, 계속 살아 있는가?
 
 > 내 예측:
 
-3. `Stack`을 쓰는 `_layout.tsx`에서 화면 제목을 따로 지정하지 않았을 때, 헤더에 보이는 제목은 무엇이 될 것 같은가?
+3. 존재하지 않는 `/post/999`로 이동하면 무엇이 보이는가?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-지금까지는 `app/index.tsx` 한 화면에 입력 폼과 목록이 같이 있었다. 이를 라우트 두 개로 나눈다.
-
-중요한 변화: 화면을 나누면 기록 화면에서 입력한 글이 피드에 나타나지 않는다. 피드는 `Post`(`MOCK_POSTS`)만 보여 주고 기록(`LogEntry`)과 섞지 않는다. 기록 개수 공유는 Day 22에서 한다. 오늘은 이 상태가 정상이다.
+Day 7에서 만든 `@/data/mock-posts`의 `MOCK_POSTS`를 상세 화면의 데이터로 쓴다.
 
 새로 만들 파일:
-- `app/write.tsx` — 기존 `app/index.tsx`의 내용(입력 폼 + 이번에 작성한 글 목록)을 그대로 옮겨 기록 화면으로 쓴다. 기본 export 컴포넌트 이름은 `WriteScreen`으로 바꾼다.
-- `app/_layout.tsx` — 템플릿 초기화 후 이미 있으면 내용을 확인만 한다. 없으면 `Stack`을 렌더하는 기본 export를 만든다.
-
-```tsx
-import { Stack } from 'expo-router';
-
-export default function RootLayout() {
-  return <Stack />;
-}
-```
+- `app/post/[id].tsx` — `useLocalSearchParams<{ id: string }>()`로 `id`를 읽고, `Number(id)`로 숫자로 바꿔 `MOCK_POSTS`에서 글을 찾는다. 글이 있으면 제목, 본문을 `Card`로 보여 주고, 없으면 `EmptyState message="글을 찾을 수 없어요"`를 보여 준다. 글이 있을 때 `<Stack.Screen options={{ title: entry.title }} />`로 헤더 제목을 글 제목으로 정한다.
 
 고칠 파일:
-- `app/index.tsx` — 피드 화면 `FeedScreen`으로 바꾼다. `@/data/mock-posts`의 `MOCK_POSTS`를 `FlatList`와 `PostCard`로 보여 준다(Day 8의 `SectionList`는 `FlatList`로 되돌리고 `refreshing`·`onRefresh`는 유지한다). Day 7의 기록|피드 전환 버튼을 지운다. `now`·`useNow`는 피드에서 빼고 `app/write.tsx`의 `LogItem`에 남긴다. 화면 위쪽에 `<Link href="/write">글쓰기</Link>`를 둔다.
-- `app/write.tsx` — 위쪽에 피드로 돌아가는 `<Link href="/">피드</Link>`를 둔다.
-- `src/data/entries.ts`와 `ENTRIES`가 남아 있으면 모두 지운다.
+- `app/_layout.tsx` — `Stack` 안에 `index`는 `title: '피드'`, `write`는 `title: '기록'`, `post/[id]`는 기본 제목 `글`로 정적 옵션을 준다.
+- `app/index.tsx` — `PostCard`의 `onPress`에서 `router.push`로 `/post/<id>`로 이동한다. 템플릿 문자열을 쓰거나 `typedRoutes`가 요구하면 객체 `href`를 쓴다.
+
+핵심 형태:
+
+```tsx
+const { id } = useLocalSearchParams<{ id: string }>();
+const entry = MOCK_POSTS.find((p) => p.id === Number(id));
+```
+
+이번 Day의 상세 화면은 `MOCK_POSTS`만 보여 준다. 기록 상세는 Day 45의 `app/log/[id].tsx`가 맡는다.
 
 완료 기준:
-- [ ] `app/`에 `_layout.tsx`, `index.tsx`, `write.tsx`가 있고 `app/` 안에 라우트가 아닌 파일은 없다
-- [ ] 피드에서 `글쓰기`를 누르면 기록 화면으로 이동하고 헤더에 뒤로가기가 보인다
-- [ ] 기록 화면에서 글을 쓰면 그 화면의 목록에는 나타난다(피드에는 나타나지 않는다)
-- [ ] 피드가 `MOCK_POSTS`를 `PostCard`로 보여 준다
+- [ ] `app/post/[id].tsx`가 있고 피드의 글을 누르면 해당 글의 상세가 열린다
+- [ ] 헤더 제목이 글 제목으로 바뀌고 뒤로가기가 동작한다
+- [ ] 없는 id(`/post/999`)에서 "글을 찾을 수 없어요"가 보이고 앱이 죽지 않는다
+- [ ] `id` 비교에서 `Number(id)` 변환이 빠지면 `npm run typecheck`가 잡는 것을 확인했다
 - [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
 
 ## 검증(10분)
 
-- 시뮬레이터에서 `글쓰기`를 누르고, 기록 화면에서 뒤로 가기를 눌러 피드로 돌아오는 것을 확인한다. 헤더의 제목 문자열을 적는다.
+- 시뮬레이터에서 피드의 글 3개를 차례로 눌러 각 상세가 맞는지 본다. 피드 화면 컴포넌트에 임시 `useEffect`로 마운트/언마운트 로그를 찍고 상세로 갔다 돌아올 때 로그가 어떻게 나오는지 본다. 확인 후 로그를 지운다.
 - 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- 일부러 깨뜨려 보기: `app/write.tsx` 파일 이름을 `app/compose.tsx`로 바꾸고 `Link`의 `href="/write"`는 그대로 둔다. `npm run typecheck`에서 오류가 나는지, 앱에서 `글쓰기`를 눌렀을 때 무엇이 보이는지 적는다. `app.json`의 `experiments.typedRoutes` 값이 `true`인지도 함께 확인해 오류 여부와 연결해 적는다(타입이 지정된 라우트 문서: https://docs.expo.dev/router/reference/typed-routes/). 확인이 끝나면 이름을 되돌린다.
+- 일부러 깨뜨려 보기: `Number(id)`를 빼고 `p.id === id`로 비교한다. `npm run typecheck`가 무엇을 지적하는지, 이 코드가 타입 검사 없이 실행되었다면 어떤 화면이 나왔을지 적는다. 확인 후 되돌린다.
 
 ## 이해 점검 질문
 
-1. `app/profile/index.tsx`, `app/(auth)/login.tsx`, `app/post/[id].tsx`는 각각 어떤 URL이 되는가?
-2. `Link`가 `<a>`와 달리 자식을 `Text`로 감싸는 이유와, 자식으로 `Pressable`을 쓰고 싶을 때 필요한 prop은 무엇인가?
-3. 화면을 둘로 나누자 기록 화면에서 `useState`로 든 글을 다른 화면이 읽을 수 없다. 왜이고, 어떻게 해결하게 되는가?
+1. `useLocalSearchParams`가 돌려주는 값의 타입이 숫자가 아니라 문자열인 이유는 무엇이고, 어떻게 처리하는가?
+2. 상세 화면의 헤더 제목을 `_layout.tsx`의 정적 옵션이 아니라 화면 파일 안의 `<Stack.Screen options>`로 정하는 이유는 무엇인가?
+3. Stack 안에서 상세로 이동했다가 뒤로 오면 피드 화면은 어떻게 되며, 그래서 어떤 점이 웹 페이지 이동과 다른가?
 
 <details>
 <summary>정답</summary>
 
-1. `/profile`, `/login`, `/post/<id 값>`이다. `index.tsx`는 폴더의 기본 화면이라 URL에 `index`가 붙지 않고, `(auth)`처럼 괄호로 묶인 폴더는 URL에 포함되지 않는 그룹이며, `[id]`는 동적 세그먼트다.
-2. RN에서는 문자열을 `Text` 안에서만 렌더할 수 있고, 링크의 기본 자식은 글자이기 때문이다. `Link`가 기본으로 `Text`로 감싸는 것이다. `View`나 `Pressable`을 자식으로 쓰려면 `asChild`를 붙여 `onPress`를 받는 자식에게 링크 동작을 위임해야 한다.
-3. 상태가 기록 화면 컴포넌트 안의 `useState`에 갇혀 있어, 다른 화면은 그 값에 접근할 수 없기 때문이다. 화면(컴포넌트) 밖에서 상태를 들고 있는 Context를 Day 21~22에서 도입해 해결한다.
+1. 라우트 파라미터는 URL 경로와 쿼리 문자열에서 오므로 항상 문자열이다. 숫자 `id`와 비교하려면 `Number(id)`처럼 변환해야 하고, 변환하지 않으면 `3 === "3"`이 거짓이라 글을 못 찾는다. 이 불일치를 `tsc`가 비교 단계에서 잡아 준다.
+2. 제목이 글 내용(파라미터로 찾은 글의 `title`)에 따라 달라지는데, `_layout.tsx`는 데이터를 모르는 정적 설정 자리이기 때문이다. 화면 파일은 파라미터를 알고 있어서 글을 찾은 뒤 그 값으로 옵션을 정할 수 있다.
+3. Stack은 새 화면을 쌓고 뒤로 가면 맨 위 화면만 제거하므로, 이전 화면(피드)은 보통 언마운트되지 않고 스크롤 위치와 상태를 유지한 채 남는다. 실제 동작은 위 검증의 로그로 확인한다. 웹 SPA처럼 이전 페이지를 내리고 새로 그리는 것과 다르다.
 
 </details>
 
@@ -86,9 +83,9 @@ export default function RootLayout() {
 
 ## 커밋 단위 제안
 
-- `refactor: 한 화면을 피드와 기록 라우트로 분리`
-- `feat: 샘플 데이터와 화면 이동 링크 추가`
+- `feat: 글 상세 동적 라우트 추가`
+- `feat: Stack 헤더 제목을 글 제목으로 설정`
 
 ## 웹과 다른 점
 
-파일 경로가 URL이 되는 규칙은 Next.js와 비슷하지만, 앱에서 URL은 주소창이 아니라 화면 스택 이동과 딥링크(Day 18)에 쓰인다.
+웹에서는 링크를 따라가면 이전 페이지가 내려가는 것이 보통이지만, RN의 Stack은 화면을 쌓아 두고 뒤로 가기가 위 화면만 걷어내므로 이전 화면의 상태가 남아 있다.

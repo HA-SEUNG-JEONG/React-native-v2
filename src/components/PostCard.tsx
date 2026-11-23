@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
-import { Post } from "../data/mock-posts";
+import { Post } from "@/data/mock-posts";
 import { Card } from "./Card";
 
 type PostCardProps = {

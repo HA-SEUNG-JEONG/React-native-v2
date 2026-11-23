@@ -1,90 +1,85 @@
-# Day 56 · 1/12 (화) — 반응형: useWindowDimensions, 키보드·SafeArea 다듬기
+# Day 56 · 1/13 (수) — Error Boundary
 
 ## 오늘의 목표
 
-`useWindowDimensions`로 피드를 화면 너비에 따라 1열/2열로 바꾸고, 기록 작성 화면에서 SafeArea 하단 여백과 키보드 동작을 iOS·Android에서 비교해 다듬는다.
+클래스 기반 `AppErrorBoundary`로 피드 카드 하나의 렌더 오류가 목록 전체를 죽이지 않게 하고, expo-router의 라우트 `ErrorBoundary` export로 화면 단위 폴백을 만들어 두 방식의 범위 차이를 확인한다.
 
 ## 읽기(15분)
 
-1. https://reactnative.dev/docs/usewindowdimensions
-   - 확인할 사실: 반환 필드는 `width`, `height`, `scale`, `fontScale`이다. 화면 크기나 글자 크기 설정이 바뀌면 값이 자동으로 갱신된다. `Dimensions.get`이 호출 시점의 스냅샷인 것과 달리 이 훅은 구독해 리렌더한다는 차이를 `Dimensions` 문서(https://reactnative.dev/docs/dimensions)와 비교해 확인한다.
-2. https://reactnative.dev/docs/flatlist
-   - 확인할 사실: `numColumns`는 `horizontal={false}`일 때만 쓸 수 있고, 모든 항목이 같은 높이여야 한다(masonry 불가). `columnWrapperStyle`은 `numColumns > 1`인 행에 주는 스타일이다. `numColumns`를 실행 중에 바꿀 때의 제약은 이 페이지에 적혀 있지 않다. 이 제약은 직접 만들기에서 에러 메시지로 확인한다.
-3. https://docs.expo.dev/versions/latest/sdk/safe-area-context/
-   - 확인할 사실: Expo Router는 `SafeAreaProvider`를 자동으로 설정한다. `SafeAreaView`는 안전 영역을 패딩으로 적용한 `View`이고 문서가 가능하면 이쪽을 우선하라고 한다. `useSafeAreaInsets()`는 `top`·`right`·`bottom`·`left`를 돌려주는 더 세밀한 선택지다.
+1. https://react.dev/reference/react/Component 의 "Catching rendering errors with an error boundary" 절
+   - 확인할 사실: 에러 경계는 클래스 컴포넌트이고 `static getDerivedStateFromError(error)`(필수, 폴백을 그리도록 state를 돌려줌)와 `componentDidCatch(error, info)`(선택, 로깅 같은 부수 효과)를 정의한다. 이벤트 핸들러 안의 에러, `setTimeout` 같은 비동기 코드의 에러, 경계 컴포넌트 자신의 에러는 잡지 못한다. 함수 컴포넌트로 에러 경계를 쓰는 방법은 현재 없다.
+2. https://docs.expo.dev/router/error-handling/
+   - 확인할 사실: 라우트 파일에서 `ErrorBoundary`라는 이름으로 컴포넌트를 export하면 그 라우트가 에러 경계로 감싸지고, 컴포넌트는 `error`와 `retry` props를 받는다(타입은 `expo-router`의 `ErrorBoundaryProps`). export하지 않으면 에러는 가장 가까운 상위 `ErrorBoundary`로 올라간다. 문서 하단에 React Native LogBox가 `console.error`에도 뜨는 개발 중 불편이 적혀 있다.
 
 ## 예측(10분)
 
-1. 피드가 1열일 때 `numColumns`를 2로 바꾸는 코드를 `key` 없이 조건부로만 바꾸면 어떻게 될까?
+1. 피드의 한 카드(`PostCard`) 렌더 중에 `throw new Error('테스트')`가 나는데 어디에도 에러 경계가 없으면, 개발 모드에서 화면은 어떻게 될까?
 
 > 내 예측:
 
-2. 2열 피드에서 글이 홀수 개(예: 5개)이면 마지막 행의 카드는 어떤 폭으로 보일까? 카드에 `flex: 1`을 줬다고 가정한다.
+2. `renderItem`이 반환하는 각 카드를 `AppErrorBoundary`로 감싸 두면, 카드 3번이 렌더 중에 던진 에러는 다른 카드와 목록 스크롤에 어떤 영향을 줄까?
 
 > 내 예측:
 
-3. 기록 작성 화면의 저장 버튼을 화면 맨 아래에 붙였을 때, 홈 인디케이터가 있는 iPhone과 제스처 내비게이션 Android에서 버튼은 각각 어떻게 가려질까? 키보드가 올라오면 버튼은 어떻게 될까?
+3. 카드의 `onPress` 핸들러 안에서 같은 에러를 던지면 `AppErrorBoundary`의 폴백이 보일까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-1. 피드 탭(`app/(tabs)/index.tsx`)에서 `useWindowDimensions().width`로 `numColumns`를 구한다. 기준 너비는 상수 하나(예: 600)로 두고, 그 이상이면 2, 아니면 1이다.
-   - `FlatList`의 `numColumns`에 넘기고, `key`에도 열 개수를 넣어 열 수가 바뀔 때 목록이 새로 만들어지게 한다(실행 중에 `numColumns`만 바꾸면 에러가 난다. 메시지 원문을 기록 칸에 적는다).
-   - 열이 2개일 때만 `columnWrapperStyle`을 준다. 열이 1개일 때 `columnWrapperStyle`을 넘기면 에러가 난다.
-   - 카드 폭이 열 수에 맞게 나뉘도록 하고, 홀수 개일 때 마지막 카드만 넓어지는 문제는 카드의 폭을 열 수에 맞춘 퍼센트 값으로 고정해 해결한다.
-2. 글 상세 화면(Day 16에서 만든 동적 라우트 파일)에서 큰 화면일 때 본문이 한 줄로 너무 길게 늘어나지 않도록, 본문 컨테이너에 `maxWidth` 상수를 주고 가운데 정렬한다.
-3. 기록 작성 화면(`app/(tabs)/write.tsx`)을 다듬는다.
-   - 저장 버튼 영역의 하단 패딩을 `useSafeAreaInsets().bottom`과 기본 여백 중 큰 값으로 준다.
-   - Day 6의 `KeyboardAvoidingView`가 있다면 `behavior`를 플랫폼별로 직접 지정했는지 확인한다. 문서는 Android와 iOS가 이 속성을 다르게 처리하므로 양쪽 모두 `behavior`를 설정하라고 한다. 값은 두 플랫폼에서 실제로 시험해 정한다.
-   - 헤더가 있다면 `keyboardVerticalOffset`을 헤더 높이만큼 주어야 하는지 확인한다.
-4. 글자 크기 설정이 커졌을 때 카드가 잘리지 않는지 본다. 카드 높이를 고정값으로 주었다면 `minHeight`로 바꾸거나 제거한다. `useWindowDimensions().fontScale` 값을 임시로 화면에 찍어 설정 변경이 반영되는지 확인한다.
-5. `app.json`의 `orientation`은 템플릿에서 `portrait`이다. 가로 회전을 직접 시험하려면 `default`로 바꾸면 되지만, 이 변경이 개발 환경에서 즉시 적용되는지는 문서에서 확인 필요하다(적용되지 않으면 이 항목은 생략하고 iPad 시뮬레이터로 큰 화면만 확인한다).
+1. `src/components/AppErrorBoundary.tsx`에 `AppErrorBoundary`를 만든다. 클래스 컴포넌트이고 TypeScript로 `Props`(`children`, `fallback`)와 `State`(`hasError`)를 정의한다.
+   - `static getDerivedStateFromError()`는 `{ hasError: true }`를 돌려준다.
+   - `componentDidCatch(error, info)`에서는 `console.error`로 `error`와 `info.componentStack`을 남긴다(실제 앱이라면 크래시 리포팅 서비스에 보낼 자리다).
+   - 폴백에서 "다시 시도"를 누르면 `hasError`를 `false`로 되돌려 자식을 다시 렌더하게 한다.
+2. 피드 탭(`app/(tabs)/index.tsx`)의 `FlatList` `renderItem`에서 각 `PostCard`를 `AppErrorBoundary`로 감싼다. 폴백은 작은 카드 모양의 "이 글을 표시할 수 없어요"와 "다시 시도" 버튼이다. 폴백 색은 Day 52의 `useTheme()` 토큰을 쓴다.
+3. 같은 피드 탭 파일에서 라우트용 폴백도 export한다.
+
+```tsx
+import { type ErrorBoundaryProps } from 'expo-router';
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) { /* error.message와 retry 버튼 */ }
+```
+
+   `retry`를 누르면 무슨 일이 일어나는지는 직접 확인해 기록 칸에 적는다(문서에는 내부 동작 설명이 없다).
+4. `PostCard`의 폴백과 라우트 폴백이 각각 언제 보이는지 구분되게 서로 다른 문구를 쓴다.
+5. 선택: 루트 레이아웃 `app/_layout.tsx`에도 `ErrorBoundary`를 export해 앱 전체의 마지막 폴백을 둔다.
 
 완료 기준
 
-- [ ] 폭이 600 미만이면 1열, 이상이면 2열로 피드가 바뀐다
-- [ ] 2열에서 홀수 개일 때 마지막 카드가 넓어지지 않는다
-- [ ] 열 수가 바뀔 때 `numColumns` 관련 에러가 나지 않는다
-- [ ] 큰 화면에서 상세 본문이 `maxWidth`에서 멈추고 가운데에 놓인다
-- [ ] 기록 작성 화면의 저장 버튼이 홈 인디케이터/내비게이션 막대에 가려지지 않고, 키보드가 올라와도 입력창과 저장 버튼이 보인다
-- [ ] 글자 크기를 키워도 피드 카드 글자가 잘리지 않는다
-- [ ] iOS와 Android에서 키보드 동작 차이를 기록 칸에 적었다
+- [ ] 클래스 컴포넌트 `AppErrorBoundary`가 `getDerivedStateFromError`와 `componentDidCatch`를 갖는다
+- [ ] 한 카드가 렌더 중 에러를 던져도 다른 카드가 정상 표시되고 목록 스크롤이 된다
+- [ ] 카드 폴백의 "다시 시도"를 누르면 자식이 다시 렌더된다(원인이 남아 있으면 다시 폴백이 보인다)
+- [ ] 피드 탭 파일이 `ErrorBoundary`를 export하고 `error.message`를 보여 준다
+- [ ] 임시로 넣은 `throw` 코드를 모두 제거했다
 
 ## 검증(10분)
 
 확인할 동작
 
-- 큰 화면 확인: iPad 시뮬레이터(또는 태블릿 Android 에뮬레이터)에서 앱을 열어 피드가 2열인지 본다(기기를 고르는 방법은 Expo CLI 안내를 따른다). 시뮬레이터가 없으면 `npm run web`으로 열어 브라우저 창 너비를 조절해 열 수 변화를 확인한다. 이 경우는 레이아웃만 확인하고 안전 영역·키보드는 확인할 수 없다는 점을 기록한다.
-- 글자 크기: iOS 시뮬레이터 설정의 글자 크기(접근성 > 디스플레이 및 텍스트 크기)를 키우거나 Android 설정의 글꼴 크기를 키운 뒤 피드와 상세를 본다.
-- 키보드: 기록 작성 화면에서 입력창을 눌러 키보드를 올리고 저장 버튼과 마지막 입력창이 보이는지, 두 플랫폼에서 비교한다.
+- 개발 모드에서는 에러가 경계에 잡혀도 LogBox 오류 화면이 먼저 뜰 수 있다(문서의 LogBox 언급 참고). 오류 화면을 닫으면 폴백이 보이는지 확인하고, 앱 안에서 보인 것을 기록한다. 릴리스 빌드에서의 동작은 EAS Build를 다루는 Day 65 이후 확인 대상이므로 지금은 가정하지 않는다.
+- "다시 시도"를 눌러 폴백이 다시 나오는지, 원인을 제거한 뒤 누르면 카드가 복구되는지 본다.
 
 일부러 깨뜨려 보는 실험
 
-- 피드 `FlatList`에서 `key`를 지우고 화면 너비를 600 경계 위아래로 바꿔(iPad ↔ 폰, 웹 창 크기) `numColumns` 변경 에러를 일으킨다. 에러 메시지 원문을 적고 `key`를 되돌린다. 예측 1과 비교한다.
+- `PostCard`에 `post.id === 3`이면 렌더 중 에러를 던지는 줄을 임시로 넣고 카드 3번이 폴백으로 바뀌고 나머지 카드는 정상인지 본다. 이어서 같은 `throw`를 카드 `onPress` 안으로 옮겨 카드를 눌러 보고, 폴백이 보이는지와 화면에 무엇이 나타나는지 적는다. 예측 1, 2, 3과 비교한 뒤 임시 코드를 지운다.
 
-> 에러 원문:
->
-> 예측과 달랐던 점:
+> 실험 결과:
 
 ## 이해 점검 질문
 
-1. `Dimensions.get('window')`와 `useWindowDimensions()`는 어떻게 다르고, 왜 컴포넌트에서는 후자를 쓸까?
-2. 실행 중에 `numColumns`를 바꾸려면 왜 `FlatList`에 `key`를 줘야 하고, 열이 1개일 때 `columnWrapperStyle`을 주면 어떻게 될까?
-3. `SafeAreaView`와 `useSafeAreaInsets()`는 각각 언제 쓰고, 저장 버튼 하단 여백을 `Math.max(insets.bottom, 기본 여백)`으로 주는 이유는 무엇일까?
+1. 에러 경계가 잡지 못하는 에러 세 가지와, 그 에러를 처리하는 방법은 무엇일까?
+2. 에러 경계를 함수 컴포넌트로 만들 수 없는 이유와, 클래스를 직접 쓰지 않고 해결하는 방법은 무엇일까?
+3. 카드마다 감싼 `AppErrorBoundary`와 라우트의 `ErrorBoundary` export는 잡는 범위와 쓰임이 어떻게 다를까?
 
 <details>
 <summary>정답</summary>
 
-1. `Dimensions.get('window')`는 호출한 순간의 스냅샷이라 회전·분할 화면·글자 크기 변경 후에도 값이 자동으로 바뀌지 않는다. `useWindowDimensions()`는 변경을 구독해 값이 바뀌면 컴포넌트를 다시 렌더하므로, 렌더에서 레이아웃을 결정하는 컴포넌트에서는 이 훅이 맞다.
-2. `FlatList`는 `numColumns`가 바뀌면 `Changing numColumns on the fly is not supported. Change the key prop on FlatList when changing the number of columns to force a fresh render of the component.`라는 에러를 낸다(RN 0.81 소스의 invariant 메시지). `key`를 바꾸면 목록이 새로 마운트되어 이 검사를 피한다. `columnWrapperStyle`은 `numColumns > 1`에서만 허용되어 단일 열에서 넘기면 `columnWrapperStyle not supported for single column lists` 에러가 난다.
-3. `SafeAreaView`는 안전 영역을 패딩으로 자동 적용하는 `View`라서 화면 전체를 감싸는 단순한 경우에 쓰고, 문서도 네이티브로 구현되어 있어 가능하면 이쪽을 우선하라고 한다. `useSafeAreaInsets()`는 `top`·`bottom` 같은 값을 직접 받아 특정 요소의 패딩을 따로 계산해야 할 때 쓴다. 홈 인디케이터가 없는 기기는 `insets.bottom`이 0이라 버튼이 바닥에 붙어 답답해 보이므로, 기본 여백과 큰 값을 취해 어떤 기기에서도 최소 여백을 보장한다.
+1. 이벤트 핸들러 안의 에러, `setTimeout`·`requestAnimationFrame` 같은 비동기 코드의 에러, 경계 컴포넌트 자신의 에러는 잡지 못한다(React 문서). 이벤트 핸들러와 비동기 코드는 렌더 과정 밖에서 실행되어 React가 렌더 트리에서 에러를 추적하지 않기 때문이다. 이런 에러는 `try/catch`, Day 24~26에서 만든 로딩·에러 상태, TanStack Query의 `error`로 직접 처리하고 사용자에게 상태로 보여 준다.
+2. 에러 경계는 `getDerivedStateFromError`·`componentDidCatch` 같은 클래스 생명주기 메서드로만 만들 수 있고, 같은 일을 하는 Hook이 아직 없다(React 문서). 직접 클래스를 쓰기 싫으면 문서가 언급하는 `react-error-boundary` 패키지를 쓸 수 있다. 이 카드는 의존성을 늘리지 않으려고 작은 클래스를 직접 쓴다.
+3. 카드마다 감싼 경계는 그 카드의 자식만 보호하므로 한 카드가 죽어도 나머지 화면은 그대로 보인다. 라우트의 `ErrorBoundary` export는 그 라우트 화면 전체를 감싸고, export하지 않으면 에러가 가장 가까운 상위 경계로 올라간다. 그래서 세밀한 단위(카드)는 클래스 경계로, 화면 단위의 마지막 폴백은 라우트 export로 나눈다.
 
 </details>
 
 ## 기록(5분)
-
-iOS와 Android의 키보드 동작 차이:
 
 배운 것 3줄:
 
@@ -96,9 +91,9 @@ iOS와 Android의 키보드 동작 차이:
 
 ## 커밋 단위 제안
 
-- `feat: 피드를 화면 너비에 따라 1열/2열로 전환`
-- `style: 상세 본문 최대 너비와 기록 작성 하단 여백 다듬기`
+- `feat: 피드 카드를 감싸는 AppErrorBoundary 추가`
+- `feat: 피드 탭에 라우트 ErrorBoundary 폴백 추가`
 
 ## 웹과 다른 점
 
-웹은 CSS 미디어 쿼리와 `rem`/`vh` 단위로 반응형을 선언하지만, RN에는 미디어 쿼리가 없어서 `useWindowDimensions` 값을 JS로 읽어 레이아웃을 분기하고 SafeArea 여백도 직접 값으로 받아 쓴다.
+에러 경계 자체는 웹 React와 같지만, RN 개발 모드에서는 경계가 에러를 잡아도 LogBox 오류 화면이 먼저 뜰 수 있어 닫아야 폴백이 보인다.

@@ -1,92 +1,93 @@
-# Day 24 · 11/27 (금) — 버퍼 + 5주차 점검
+# Day 24 · 11/30 (월) — fetch + useEffect, 로딩·에러 상태
 
 ## 오늘의 목표
 
-5주차(Day 20~23: router API, Context, reducer, 보호된 라우트) 내용을 정답을 가리고 풀어 보고, 밀린 Day와 질문 목록을 정리한다.
+피드 탭이 JSONPlaceholder `/posts`를 `fetch`로 불러오고, 로딩·에러·성공 세 상태를 각각 다른 화면으로 보여 준다.
 
-## 주간 점검 퀴즈(30분)
+## 읽기(15분)
 
-정답은 접힌 상태에서 먼저 자기 답을 적은 뒤 연다. 결과는 `docs/quiz/2026-11-27-day-24.md`에 `AGENTS.md`의 상세 구조(문항별 내 답 → 문제점 → 정답 → 암기 고리 → 근거 절, 종합 약점 패턴, 재복습 일정)로 기록한다.
+1. https://reactnative.dev/docs/network — React Native의 `fetch` 사용법과 에러 처리.
+   - 확인할 사실: `fetch`는 Promise를 돌려주며, `fetch`가 던지는 에러를 잡지 않으면 조용히 버려진다고 적혀 있다.
+   - 확인할 사실: iOS는 ATS 때문에 HTTP 연결을 기본 차단하고, Android는 API 28부터 cleartext 트래픽을 기본 차단한다. JSONPlaceholder는 HTTPS라 해당 없다.
+   - 확인할 사실: 이 페이지에는 `response.ok`와 HTTP 상태 코드 처리가 나오지 않는다. `response.ok`의 정확한 의미는 이 페이지에서 확인할 수 없으므로 오늘 예측 1번 실험으로 직접 확인한다(문서에서 확인 필요).
+2. https://react.dev/learn/synchronizing-with-effects — 본문의 "Fetching data" 부분.
+   - 확인할 사실: Effect 안에서 데이터를 가져오는 방법과 한계. Strict Mode를 켠 개발 환경에서는 Effect가 마운트 직후 한 번 더 실행되어 요청이 두 번 나갈 수 있고, 프로덕션에서는 한 번이다. Expo/RN 앱은 Strict Mode를 기본으로 켜지 않으므로 이 카드의 기본 상태에서는 한 번만 찍힐 수 있다(아래 예측 3과 선택 과제).
+3. https://jsonplaceholder.typicode.com/guide/ — `/posts` 리소스(100개)와 필드. 글은 `{ userId, id, title, body }` 형태다.
+   - 확인할 사실: 쓰기 요청(POST 등)은 서버에 저장되지 않고 응답만 흉내 낸다(Day 29에서 쓴다).
 
-**Q1 (Day 20).** 피드 → 글 1 → `router.push('/post/2')` → `router.push('/post/3')` 순서로 이동했다. 마지막 화면에서 `router.replace('/post/4')`를 하면 스택은 어떻게 되고, 피드로 돌아가려면 back이 몇 번 필요한가?
-> 내 답:
+## 예측(10분)
+
+1. 주소를 일부러 `https://jsonplaceholder.typicode.com/postz`로 틀리게 쓰면 `await fetch(...)`는 에러를 던지는가, 정상 응답을 돌려주는가? 그때 `response.ok`와 `response.status`는 무엇인가?
+   > 내 예측:
+2. 네트워크가 끊긴 상태(또는 존재하지 않는 호스트)로 요청하면 `fetch`는 에러를 던지는가? 에러 메시지는 어떤 모양일까? iOS Simulator에는 비행기 모드가 없으므로 실험 방법은 만들기 완료 기준 아래 "오프라인 실험 방법"에서 고른다.
+   > 내 예측:
+3. 개발 중 피드 화면이 처음 열릴 때 `console.log('fetch start')`는 몇 번 찍힐까? 정상 로드 시 목록 항목은 몇 개일까? 숫자를 먼저 적고, 검증에서 터미널의 실제 횟수와 비교한다.
+   > 내 예측(`fetch start` 횟수 / 목록 항목 수):
+
+## 만들기(40분)
+
+피드 탭(`app/(tabs)/index.tsx`)이 서버 글을 보여 주게 바꾼다. Day 7에서 `FlatList`에 넣던 하드코딩 데이터와 Day 8의 `RefreshControl`을 서버 데이터에 연결한다. Day 21의 "내 기록 N개" 헤더는 그대로 둔다.
+
+**새 파일**
+- `src/types/post.ts`를 만들고 Day 7의 `Post` 타입(`userId: number`, `id: number`, `title: string`, `body: string`)을 `src/data/mock-posts.ts`에서 옮긴다. `mock-posts.ts`와 `PostCard`는 여기서 import한다.
+
+**고칠 파일** `app/(tabs)/index.tsx`
+- state 세 개: `posts: Post[]`, `status: 'loading' | 'error' | 'success'`, `errorMessage: string`.
+- `useEffect`에서 `fetch('https://jsonplaceholder.typicode.com/posts')`를 호출한다. 응답이 `!response.ok`이면 `Error`를 던져 `catch`에서 `status: 'error'`로 바꾼다. 성공하면 `response.json()` 결과를 `Post[]`로 저장한다.
+
+```tsx
+const response = await fetch(url);
+if (!response.ok) throw new Error(`HTTP ${response.status}`);
+const data: Post[] = await response.json();
+```
+
+- 로딩 중에는 `ActivityIndicator`, 에러일 때는 에러 문구와 "다시 시도" 버튼, 성공일 때는 `FlatList`(`keyExtractor`는 `String(item.id)`)를 보여 준다. 목록이 비면 "글이 없어요" 문구를 보여 준다.
+- 불러오기 로직을 `loadPosts` 함수로 분리해서 `useEffect`, "다시 시도" 버튼, Day 8의 `RefreshControl`(`onRefresh`)이 같이 쓴다.
+- 요청 시작 지점에 임시 `console.log('fetch start')`를 단다.
+
+**오프라인 실험 방법** (iOS Simulator에는 비행기 모드가 없다. 하나를 고른다.)
+- Android 에뮬레이터의 비행기 모드(또는 Wi-Fi 끄기).
+- 존재하지 않는 호스트로의 요청: 주소를 `https://jsonplaceholder.invalid/posts`처럼 바꿔 `fetch`가 던지는 에러를 본다. 서버가 응답하는 `/postz`(404)와 달리 연결 자체가 실패하는 경우다.
+- 시뮬레이터가 Mac의 네트워크를 쓰므로 Mac의 Wi-Fi를 끄는 방법도 있다.
+
+**선택 과제**: `app/_layout.tsx`의 `RootLayout` 반환값을 React의 `<StrictMode>`로 감싸 `fetch start`가 몇 번 찍히는지 본 뒤 원복한다(예측 3과 비교).
+
+완료 기준
+- [ ] 앱을 열면 로딩 표시가 잠깐 보이고, 이어서 JSONPlaceholder 글 목록이 보인다.
+- [ ] 주소를 `/postz`로 틀리게 바꾸면 에러 화면이 나온다(예측 1과 비교한 결과를 적었다).
+- [ ] 오프라인 실험 방법 중 하나로 연결을 실패시키면 에러 화면이 나오고, 정상 주소(또는 네트워크)로 복구한 뒤 "다시 시도"로 목록이 뜬다.
+- [ ] 아래로 당겨 새로고침하면 `RefreshControl`이 돌고 목록이 다시 로드된다.
+- [ ] `fetch`를 감싼 `try/catch`가 있고, `catch`에서 에러 메시지를 화면에 표시한다.
+- [ ] 임시 `console.log`는 검증이 끝나면 삭제했다.
+
+## 검증(10분)
+
+- 정상 → 주소 오타 → 오프라인(위 "오프라인 실험 방법") → 복구 순서로 눌러 보며 화면 3상태가 맞게 바뀌는지 본다. 오프라인일 때 에러 메시지 원문을 그대로 `막힌 점`이나 기록에 옮겨 적는다(예측 2 비교).
+- 터미널에서 `fetch start`가 몇 번 찍혔는지 센다(예측 3). 한 번이면 Strict Mode가 꺼져 있기 때문인지 읽기 2번 문서와 대응시켜 적는다. 두 번이면 `<StrictMode>`로 감쌌거나 다른 원인으로 Effect가 두 번 실행된 것이므로 이유를 찾아 적고, 모르겠으면 질문 목록에 올린다.
+- 일부러 깨뜨리기: `if (!response.ok) throw ...` 한 줄을 지우고 `/postz`로 요청한다. 에러 화면이 나오는지, 어떤 상태가 되는지(빈 목록 또는 다른 오류) 확인하고 원복한다.
+
+## 이해 점검 질문
+
+1. `fetch`가 404 응답에서 에러를 던지지 않는 이유는 무엇이고, 그래서 `response.ok` 검사가 왜 필요한가?
+2. 데이터 상태를 `isLoading`, `error`, `data`로 따로 두지 않고 `status` 하나로 나눌 때 얻는 이점은 무엇인가?
+3. Strict Mode를 켠 개발 환경에서 같은 요청이 두 번 나가는 것은 버그인가? 어떻게 대응해야 하는가?
 
 <details><summary>정답</summary>
 
-`push` 두 번으로 스택은 [피드, 글1, 글2, 글3]이고, `replace('/post/4')`는 맨 위(글3)를 글4로 바꿔서 [피드, 글1, 글2, 글4]가 된다. 피드까지 back이 3번 필요하다. `replace`는 history를 추가하지 않는다.
+1. `fetch`는 네트워크 수준 실패(연결 불가 등)에서만 Promise를 reject한다. 서버가 404나 500을 응답하면 응답은 정상적으로 도착했으므로 Promise는 성공하고 `response.ok`가 `false`일 뿐이다. 그래서 `response.ok`를 검사해서 직접 에러로 바꿔야 `catch`에서 한 곳으로 처리할 수 있다.
+2. 상태 세 값이 따로면 `isLoading`과 `error`가 동시에 참이 되는 등 불가능한 조합이 생길 수 있다. 하나의 `status`는 한 번에 한 상태만 가능하므로 화면 분기가 단순하고 빠뜨린 경우를 줄일 수 있다.
+3. 버그가 아니다. React 문서는 Strict Mode를 켠 개발 환경에서 Effect가 마운트 직후 한 번 더 실행되며 프로덕션에서는 한 번만 요청된다고 설명한다. Expo/RN은 Strict Mode를 기본으로 켜지 않으므로 `<StrictMode>`로 감싸지 않았다면 한 번만 찍히는 것이 정상이다. 두 번 찍히는 경우의 대응은 Effect가 다시 실행되어도 안전하도록 cleanup(Day 25의 취소/무시)을 쓰는 것이다. 요청이 한 번만 나가도록 막는 우회(ref로 첫 실행 표시)는 문제를 숨길 뿐이다.
 
 </details>
-
-**Q2 (Day 20).** 탭 화면에서 "탭이 보일 때마다" 데이터를 새로고침하려고 한다. `useEffect(() => {...}, [])` 대신 무엇을 쓰고, 그 콜백에 꼭 필요한 처리는 무엇인가?
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-`expo-router`의 `useFocusEffect`를 쓴다. 탭 화면은 탭을 옮겨도 언마운트되지 않아 `useEffect(..., [])`는 처음 한 번만 실행되기 때문이다. 콜백은 `React.useCallback`으로 감싸 안정시켜야 한다(감싸지 않으면 매 렌더마다 effect가 다시 실행될 수 있다). cleanup은 포커스를 잃을 때 실행된다.
-
-</details>
-
-**Q3 (Day 21).** `useProfile()`을 Provider 밖에서 불렀을 때 `throw new Error`로 막는 이유와, Context `value`가 바뀔 때 다시 렌더되는 컴포넌트를 설명하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-`createContext(null)` 기본값을 그대로 돌려주면 `nickname`을 읽는 순간 원인과 멀리 떨어진 곳에서 TypeError가 난다. `throw`하면 "Provider를 감싸지 않았다"는 원인을 바로 알려 주고, 반환 타입에서 `null`을 제거할 수 있다. `value`가 바뀌면 그 context를 `useContext`로 읽는 컴포넌트만 다시 렌더된다.
-
-</details>
-
-**Q4 (Day 22).** reducer가 `state.push(action.log); return state;`를 하면 어떤 문제가 생기는가? 이유를 `Object.is`와 Strict Mode 두 가지로 설명하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-React는 이전 state와 다음 state를 `Object.is`로 비교하는데, 같은 배열을 변경해 반환하면 참조가 같아 업데이트가 무시되어 화면이 안 바뀐다. 또 개발 환경 Strict Mode는 reducer를 두 번 호출하므로, 직접 변경하는 reducer는 항목이 두 번 들어간다. 해결은 `[...state, action.log]`처럼 새 배열을 반환하는 것이다.
-
-</details>
-
-**Q5 (Day 23).** 로그인 성공 후 `router.replace`를 호출하지 않아도 탭 화면으로 넘어가는 이유와, 로그아웃 후 뒤로가기로 이전 화면에 못 돌아가는 이유를 한 문장씩 설명하라.
-
-> 내 답:
-
-<details><summary>정답</summary>
-
-토큰이 바뀌면 `RootNavigator`의 `Stack.Protected guard` 값이 바뀌고, 라우터가 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 열면서 anchor 또는 첫 사용 가능 화면으로 보내기 때문이다. 가드가 `true`에서 `false`로 바뀌면 그 화면들의 history 항목이 모두 제거되므로 뒤로가기로 돌아갈 화면이 없다.
-
-</details>
-
-## 구술 1주제(15분)
-
-주제: "앱을 켠 순간부터 로그인해서 탭 화면이 보이기까지, 상태와 라우터가 어떻게 연결되는지 소리 내어 설명한다."
-
-포함할 핵심어: `AuthProvider`, `token`, `Stack.Protected`, `guard`, history 제거
-
-설명 후 빠뜨린 핵심어를 적는다:
-
-## 질문 목록 처리(15분)
-
-`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 에러 원문과 시도한 것을 다시 읽고, 공식 문서에서 해당 절을 찾아 답을 적는다. 답을 못 찾은 질문은 다음 주 금요일로 넘기고 표시한다.
-
-- [ ] 이번 주 질문 전부 읽었다
-- [ ] 해결한 질문에 답과 근거 문서 링크를 적었다
-- [ ] 못 푼 질문 개수:
-
-## 밀린 Day 흡수
-
-달력이 아니라 Day 번호 기준이다. 1~2일 밀렸으면 여기서 하나만 한다(한 번에 Day 둘 금지).
-
-- [ ] Day 20 router API·중첩 라우트·not-found·`useFocusEffect`
-- [ ] Day 21 Context
-- [ ] Day 22 reducer + Context
-- [ ] Day 23 인증 흐름과 보호된 라우트
-- [ ] 이전 주에서 밀린 Day:
 
 ## 기록(5분)
 
-이번 주 가장 헷갈린 개념:
+배운 것 3줄:
 
-틀린 퀴즈와 이유:
+막힌 점:
 
-다음 주(6주차 데이터 1) 전에 고칠 것:
+## 커밋 단위 제안
+
+- `feat: Post 타입 추가`
+- `feat: 피드 탭에서 JSONPlaceholder 글 목록 fetch`
+- `feat: 피드 로딩·에러·재시도 화면 추가`

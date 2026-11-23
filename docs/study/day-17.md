@@ -1,87 +1,84 @@
-# Day 17 · 11/18 (수) — Tabs, SafeArea
+# Day 17 · 11/19 (목) — Modal, 헤더 설정, 딥링크 scheme 기본
 
 ## 오늘의 목표
 
-피드·기록·설정 3탭 구조를 `app/(tabs)/`로 만들고, 헤더가 없는 설정 화면에서 SafeArea로 노치·상태바 영역을 피한다.
+설정 탭에서 여는 "앱 정보" 모달 라우트를 만들고 헤더 오른쪽 닫기 버튼을 달며, `scheme`과 `exp://` 주소로 상세 화면을 딥링크로 열어 본다.
 
 ## 읽기(15분)
 
-1. Tabs 레이아웃: https://docs.expo.dev/router/advanced/tabs/
-   - 확인할 사실: `(tabs)` 폴더 안의 `_layout.tsx`가 `Tabs`를 렌더하고, 탭 하나마다 `Tabs.Screen`의 `name`이 같은 폴더의 파일 이름과 일치한다. `title`이 탭 글자가 된다. 루트 Stack에서 `<Stack.Screen name="(tabs)" options={{ headerShown: false }} />`로 Stack 헤더를 숨겨 헤더가 두 겹이 되는 것을 막는다.
-2. `react-native-safe-area-context` Expo 문서: https://docs.expo.dev/versions/latest/sdk/safe-area-context/
-   - 확인할 사실: `SafeAreaView`는 안전 영역 가장자리를 padding으로 적용하는 `View`이고 `edges` 배열(`'top'` 등)로 적용할 가장자리를 고른다. `useSafeAreaInsets()`는 `top`, `bottom` 같은 숫자를 돌려준다. 웹에서는 값이 0이다. 이 패키지는 템플릿에 이미 들어 있다.
-3. RN `SafeAreaView` 문서: https://reactnative.dev/docs/safeareaview
-   - 확인할 사실: RN 0.81에서 `react-native`의 `SafeAreaView`는 deprecated이고 `react-native-safe-area-context`를 쓰라고 한다. import 출처가 어디인지 확인한다.
+1. 모달 만들기: https://docs.expo.dev/router/advanced/modals/
+   - 확인할 사실: 모달은 `app/` 아래 일반 라우트 파일이고, 루트 `_layout.tsx`의 `Stack.Screen`에서 `presentation: 'modal'`을 주면 모달로 열린다. 열 때는 `Link href`를 쓴다. Android는 뒤로가기 버튼, iOS는 아래로 쓸어내려 닫고, 웹은 닫는 동작을 직접 만들어야 한다. 모달을 코드로 닫는 방법은 이 문서에 없으므로, Day 14에서 읽은 페이지 이동 문서(https://docs.expo.dev/router/basics/navigation/)의 `router.back`을 쓴다.
+2. Stack 헤더 옵션: https://docs.expo.dev/router/advanced/stack/
+   - 확인할 사실: `headerRight`는 헤더 오른쪽에 그릴 React 요소를 돌려주는 함수이고, `screenOptions`는 Stack 전체 화면에 공통 옵션을 준다. `presentation` 값은 `card`, `modal`, `formSheet` 등이다. 플랫폼별 지원 범위는 문서에서 모호하므로 `presentation` 옵션 설명을 읽고 시뮬레이터에서 확인한다.
+3. 딥링크 연결: https://docs.expo.dev/linking/into-your-app/
+   - 확인할 사실: `app.json`의 `scheme`은 개발 빌드나 스토어 빌드에서 `myapp://` 링크로 앱을 열게 한다. Expo Go에서는 `exp://` 스킴을 쓰고, 경로가 있을 때 `/--/`가 붙는다. `npx uri-scheme open <주소> --ios`로 시뮬레이터에서 링크를 연다. `scheme`은 Expo Go에서는 효과가 없는 빌드 시점 설정이다(공식 앱 설정 문서: https://docs.expo.dev/versions/latest/config/app/ 의 `scheme` 항목).
 
 ## 예측(10분)
 
-1. `app/(tabs)/write.tsx`의 URL은 `/(tabs)/write`인가 `/write`인가? Day 15에서 쓴 `<Link href="/write">`는 그대로 동작하는가?
+1. 모달 화면을 닫는 방법은 iOS와 Android에서 각각 무엇인가? 그리고 헤더의 `닫기` 버튼은 어떤 함수를 호출해야 하는가?
 
 > 내 예측:
 
-2. 피드 탭에서 스크롤하고 기록 탭으로 갔다가 돌아오면 피드의 스크롤 위치와 상태는 어떻게 되는가?
+2. `app.json`에 `"scheme": "dailylog"`를 넣고 Expo Go를 쓰는 중에 `dailylog://post/3`을 열면 상세 화면이 열리는가? 열리지 않는다면 Expo Go에서는 어떤 주소를 써야 하는가?
 
 > 내 예측:
 
-3. 헤더를 끈 설정 화면에서 `SafeAreaView` 없이 제목을 맨 위에 그리면, iPhone 시뮬레이터에서 제목이 어디에 놓이는가?
+3. 앱이 완전히 꺼진 상태에서 딥링크로 `/post/3`을 바로 열면, 상세 화면의 헤더에 뒤로가기 버튼이 보이는가?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-Day 15~16의 라우트를 `(tabs)` 그룹으로 옮겨 3탭을 완성한다. 상세 화면은 탭이 아니라 루트 Stack에 남긴다.
+새로 만들 파일:
+- `app/about.tsx` — 모달 화면 `AboutScreen`. `Card` 안에 앱 이름, 버전 문구(코드에 직접 쓴 문자열), 한 줄 설명을 둔다. 하단에 `AppButton title="닫기"`가 `router.back()`을 호출한다.
 
-목표 구조:
+고칠 파일:
+- `app/_layout.tsx` — `Stack` 안에 `about`을 추가해 `presentation: 'modal'`, `title: '앱 정보'`를 주고 `headerRight`에 `닫기` 글자 버튼(`Pressable`)을 만든다. `screenOptions`에 공통 헤더 옵션 하나(예: 제목 굵기)를 줘서 정적 옵션과 공통 옵션을 구분해 본다.
+- `app/(tabs)/settings.tsx` — `Card` 안에 `<Link href="/about">앱 정보</Link>` 줄을 추가한다.
+- `app.json` — `expo.scheme`이 이미 있으면 값을 확인만 하고, 없으면 `"scheme": "dailylog"`를 추가한다.
 
+딥링크 실습:
+1. Expo Go 사용 중이면 Metro 터미널에 표시된 `exp://` 주소(호스트와 포트)를 확인하고, 아래 형태로 연다. Android는 `--ios` 대신 `--android`.
+
+```sh
+npx uri-scheme open "exp://<Metro 주소>/--/post/3" --ios
 ```
-app/_layout.tsx         루트 Stack: (tabs) 숨김 헤더, post/[id]
-app/(tabs)/_layout.tsx  Tabs: index(피드), write(기록), settings(설정)
-app/(tabs)/index.tsx    Day 15의 피드
-app/(tabs)/write.tsx    Day 15의 기록
-app/(tabs)/settings.tsx 새 설정 화면
-app/post/[id].tsx       Day 16의 상세 (그대로)
-```
 
-해야 할 일:
-1. `app/index.tsx`, `app/write.tsx`를 `app/(tabs)/` 아래로 옮긴다. 편집기 이동으로 import가 깨지면 `@/` 별칭 경로로 바로잡는다.
-2. `app/(tabs)/_layout.tsx`를 만들어 `Tabs`와 `Tabs.Screen` 세 개를 쓴다. `title`은 `피드`, `기록`, `설정`이다.
-3. `app/_layout.tsx`의 `Stack`에서 `(tabs)`의 헤더를 숨기고 `post/[id]`는 그대로 둔다.
-4. `app/(tabs)/settings.tsx`를 만든다. `Card` 안에 앱 이름 `Daily Log`와 "로그인은 Day 23에서 붙인다" 안내 문구를 둔다. 이 탭의 헤더는 `Tabs.Screen`의 `options`에서 `headerShown: false`로 끄고, 화면 최상단을 `react-native-safe-area-context`의 `SafeAreaView edges={['top']}`로 감싸 큰 제목 `설정`을 직접 그린다.
-5. `app/post/[id].tsx` 화면 맨 아래에 `useSafeAreaInsets().bottom`을 `paddingBottom`으로 쓰는 하단 영역을 두고 "목록으로" `AppButton`(`router.back()`)을 놓는다. 홈 인디케이터에 가려지지 않아야 한다.
-
-탭 아이콘은 선택 과제다. 템플릿의 `package.json`에 아이콘 패키지가 있으면 `tabBarIcon`을 써 보고, 없으면 글자 탭으로 둔다.
+2. 개발 빌드를 쓰는 경우에는 `npx uri-scheme open dailylog://post/3 --ios`를 쓴다(빌드에 `scheme`이 들어간 뒤에만 동작).
+3. 앱 안에서 `import * as Linking from 'expo-linking'` 후 `Linking.createURL('/post/3')`의 결과를 콘솔에 찍어 실행 환경별 주소 모양을 확인한다. 템플릿에 `expo-linking`이 없으면 `npx expo install expo-linking`으로 설치한다.
 
 완료 기준:
-- [ ] 하단에 `피드`, `기록`, `설정` 3개 탭이 보이고 누르면 전환된다
-- [ ] `Link href="/write"`와 피드의 상세 이동(`/post/<id>`)이 URL을 바꾸지 않고 그대로 동작한다
-- [ ] 상세 화면은 탭바 위로 덮여서 열리고 뒤로가기로 돌아온다
-- [ ] 설정 탭의 제목이 상태바·노치와 겹치지 않는다
-- [ ] 상세 화면 하단 버튼이 홈 인디케이터에 가려지지 않는다
-- [ ] `import { SafeAreaView } from 'react-native'`가 어디에도 없다
+- [ ] 설정 탭의 `앱 정보`를 누르면 `app/about.tsx`가 모달로 올라온다
+- [ ] 헤더 오른쪽 `닫기`와 하단 `닫기` 버튼이 모달을 닫는다
+- [ ] 딥링크 명령으로 상세 화면 `/post/3`이 열린다(Expo Go는 `exp://` 주소, 개발 빌드는 `scheme` 주소)
+- [ ] `Linking.createURL('/post/3')` 결과를 아래 기록 절에 적었다
 - [ ] `npm run typecheck`와 `npx expo lint`가 오류 0개다
 
 ## 검증(10분)
 
-- iPhone 시뮬레이터(노치 있는 기종)에서 설정 탭의 제목 위치와 상세 화면 하단 버튼 위치를 눈으로 확인한다. 피드를 스크롤한 뒤 다른 탭에 다녀와 스크롤이 유지되는지 본다.
+- 시뮬레이터에서 모달을 열고 iOS는 아래로 쓸어내려, Android는 뒤로가기로 닫아 본다. 딥링크는 앱이 켜져 있을 때와 꺼져 있을 때 각각 열어 상세 화면이 맞게 열리는지, 뒤로가기 버튼이 보이는지 적는다.
 - 예측 1~3과 실제를 비교해 다른 지점을 적는다.
-- 일부러 깨뜨려 보기: 설정 화면의 `SafeAreaView`를 일반 `View`로 바꿔 제목이 상태바와 겹치는 것을 확인하고 되돌린다.
+- 일부러 깨뜨려 보기: Expo Go 상태에서 `npx uri-scheme open dailylog://post/3 --ios`를 실행해 아무 일도 일어나지 않는 것을 확인하고, 이유를 `scheme` 문서 문장으로 적는다.
+- 선택 과제: 앱이 꺼진 상태의 딥링크에서 뒤로가기가 없는 문제는 `unstable_settings`의 `anchor`와 관련이 있다. 공유 라우트 문서(https://docs.expo.dev/router/advanced/shared-routes/)에서 `anchor`가 무엇을 정하는지 읽고 적는다. 문서에서 확인 필요한 부분이므로 적용은 하지 않아도 된다.
 
 ## 이해 점검 질문
 
-1. `(tabs)` 폴더 이름의 괄호는 무슨 뜻이며, 그 안의 `write.tsx`의 URL은 무엇인가?
-2. 루트 Stack에서 `(tabs)`에 `headerShown: false`를 주는 이유는 무엇인가?
-3. 설정 화면에서 `View`가 아니라 `react-native-safe-area-context`의 `SafeAreaView`를 쓰는 이유는 무엇이며, `edges={['top']}`만 주는 이유는 무엇인가?
+1. 모달 라우트를 일반 화면과 구분해 주는 설정은 무엇이고 어디에 쓰는가?
+2. 같은 상세 화면을 여는 딥링크 주소가 Expo Go와 개발 빌드에서 다른 이유는 무엇인가?
+3. 파일 기반 라우팅을 쓰면 딥링크 경로를 따로 등록하지 않아도 되는 이유는 무엇인가?
 
 <details>
 <summary>정답</summary>
 
-1. 괄호는 URL에 들어가지 않는 라우트 그룹이다. 그래서 `(tabs)/write.tsx`의 URL은 `/write`이고, 그룹 이름이 URL에 없으므로 기존 `Link href="/write"`가 그대로 동작한다. `(tabs)` 폴더 안의 `_layout.tsx`에서 `Tabs`를 쓰면 이 그룹이 탭 구조가 된다.
-2. 탭 화면들이 이미 자기 헤더를 갖고 있는데 루트 Stack도 `(tabs)`를 하나의 화면으로 보고 헤더를 그리면 헤더가 두 겹이 되기 때문이다. 바깥 Stack 헤더를 숨겨 안쪽 Tabs의 헤더만 쓴다.
-3. 헤더를 끄면 상태바·노치 영역을 헤더가 피해 주지 않으므로 직접 안전 영역을 비워야 하고, `SafeAreaView`가 그 크기를 기기에 맞게 padding으로 넣어 준다. RN 기본 `SafeAreaView`는 deprecated다. 하단은 탭바가 이미 안전 영역을 처리하므로 위쪽만 필요해서 `edges={['top']}`로 한정한다.
+1. 루트 `_layout.tsx`의 `Stack.Screen`에서 해당 화면의 `options`에 `presentation: 'modal'`을 준다. 파일 자체는 일반 라우트와 같은 `app/about.tsx`이고, 열고 닫는 방식만 모달로 바뀐다.
+2. 개발 빌드나 스토어 빌드는 `app.json`의 `scheme`을 자기 앱의 스킴으로 등록하므로 `dailylog://post/3`으로 열린다. Expo Go는 여러 앱을 실행하는 하나의 앱이라 자체 스킴 `exp://`를 쓰고, `scheme`은 빌드 시점 설정이라 Expo Go에서는 효과가 없다. Expo Go에서 경로를 지정하면 `/--/`가 붙는다.
+3. 파일 경로가 곧 URL이고, 그 URL이 딥링크 경로로도 그대로 쓰이기 때문이다. `app/post/[id].tsx`가 있으면 `/post/3`이 딥링크 경로가 된다. 따로 매핑 표를 만들 필요가 없다.
 
 </details>
 
 ## 기록(5분)
+
+`Linking.createURL('/post/3')` 결과:
 
 배운 것 3줄:
 
@@ -89,9 +86,9 @@ app/post/[id].tsx       Day 16의 상세 (그대로)
 
 ## 커밋 단위 제안
 
-- `refactor: 라우트를 (tabs) 그룹으로 옮기고 3탭 구성`
-- `feat: 설정 탭과 SafeArea 적용`
+- `feat: 앱 정보 모달 라우트 추가`
+- `chore: 딥링크 scheme 설정`
 
 ## 웹과 다른 점
 
-웹에는 노치·상태바·홈 인디케이터처럼 화면에서 피해야 할 영역이 없다. 모바일은 `SafeAreaView`나 `useSafeAreaInsets`로 직접 피하며, 웹 환경에서는 이 값들이 0이다.
+웹의 모달은 보통 DOM에 올려놓는 UI이지만, Expo Router의 모달은 화면 스택의 한 화면으로 올라오는 라우트라 URL로도 열린다.

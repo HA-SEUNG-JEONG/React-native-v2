@@ -6,7 +6,7 @@ import {
   ViewStyle,
 } from "react-native";
 
-import { LogEntry } from "../types/log";
+import { LogEntry } from "@/types/log";
 import { Card } from "./Card";
 
 type LogItemProps = {

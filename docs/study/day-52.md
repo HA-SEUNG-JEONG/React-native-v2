@@ -1,91 +1,79 @@
-# Day 52 · 1/6 (수) — 제스처 + Reanimated 결합(스와이프 삭제)
-
-> 건너뛰기 가능: 삭제는 항목의 삭제 버튼으로도 같은 기능을 얻을 수 있고, 이후 Day는 이 스와이프 구현에 의존하지 않는다. 건너뛰면 읽기만 한다.
+# Day 52 · 1/7 (목) — 다크 모드와 테마 토큰
 
 ## 오늘의 목표
 
-기록 탭 목록의 각 항목을 왼쪽으로 밀어 삭제하는 `SwipeableRow`를 `Gesture.Pan()`, shared value, `withTiming` 콜백, `scheduleOnRN`으로 만들고, 세로 스크롤과 충돌하지 않게 제스처 활성화 조건을 설정한다.
+색을 `src/constants/theme.ts`의 라이트/다크 토큰으로 모으고, `useColorScheme`으로 읽어 모든 탭에 적용하며, 설정 탭에서 시스템/라이트/다크를 고르게 만든다.
 
 ## 읽기(15분)
 
-1. https://docs.swmansion.com/react-native-gesture-handler/docs/2.x/gestures/pan-gesture (Day 50에서 읽은 페이지의 Config 절을 다시 본다)
-   - 확인할 사실: `activeOffsetX`는 "이 범위 안의 움직임은 활성화하지 않고, 범위를 벗어나면 활성화"한다. `failOffsetY`는 "활성화 전에 이 범위를 벗어나면 제스처를 실패 처리"한다. 두 옵션 모두 숫자 하나 또는 `[시작, 끝]` 쌍을 받는다.
-2. https://docs.swmansion.com/react-native-reanimated/docs/animations/withTiming
-   - 확인할 사실: 세 번째 인자 콜백은 `finished`를 받고, 애니메이션이 취소되면 `false`, 아니면 `true`다. 기본 `duration`은 300밀리초다.
-3. https://docs.swmansion.com/react-native-worklets/docs/threading/scheduleOnRN
-   - 확인할 사실: `scheduleOnRN(함수, ...인자)`는 UI 스레드(worklet 런타임)에서 React Native(JS) 런타임으로 함수 실행을 예약한다. 상태 갱신이나 reducer `dispatch`처럼 JS 쪽 함수를 부를 때 쓴다. 이전 자료에는 `runOnJS(fn)(...인자)`가 자주 나오는데, SDK 54의 worklets 0.5 소스에서는 `runOnJS`에 "`scheduleOnRN`을 쓰라"는 deprecated 표시가 붙어 있다. 둘이 같은 일을 한다는 것만 알고 이 카드는 `scheduleOnRN`을 쓴다.
+1. https://docs.expo.dev/develop/user-interface/color-themes/
+   - 확인할 사실: `app.json`의 `userInterfaceStyle`은 `automatic`(시스템을 따름), `light`, `dark` 중 하나이고, 속성이 없으면 라이트로 동작한다. 기본 템플릿은 `automatic`이다. Android 개발 빌드에서는 `expo-system-ui`가 설치되어 있어야 이 속성이 적용된다. 이 가이드 페이지는 SDK 버전별 주소가 아니므로, 이 프로젝트의 `app.json`(`userInterfaceStyle`)과 `package.json`(`expo-system-ui`)을 직접 열어 위 내용이 맞는지 확인한다.
+2. https://reactnative.dev/docs/usecolorscheme
+   - 확인할 사실: 반환값은 `'light'`, `'dark'`, `null` 셋 중 하나다. `null`의 뜻은 문서마다 다르다: RN 0.81 문서는 "사용자가 선호를 밝히지 않음", 최신(0.88) 문서는 "네이티브 Appearance 모듈이 없을 때 반환될 수 있음"이다. 어느 쪽이든 타입에 `null`이 있으니 기본값을 정해 둔다. 이 훅은 색상표 변경을 구독하므로 앱이 켜져 있는 동안 값이 바뀌면 컴포넌트가 다시 렌더된다.
+3. https://reactnative.dev/docs/appearance
+   - 확인할 사실: `Appearance.setColorScheme('light' | 'dark' | null)`은 앱이 쓰는 색상표를 강제하고, `null`이면 시스템 설정을 따른다(이 프로젝트의 RN 0.81.5 기준). 최신(0.88) 문서는 인자를 `'light' | 'dark' | 'auto' | 'unspecified'`로 적고 강제를 푸는 값이 `'auto'`다. 이 카드의 코드는 0.81.5 타입에 맞춰 `null`을 쓴다. 시스템 설정 자체를 바꾸지는 않으며, 앱과 앱이 띄우는 네이티브 요소(알럿·피커 등)에 적용된다.
 
 ## 예측(10분)
 
-1. `activeOffsetX`와 `failOffsetY`를 아무것도 주지 않은 Pan을 FlatList 행에 붙이면 목록의 세로 스크롤은 어떻게 될까?
+1. 시스템이 다크일 때 `Appearance.setColorScheme('light')`를 호출하면 `useColorScheme()`의 값은 무엇일까? 다시 `setColorScheme(null)`을 호출하면?
 
 > 내 예측:
 
-2. 행을 삭제 임계값(예: 80)보다 덜 밀고 손을 떼면 행은 어떻게 움직일까? 임계값을 넘겨서 놓으면?
+2. 컴포넌트 색은 전부 토큰으로 바꾸고 루트 레이아웃의 `ThemeProvider`는 라이트 테마로 고정한 채 다크 모드로 전환하면, 화면 본문과 탭바·헤더는 각각 어떤 색일까?
 
 > 내 예측:
 
-3. 삭제 애니메이션이 끝나기 전에 사용자가 같은 행을 다시 잡아 끌면 `withTiming` 콜백의 `finished`는 무엇일까?
+3. 어떤 컴포넌트에 `backgroundColor: '#ffffff'`를 하드코딩해 두면 다크 모드에서 어떻게 보일까?
 
 > 내 예측:
 
 ## 만들기(40분)
 
-기록 탭(`app/(tabs)/write.tsx`)의 기록 목록 `FlatList` 각 행을 스와이프 삭제 가능하게 만든다. 새 컴포넌트는 `src/components/SwipeableRow.tsx`의 `SwipeableRow({ onDelete, children })`다. 삭제는 Day 22의 `removed` 액션과 Day 42의 `deletePhoto`를 부르는 기존 삭제 핸들러를 `onDelete`로 넘긴다.
+Daily Log 전체(피드·기록·설정·상세)에 다크 모드를 입힌다.
 
-1. `SwipeableRow`가 하는 일
-   - 바깥 `View`(배경): 오른쪽 끝에 "삭제" 글자를 두고 위험을 뜻하는 배경색을 준다. 행이 밀리면 이 배경이 드러난다.
-   - 안쪽 `Animated.View`(내용): `children`을 담고 `translateX` shared value를 `useAnimatedStyle`로 연결한다.
-2. Pan 설정: 가로 이동이 일정 거리 이상일 때만 활성화하고, 세로로 먼저 움직이면 실패시켜 `FlatList`의 세로 스크롤이 동작하게 한다.
-
-```tsx
-Gesture.Pan()
-  .activeOffsetX([-10, 10])
-  .failOffsetY([-10, 10])
-```
-
-3. 콜백
-   - `onUpdate`: `translateX.value = Math.min(0, e.translationX)`로 왼쪽으로만 밀리게 한다.
-   - `onEnd`: `e.translationX`가 `-80`(상수로 둔다)보다 작으면 `withTiming(-화면너비, { duration: 200 }, 콜백)`으로 밖으로 밀어내고, 콜백에서 `finished`일 때만 `scheduleOnRN(onDelete)`를 부른다. 아니면 `withSpring(0)`으로 되돌린다. 화면 너비는 `useWindowDimensions().width`(Day 56에서 더 자세히 다룬다)로 얻는다.
-   - `scheduleOnRN`은 `react-native-worklets`에서 가져온다. 이 패키지는 템플릿에 이미 있다.
-4. `children`으로 Day 10의 `LogItem`(`Pressable`)을 그대로 넣고, 탭과 가로 스와이프가 둘 다 동작하는지 검증에서 확인한다.
-5. 기록 목록 `FlatList`의 `renderItem`에서 각 행을 `SwipeableRow`로 감싼다. `keyExtractor`가 기록의 고유 id를 쓰는지 확인한다. index를 키로 쓰면 삭제 후 다른 행에 애니메이션 값이 남을 수 있다.
+1. `src/constants/theme.ts`의 `Colors`를 만든다. `light`와 `dark` 두 객체가 같은 키를 갖게 한다. 필요한 키: `background`(화면), `surface`(카드·입력창), `text`, `textMuted`, `border`, `primary`, `danger`(삭제 배경 등). 값은 직접 고르되, 각 모드에서 `text`와 `background`가 충분히 구분되는지 눈으로 확인한다. 키 이름과 값 모양은 TypeScript가 `Colors.light`와 `Colors.dark`가 같음을 보장하도록 쓴다(`typeof Colors.light` 같은 타입 활용).
+2. `src/hooks/useTheme.ts`의 `useTheme()`를 만든다. `react-native`의 `useColorScheme()`로 현재 값을 읽고, `null`이면 `'light'`로 취급해 해당 색 객체를 돌려준다.
+3. 색을 하드코딩한 곳을 모두 찾아 토큰으로 바꾼다. 먼저 `app`과 `src` 아래에서 색 리터럴(`#`로 시작하는 값, `'white'`, `'black'` 등)을 검색해 목록을 만든다.
+   - 레이아웃 스타일(패딩·정렬 등)은 `StyleSheet`에 그대로 두고, 색만 `style={[styles.card, { backgroundColor: theme.surface }]}`처럼 렌더 시점에 덧붙인다.
+   - 대상: 피드 카드와 목록 배경, 글 상세 화면, 기록 탭의 입력창·목록·`SwipeableRow`의 삭제 배경(Day 51를 건너뛰었다면 생략), 설정 화면, Day 50의 하트·연습 박스.
+4. 루트 레이아웃 `app/_layout.tsx`의 `RootLayout`: `@react-navigation/native`의 `ThemeProvider`에 `DarkTheme`/`DefaultTheme`를 현재 색상표에 맞춰 넘기고, `expo-status-bar`의 `StatusBar`는 `style="auto"`로 둔다. reset-project로 지워졌으므로 `GestureHandlerRootView` 바로 안에 새로 추가한다. 이 `ThemeProvider`가 헤더·탭바 같은 내비게이션 요소의 색을 정한다.
+5. 설정 탭에 "화면 모드" 선택 항목을 추가한다. 시스템 / 라이트 / 다크 세 개의 `Pressable`을 두고, 누르면 각각 `Appearance.setColorScheme(null | 'light' | 'dark')`를 호출한다. 현재 선택은 `useState`로 표시한다.
+6. 시간이 남으면(선택, 완료 기준에는 넣지 않는다): 선택값을 Day 34의 AsyncStorage에 저장하고 앱 시작 시 복원한다. `Appearance.getColorScheme()`은 강제된 색상표만 알려 주고 "시스템"을 구분하지 못하므로, 선택값 자체를 따로 저장해야 한다.
 
 완료 기준
 
-- [ ] 행을 왼쪽으로 밀면 손가락을 따라 움직이고 뒤에 "삭제" 배경이 보인다
-- [ ] 임계값 안쪽에서 놓으면 스프링으로 제자리로 돌아온다
-- [ ] 임계값을 넘겨서 놓으면 행이 밖으로 사라진 뒤 목록에서 기록이 삭제된다
-- [ ] 목록을 세로로 스크롤할 때 행이 가로로 딸려 움직이지 않는다
-- [ ] 오른쪽으로 밀어도 행이 오른쪽으로 움직이지 않는다
-- [ ] 삭제 후 앱을 다시 열어도(Day 42의 `saveLogs`로) 삭제 상태가 유지된다.
+- [ ] `app.json`의 `userInterfaceStyle`이 `automatic`이고 `package.json`에 `expo-system-ui`가 있음을 확인했다
+- [ ] `Colors.light`와 `Colors.dark`가 같은 키를 갖고, 컴포넌트에서는 `useTheme()`로 읽는다
+- [ ] `app`과 `src`에서 색 리터럴 검색 결과가 `src/constants/theme.ts`에만 남는다(의도한 예외는 기록 칸에 적는다)
+- [ ] 시스템 모드를 바꾸면 피드·기록·설정·상세와 탭바·헤더가 모두 따라 바뀐다
+- [ ] 설정의 시스템/라이트/다크 선택이 시스템 모드와 무관하게 동작한다
+- [ ] 타입 오류와 `npm run lint` 경고가 없다
 
 ## 검증(10분)
 
 확인할 동작
 
-- 시뮬레이터에서 기록 탭을 열고 기록을 여러 개 만든 뒤, 한 행을 천천히 왼쪽으로 밀었다 되돌리기, 임계값을 넘겨 삭제하기, 목록 세로 스크롤하기를 차례로 한다. 예측 2와 비교한다.
-- 행을 가볍게 탭하면 `LogItem`의 `onPress`(기록 상세 이동)가 동작하고, 가로로 밀면 스와이프가 동작하는지 둘 다 확인한다. Day 46(건너뛰기 가능)을 건너뛰어 기록 상세 화면(`app/log/[id].tsx`)이 없다면 이동 확인은 생략한다. 대신 기록 탭 목록에서만 확인한다: 행을 탭하는 동안 행이 가로로 딸려 움직이지 않고, 탭 직후 바로 가로로 밀면 스와이프가 정상 시작되는지 본다.
-- 삭제 직후 아래 행들이 점프하듯 올라오는지 본다. 이번 Day에는 이를 부드럽게 만들지 않는다. 눈에 띄는 점을 기록 칸에 적어 둔다.
+- 시뮬레이터의 외관을 앱을 켠 채로 전환한다. iOS 시뮬레이터는 터미널에서 `xcrun simctl ui booted appearance dark`와 `appearance light`를, Android 에뮬레이터는 `adb shell cmd uimode night yes`와 `night no`를 쓴다. 각 탭과 상세 화면에서 본문 색, 탭바, 헤더, 상태 막대 글자색이 모두 따라오는지 본다.
+- 설정에서 "다크"를 고른 뒤 시스템을 라이트로 바꿔도 앱은 다크를 유지하는지, "시스템"으로 돌아오면 시스템을 따르는지 본다. 예측 1과 비교한다.
 
 일부러 깨뜨려 보는 실험
 
-- `activeOffsetX`와 `failOffsetY` 두 줄을 지우고 목록을 세로로 스크롤해 본다. 어떤 일이 일어나는지 적은 뒤 두 줄을 되돌린다. 예측 1과 비교한다.
+- 어떤 컴포넌트 하나에 `backgroundColor: '#ffffff'`를 일부러 하드코딩하고 다크 모드로 전환해 본다. 이어서 `RootLayout`의 `ThemeProvider`를 잠시 지우고(감싸는 껍데기만 제거) 전환해, 헤더·탭바 색이 어떻게 되는지 적는다. 예측 2, 3과 비교한 뒤 둘 다 되돌린다.
 
 > 실험 결과:
 
 ## 이해 점검 질문
 
-1. `activeOffsetX([-10, 10])`과 `failOffsetY([-10, 10])`은 각각 무슨 뜻이고, 둘을 같이 쓰면 스크롤 가능한 목록 안에서 어떻게 동작할까?
-2. `withTiming`의 콜백에서 삭제 함수를 직접 부르지 않고 `scheduleOnRN`으로 감싸는 이유는 무엇일까?
-3. 삭제 콜백에서 `finished`가 `true`일 때만 삭제하는 이유는 무엇일까?
+1. `useColorScheme()`가 `null`을 돌려줄 수 있는 이유는 무엇이고, `useTheme()`는 이를 어떻게 처리해야 할까?
+2. `Appearance.setColorScheme(null)`과 `Appearance.setColorScheme('dark')`는 어떻게 다르고, 무엇을 바꾸고 무엇을 바꾸지 않을까?
+3. 색을 `StyleSheet.create` 안이 아니라 `useTheme()`의 값으로 렌더 시점에 덧붙이는 이유는 무엇이고, `ThemeProvider`는 이와 무슨 관계일까?
 
 <details>
 <summary>정답</summary>
 
-1. `activeOffsetX([-10, 10])`은 가로로 10 포인트 안쪽 움직임은 무시하고 그 범위를 벗어나야 Pan이 활성화된다는 뜻이다. `failOffsetY([-10, 10])`은 활성화되기 전에 세로로 10 포인트를 벗어나면 Pan을 실패 처리한다는 뜻이다. 합치면 가로로 먼저 움직이면 스와이프가 시작되고 세로로 먼저 움직이면 Pan이 빠져 `FlatList`가 스크롤을 가져간다. 대각선으로 시작할 때는 먼저 범위를 벗어나는 축이 이긴다.
-2. 이 콜백은 애니메이션이 끝날 때 UI 스레드에서 worklet으로 실행된다. `onDelete`는 reducer `dispatch`를 부르는 일반 JS 함수라서 UI 스레드에서 동기 호출하면 "non-worklet function" 에러가 난다. `scheduleOnRN`이 그 함수를 JS(React Native) 런타임에서 실행하도록 예약해 준다.
-3. 애니메이션이 취소되면 콜백이 `finished === false`로 불린다. 삭제 애니메이션 도중에 사용자가 행을 다시 잡아 끌면 `onUpdate`가 값을 덮어써 애니메이션이 취소되는데, 이때 삭제를 호출하면 사용자가 되돌리려던 기록이 지워진다. 끝까지 정상 종료된 경우에만 삭제한다.
+1. 문서가 `'light' | 'dark' | null`을 반환값으로 정의한다(0.81 문서는 사용자가 선호를 밝히지 않은 경우, 최신 문서는 네이티브 모듈이 없는 플랫폼의 경우로 설명한다). 타입이 `null`을 포함하므로 `colorScheme ?? 'light'`처럼 기본값을 정해 두고 `Colors[...]`로 접근해야 타입 오류와 `undefined` 접근이 생기지 않는다.
+2. `null`(최신 0.88 문서에서는 `'auto'`)은 앱의 색상표 강제를 풀어 시스템 설정을 따르게 하고, `'dark'`는 시스템이 라이트여도 앱을 다크로 고정한다. 어느 쪽도 기기의 시스템 설정이나 다른 앱에는 영향을 주지 않으며, 변경은 앱과 앱이 띄우는 네이티브 요소(알럿·피커)에만 적용된다.
+3. `StyleSheet.create`는 모듈이 로드될 때 한 번 계산되므로 런타임에 바뀌는 색상표를 알 수 없다. 색은 렌더 시점의 `useTheme()` 값으로 덧붙이고, 바뀌지 않는 레이아웃만 `StyleSheet`에 둔다. `ThemeProvider`는 `useTheme()`와 별개로, 내비게이션 라이브러리가 헤더·탭바·화면 배경을 칠할 때 쓰는 색을 정한다. 둘 중 하나만 적용하면 본문은 다크인데 헤더·탭바는 라이트인 식으로 어긋난다.
 
 </details>
 
@@ -101,9 +89,10 @@ Gesture.Pan()
 
 ## 커밋 단위 제안
 
-- `feat: 기록 항목 스와이프 삭제 SwipeableRow 추가`
-- `refactor: 기록 목록 행을 SwipeableRow로 감싸 삭제 reducer 연결`
+- `feat: 라이트/다크 색상 토큰과 useTheme 훅 추가`
+- `refactor: 화면 색상 하드코딩을 테마 토큰으로 교체`
+- `feat: 설정 탭에 화면 모드 선택 추가`
 
 ## 웹과 다른 점
 
-웹은 스크롤 중인지 드래그 중인지를 `touch-action` 같은 CSS와 이벤트 `preventDefault`로 정하지만, RN은 네이티브 제스처 인식기끼리 `activeOffset`·`failOffset`·우선순위로 누가 터치를 가져갈지 정한다.
+웹은 CSS `prefers-color-scheme` 미디어 쿼리와 CSS 변수로 색을 한 번에 바꾸지만, RN에는 둘 다 없어서 훅으로 현재 색상표를 읽어 JS 객체의 토큰을 스타일에 직접 넣는다.

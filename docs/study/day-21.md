@@ -1,73 +1,73 @@
-# Day 21 · 11/24 (화) — Context로 전역 상태 공유
+# Day 21 · 11/25 (수) — useReducer + Context 상태 관리
 
 ## 오늘의 목표
 
-`createContext`·Provider·`useContext`로 설정 탭에서 바꾼 닉네임을 피드 탭 헤더까지 props 없이 전달한다.
+내 기록 목록을 `useReducer` reducer와 Context(state용, dispatch용 둘)로 관리해서, 기록 탭에서 쓴 글이 피드 탭 헤더의 "내 기록 N개"에 바로 반영되게 한다.
 
 ## 읽기(15분)
 
-1. https://react.dev/learn/passing-data-deeply-with-context — 만들기(create) → 읽기(`useContext`) → 제공(Provider) 3단계.
-   - 확인할 사실: `createContext(defaultValue)`의 인자는 Provider가 위에 없을 때 `useContext`가 돌려주는 값이다.
-   - 확인할 사실: Provider의 `value`가 다음 렌더에서 바뀌면 그 아래에서 해당 context를 읽는 컴포넌트가 다시 렌더된다.
-   - 확인할 사실: 문서 끝에서 context를 쓰기 전에 props 전달이나 `children` 전달로 해결되는지 먼저 보라고 권한다.
-2. https://docs.expo.dev/router/advanced/authentication/ — "Session context" 부분과 루트 레이아웃 예제만 본다(인증 전체는 Day 23).
-   - 확인할 사실: `useSession()`은 `SessionProvider` 밖에서 쓰면 에러를 던진다. `SessionProvider`가 `app/_layout.tsx`에서 navigator(`Stack`)를 감싼다.
+1. https://react.dev/learn/scaling-up-with-reducer-and-context — reducer와 Context를 합치는 방법.
+   - 확인할 사실: state용 context와 dispatch용 context를 따로 만든다. `TasksProvider`가 `useReducer`를 소유하고 두 context로 감싼다. `useTasks()`, `useTasksDispatch()` 같은 커스텀 훅으로 `useContext`를 감싼다.
+   - 확인할 사실: 문서가 둘로 나누는 이유 — dispatch만 쓰는 컴포넌트는 목록이 바뀌어도 다시 렌더될 필요가 없다.
+2. https://react.dev/reference/react/useReducer — reducer 규칙.
+   - 확인할 사실: reducer는 순수 함수여야 한다. Strict Mode(개발 환경)에서는 reducer를 두 번 호출한다.
+   - 확인할 사실: state를 직접 바꾸고 같은 객체를 반환하면 `Object.is` 비교가 같아서 React가 업데이트를 무시한다.
+   - 확인할 사실: `dispatch`는 identity가 안정적이다.
 
 ## 예측(10분)
 
-1. Provider 없이 `useProfile()`을 호출하는 화면을 열면 어떻게 되는가? `createContext`의 기본값을 `null`로 둔 경우와 `{ nickname: '나', setNickname: () => {} }`로 둔 경우를 나눠서 적는다.
+1. reducer의 `added` case를 `state.push(action.log); return state;`로 쓰면 저장 버튼을 눌렀을 때 목록이 갱신되는가? 갱신된다면(또는 안 된다면) 왜인가?
    > 내 예측:
-2. 설정 탭에서 닉네임 `TextInput`에 한 글자 칠 때마다, (가) 설정 화면 (나) 피드 화면(닉네임을 읽음) (다) 기록 화면(닉네임을 읽지 않음) 중 어느 화면의 render 로그가 찍히는가?
+2. 저장 핸들러 안에서 `dispatch({ type: 'added', ... })`를 같은 내용으로 연달아 두 번 호출하고 id를 `Date.now().toString()`으로 만들면 목록과 콘솔에 무엇이 보이는가?
    > 내 예측:
-3. 설정에서 닉네임을 "민수"로 바꾼 뒤 앱을 Reload하면 피드 헤더에는 무엇이 보이는가? 그 이유는?
+3. 입력창과 저장 버튼만 있는 컴포넌트가 `useLogsDispatch()`만 쓰고 `useLogs()`는 쓰지 않는다. 글이 추가될 때 이 컴포넌트가 다시 렌더되는가?
    > 내 예측:
 
 ## 만들기(40분)
 
-Daily Log에 "닉네임" 기능을 얹는다. 설정 탭에서 바꾸고, 피드 탭 헤더에 "{닉네임}님의 하루"를 보여 준다.
+기록 탭에서 글을 쓰고, 목록에서 삭제·고정할 수 있게 한다. 피드 탭 헤더에는 "내 기록 N개"를 보여 준다. 피드의 글 목록은 Day 24에서 공개 API로 바꾸므로 오늘은 건드리지 않는다.
 
-**새 파일** `src/contexts/ProfileContext.tsx`
-- `ProfileProvider`: `useState`로 `nickname`(초기값 `'나'`)을 들고 `{ nickname, setNickname }`을 Provider `value`로 내려준다.
-- `useProfile()`: `useContext`를 감싸고, Provider 밖이면 `throw new Error`로 알려 준다.
+**새 파일**
+- `src/state/logsReducer.ts`: 순수 함수 `logsReducer(state: LogEntry[], action: LogsAction): LogEntry[]`. 액션은 `{ type: 'added'; log: LogEntry }`, `{ type: 'removed'; id: string }`, `{ type: 'pinToggled'; id: string }` 세 가지(discriminated union). 새 배열을 반환하고 `state`를 바꾸지 않는다. 새 `LogEntry`의 id는 reducer 안이 아니라 저장 핸들러에서 만들어 action에 담아 보낸다.
+- `src/contexts/LogsContext.tsx`: `LogsContext`와 `LogsDispatchContext` 두 개, `LogsProvider`(내부에서 `useReducer(logsReducer, [])`), 훅 `useLogs()`, `useLogsDispatch()`(Day 20의 `useProfile`처럼 Provider 밖이면 throw).
 
-```tsx
-const ProfileContext = createContext<ProfileValue | null>(null);
-
-export function useProfile() {
-  const value = useContext(ProfileContext);
-  if (!value) throw new Error('useProfile은 ProfileProvider 안에서만 쓸 수 있습니다');
-  return value;
-}
+```ts
+type LogsAction =
+  | { type: 'added'; log: LogEntry }
+  | { type: 'removed'; id: string }
+  | { type: 'pinToggled'; id: string };
 ```
 
 **고칠 파일**
-- `app/_layout.tsx`의 `RootLayout`: `<Stack>`을 `<ProfileProvider>`로 감싼다. 위치가 "화면보다 위, 모든 탭보다 위"인 이유를 주석 한 줄로 남긴다.
-- 설정 탭 `app/(tabs)/settings/index.tsx`: 닉네임 `TextInput`(Day 5)을 `useProfile().setNickname`에 연결한다.
-- 피드 탭 `app/(tabs)/index.tsx`: `FlatList`의 `ListHeaderComponent`에 `{nickname}님의 하루`를 보여 준다.
+- `src/types/log.ts`: Day 10의 `LogEntry`(`id: string`, `title`, `body`, `createdAt: number`)에 `pinned: boolean`을 추가한다. 새 타입을 만들지 않고 `text` 필드도 쓰지 않는다.
+- `app/_layout.tsx`의 `RootLayout`: `LogsProvider`를 `ProfileProvider`와 같은 높이에 둔다.
+- 기록 탭 `app/(tabs)/write.tsx`: Day 5·6의 `TextInput`과 저장 버튼에 `dispatch({ type: 'added', ... })`를 연결하고, 저장 후 입력을 비운다. 그 아래에 Day 10의 기록 `FlatList`와 `LogItem`으로 내 기록 목록을 그린다. 각 행의 "고정"(`pinToggled`)과 "삭제"(`removed`) 버튼은 `LogItem`의 콜백 props로 받는다. 고정된 글이 위로 오게 정렬한다(정렬은 reducer가 아니라 렌더 쪽에서 해도 된다).
+- 피드 탭 `app/(tabs)/index.tsx`: 헤더(Day 20의 인사 문구 옆)에 `내 기록 {logs.length}개`.
 
 완료 기준
-- [ ] `ProfileProvider`가 `app/_layout.tsx`에 있고, 설정과 피드가 같은 `nickname`을 본다.
-- [ ] 설정에서 입력하면 피드 탭 헤더가 바로 바뀐다(props를 한 번도 넘기지 않았다).
-- [ ] Provider 밖에서 `useProfile()`을 부르면 위 에러 메시지가 뜬다(확인 후 원복).
-- [ ] 각 탭 화면 맨 위의 `console.log('xxx render')` 로그로 예측 2번 결과를 기록했다(확인 후 로그 삭제).
+- [ ] reducer가 `state`를 변경하지 않고 매번 새 배열을 반환한다(`push`, `splice`, `sort`를 state에 직접 쓰지 않는다).
+- [ ] 기록 탭에서 저장하면 피드 탭 헤더의 개수가 바로 늘고, 삭제하면 줄어든다.
+- [ ] 고정 토글이 동작하고 고정된 글이 목록 맨 위에 보인다.
+- [ ] 컴포넌트는 `useReducer`를 직접 부르지 않고 `useLogs()`/`useLogsDispatch()`만 쓴다.
+- [ ] 같은 내용을 빠르게 두 번 저장해도 key 경고가 없다(경고가 나면 id 생성 방식을 고친다).
 
 ## 검증(10분)
 
-- 설정에서 닉네임을 입력하며 터미널의 render 로그를 센다. 예측과 다른 화면이 있으면 이유를 적는다.
-- 앱을 새로고침(Reload)한 뒤 닉네임이 `'나'`로 돌아가는 것을 확인한다. 저장은 Day 35 이후에 다룬다.
-- 일부러 깨뜨리기: `RootLayout`에서 `ProfileProvider`를 `app/(tabs)/_layout.tsx` 안으로 옮기고, 탭 바깥(`app/post/[id].tsx`)에서 `useProfile()`을 불러 본다. 어떤 에러가 나는지, Provider 위치가 "읽는 화면 전부를 포함하는 가장 가까운 위"여야 하는 이유를 적고 원복한다.
+- 기록 탭에서 글 3개를 저장 → 하나 고정 → 하나 삭제하고, 피드 탭의 개수가 매번 맞는지 확인한다.
+- 예측 1·2·3의 실제 결과를 적는다. 3번은 입력 컴포넌트 맨 위에 `console.log('입력 render')`를 달아 센다(확인 후 삭제).
+- 일부러 깨뜨리기: `added` case를 `state.push(action.log); return state;`로 바꾸고 저장해 본다. 목록이 갱신되는지, 개발 환경에서 항목이 두 번 들어가는지 확인한 뒤 원복한다.
 
 ## 이해 점검 질문
 
-1. 3단계 중 Provider를 빼먹으면 무슨 일이 생기고, 그걸 `useProfile`에서 `throw`로 막는 이유는 무엇인가?
-2. Context `value`가 바뀌면 누가 다시 렌더되는가? 닉네임을 읽지 않는 기록 탭은 왜 영향이 없는가(또는 있는가)?
-3. props로 충분한 경우와 Context가 어울리는 경우를 하나씩 들어라.
+1. reducer에서 `state.push(...)`로 바꾸고 `return state`하면 왜 화면이 안 바뀌거나 항목이 중복되는가?
+2. 왜 state context와 dispatch context를 나누는가? 합쳐서 `{ logs, dispatch }` 하나로 내려주면 어떤 차이가 생기는가?
+3. 새 글의 id를 reducer 안에서 `Date.now()`로 만들면 안 되는 이유는 무엇인가?
 
 <details><summary>정답</summary>
 
-1. Provider가 없으면 `useContext`는 `createContext`에 준 기본값을 돌려준다. 기본값이 `null`이면 `nickname`을 읽는 순간 TypeError가 나서 원인이 멀리서 드러난다. `throw`로 막으면 "Provider를 안 감쌌다"는 실제 원인을 바로 알려 주고, TypeScript에서도 `null` 체크가 끝난 값만 반환할 수 있다.
-2. Provider의 `value`가 바뀌면 그 context를 `useContext`로 읽는 컴포넌트가 다시 렌더된다. `RootLayout`이 `<ProfileProvider><Stack /></ProfileProvider>`를 쓰면 `Stack` 엘리먼트는 `RootLayout`이 만든 그대로여서, state가 바뀌어도 `ProfileProvider`만 다시 렌더되고 `children`은 같은 엘리먼트라 읽지 않는 화면은 다시 렌더되지 않는다. 실제 로그와 같은지 검증 단계에서 확인한 결과로 판단한다.
-3. 부모가 바로 아래 한두 단계 자식에게 값을 주는 경우(버튼의 `title`)는 props가 낫다. 앱 전체의 여러 깊이에서 읽는 값(닉네임, 이후의 로그인 정보)은 중간 컴포넌트를 거치지 않는 Context가 어울린다. 문서도 context 전에 props와 `children` 전달을 먼저 고려하라고 한다.
+1. React는 이전 state와 다음 state를 `Object.is`로 비교하고, 같으면 업데이트를 무시한다. 같은 배열을 변경해서 반환하면 참조가 같으므로 화면이 안 바뀐다. 또 Strict Mode(개발)는 reducer를 두 번 호출하므로, 직접 변경하는 reducer는 항목이 두 번 들어가는 식으로 실수가 드러난다. 해결은 `[...state, action.log]`처럼 새 배열을 만드는 것이다.
+2. dispatch는 identity가 안정적이라 바뀌지 않는다. dispatch만 필요한 컴포넌트(입력창)가 state context까지 구독하면 목록이 바뀔 때마다 불필요하게 다시 렌더된다. 합쳐서 하나의 객체로 내리면 `value`가 렌더마다 새 객체가 되어 dispatch만 쓰는 소비자도 같이 렌더된다. 나누면 dispatch 소비자는 state 변화에 영향받지 않는다.
+3. reducer는 순수해야 하는데 `Date.now()`는 호출할 때마다 값이 달라지는 부수 효과다. Strict Mode에서 reducer가 두 번 불리면 결과가 달라질 수 있다. id는 이벤트 핸들러(저장 버튼)에서 만들어 action에 담아야 한다. 같은 밀리초에 두 번 저장하면 `Date.now()` id가 겹치므로 id 생성 방식(카운터 등)도 함께 고려한다.
 
 </details>
 
@@ -79,9 +79,6 @@ export function useProfile() {
 
 ## 커밋 단위 제안
 
-- `feat: ProfileContext로 닉네임을 앱 전체에서 공유`
-- `feat: 설정 탭 닉네임 입력과 피드 헤더 인사 문구 추가`
-
-## 웹과 다른 점
-
-Context 자체는 웹 React와 같지만, 앱에서는 Provider를 라우터의 루트 레이아웃(`app/_layout.tsx`)에 두고, 탭 화면이 언마운트되지 않아 렌더 로그가 웹 페이지 이동과 다르게 찍힌다.
+- `feat: 기록 reducer와 LogsContext 추가`
+- `feat: 기록 탭에 저장·삭제·고정 연결`
+- `feat: 피드 헤더에 내 기록 개수 표시`

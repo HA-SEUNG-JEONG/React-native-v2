@@ -12,15 +12,15 @@ import {
   View,
 } from "react-native";
 
-import { MOCK_POSTS, Post } from "../data/mock-posts";
+import { MOCK_POSTS, Post } from "@/data/mock-posts";
 
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useCallback, useRef, useState } from "react";
-import { AppButton } from "../components/AppButton";
-import { EmptyState } from "../components/EmptyState";
-import LogItem from "../components/LogItem";
-import { PostCard } from "../components/PostCard";
-import { LogEntry } from "../types/log";
+import { AppButton } from "@/components/AppButton";
+import { EmptyState } from "@/components/EmptyState";
+import LogItem from "@/components/LogItem";
+import { PostCard } from "@/components/PostCard";
+import { LogEntry } from "@/types/log";
 
 type TabState = "log" | "feed";
 

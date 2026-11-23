@@ -1,89 +1,92 @@
-# Day 23 · 11/26 (목) — 인증 흐름과 보호된 라우트(모의 로그인)
+# Day 23 · 11/27 (금) — 버퍼 + 5주차 점검
 
 ## 오늘의 목표
 
-모의 로그인으로 토큰 문자열을 `AuthContext`에 넣고, `Stack.Protected`로 로그인 전에는 로그인 화면만, 로그인 후에는 탭 화면만 보이게 만든다.
+5주차(Day 19~22: router API, Context, reducer, 보호된 라우트) 내용을 정답을 가리고 풀어 보고, 밀린 Day와 질문 목록을 정리한다.
 
-## 읽기(15분)
+## 주간 점검 퀴즈(30분)
 
-1. https://docs.expo.dev/router/advanced/authentication/ — Context 세션 + `Stack.Protected` 예제.
-   - 확인할 사실: 모든 라우트는 항상 정의되어 있고, 런타임에 인증 상태로 접근을 막는다. `RootNavigator` 안에서 `<Stack.Protected guard={!!session}>`와 `<Stack.Protected guard={!session}>`로 화면 묶음을 나눈다.
-   - 확인할 사실: 로그아웃 화면에서는 `signOut()`만 호출하면 가드가 리다이렉트를 처리한다.
-2. https://docs.expo.dev/router/advanced/protected/ — 가드가 `false`가 될 때의 동작.
-   - 확인할 사실: 가드가 `true`에서 `false`로 바뀌면 그 화면의 history 항목이 모두 제거되고, 사용자는 anchor 라우트(보통 `index`) 또는 사용 가능한 첫 화면으로 보내진다.
-   - 확인할 사실: 보호된 화면은 클라이언트에서만 평가되며 서버 접근 제어를 대체하지 못한다.
-   - 주의: 이 두 페이지는 최신 문서다. `redirectTo` prop은 SDK 58+라고 적혀 있으니 쓰지 않는다. `Stack.Protected`가 SDK 54에서 그대로 동작하는지는 직접 실행해서 확인하고, 안 되면 "문서에서 확인 필요"로 막힌 점에 적는다.
+정답은 접힌 상태에서 먼저 자기 답을 적은 뒤 연다. 결과는 `docs/quiz/2026-11-27-day-24.md`에 `AGENTS.md`의 상세 구조(문항별 내 답 → 문제점 → 정답 → 암기 고리 → 근거 절, 종합 약점 패턴, 재복습 일정)로 기록한다.
 
-## 예측(10분)
-
-1. 로그인 성공 직후 `signIn()`만 호출하고 `router.replace`는 호출하지 않는다. 탭 화면으로 넘어가는가?
-   > 내 예측:
-2. 로그인한 상태에서 설정 탭의 "로그아웃"을 누르면 어느 화면이 보이는가? 그 상태에서 Android 하드웨어 뒤로가기(또는 iOS 스와이프 뒤로)를 하면 탭 화면이 다시 나오는가?
-   > 내 예측:
-3. 로그아웃한 뒤 다시 로그인하면, Day 22에서 저장한 내 기록은 남아 있는가 사라지는가? 그 이유는 `LogsProvider`가 어디에 있기 때문인가?
-   > 내 예측:
-
-## 만들기(40분)
-
-Daily Log에 로그인 화면을 추가하고, 탭 3개와 상세 화면은 로그인 후에만 보이게 한다. 서버는 없다. 토큰은 메모리(state)에만 있고 앱을 다시 켜면 사라진다. 저장은 Day 36에서 한다.
-
-**새 파일**
-- `src/contexts/AuthContext.tsx`: `AuthProvider`, `useAuth()`(Provider 밖이면 throw). 값은 `{ token: string | null; signIn: (email: string, password: string) => Promise<void>; signOut: () => void }`. `signIn`은 `setTimeout` 600ms로 서버 응답을 흉내 낸 뒤, 이메일이 비었거나 비밀번호가 4자 미만이면 `throw new Error('...')`, 아니면 `` `mock-${Date.now()}` `` 같은 문자열을 token으로 저장한다.
-- `app/sign-in.tsx`: 이메일·비밀번호 `TextInput`(Day 5, `secureTextEntry`), "로그인" 버튼. 제출 중에는 버튼을 비활성화하고 `ActivityIndicator`를 보이며, `signIn`이 던진 에러 메시지를 화면에 표시한다.
-
-**고칠 파일**
-- `app/_layout.tsx`: `AuthProvider`를 `ProfileProvider`, `LogsProvider`와 같은 높이(`Stack` 위)에 둔다. `Stack`은 `RootNavigator` 컴포넌트로 빼서 안에서 `useAuth()`를 쓴다.
-
-```tsx
-<Stack.Protected guard={!!token}>
-  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-  <Stack.Screen name="post/[id]" />
-  <Stack.Screen name="about" options={{ presentation: 'modal' }} />
-</Stack.Protected>
-<Stack.Protected guard={!token}>
-  <Stack.Screen name="sign-in" />
-</Stack.Protected>
-```
-
-Day 16·18에서 `app/_layout.tsx`의 `Stack`에 달았던 `Stack.Screen` 옵션(`post/[id]`의 기본 제목, `about`의 `presentation: 'modal'`)은 `RootNavigator` 안의 이 `Stack.Screen`들로 옮긴다.
-
-- 설정 탭 `app/(tabs)/settings/index.tsx`: "로그아웃" 버튼에서 `signOut()` 호출. 현재 로그인 토큰의 앞부분을 작게 보여 주는 `Text`를 하나 둔다(디버깅용).
-
-완료 기준
-- [ ] 앱을 켜면 로그인 화면이 먼저 보이고 탭 바는 없다.
-- [ ] 잘못된 입력(빈 이메일, 4자 미만 비밀번호)이면 에러 문구가 보이고 화면이 안 넘어간다.
-- [ ] 로그인 성공 시 `router.replace`를 직접 호출하지 않았는데도 탭 화면이 나온다.
-- [ ] 로그아웃하면 로그인 화면이 나오고, 뒤로가기로 탭 화면에 돌아갈 수 없다.
-- [ ] 제출 중에는 버튼이 눌리지 않는다(연타해도 `signIn`이 한 번만 실행된다).
-
-## 검증(10분)
-
-- 위 완료 기준 순서대로 시뮬레이터에서 눌러 본다. 예측 1·2의 실제 결과를 적는다.
-- 내 기록을 2개 만든 뒤 로그아웃 → 다시 로그인한다. 기록이 남아 있는지 확인한다(예측 3). 남아 있다면 다른 계정이 로그인해도 보인다는 문제가 있다. `LogsProvider`를 `app/(tabs)/_layout.tsx`로 옮기고 같은 순서를 반복해서 기록이 사라지는지 확인한다(가드가 `false`가 되면 보호된 화면이 제거되므로 그 안의 Provider state도 사라지는지 실험으로 판단한다). 최종 위치는 직접 결정하고 이유를 기록 칸에 적는다.
-- 일부러 깨뜨리기: 두 `Stack.Protected` 가드를 모두 `true`로 바꿔 보고 어떤 화면이 첫 화면으로 보이는지 확인한다.
-
-## 이해 점검 질문
-
-1. 로그인 후 `router.replace('/')` 없이 화면이 바뀌는 이유는 무엇인가?
-2. 가드가 `false`가 될 때 해당 화면들의 history가 제거되는 것이 로그아웃 후 보안/UX에 왜 중요한가?
-3. 이 방식의 보호가 하지 못하는 일은 무엇인가? (서버, 토큰 보관 측면에서)
+**Q1 (Day 19).** 피드 → 글 1 → `router.push('/post/2')` → `router.push('/post/3')` 순서로 이동했다. 마지막 화면에서 `router.replace('/post/4')`를 하면 스택은 어떻게 되고, 피드로 돌아가려면 back이 몇 번 필요한가?
+> 내 답:
 
 <details><summary>정답</summary>
 
-1. `token`이 바뀌면 `AuthProvider`가 다시 렌더되어 `RootNavigator`의 가드 값(`!!token`, `!token`)이 바뀐다. 라우터는 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 사용 가능하게 한 뒤, 현재 위치가 막히면 anchor 또는 첫 사용 가능 화면으로 보낸다. 상태가 화면을 결정하므로 이동을 명령할 필요가 없다.
-2. 가드가 `false`가 되면 history 항목이 지워지므로 로그아웃 뒤 뒤로가기로 이전 로그인 화면(탭, 상세)에 돌아갈 수 없다. history가 남아 있으면 다른 사용자가 이전 사용자의 화면을 볼 수 있다.
-3. `Stack.Protected`는 클라이언트에서만 화면 접근을 막을 뿐 서버 접근 제어를 대체하지 못한다. 실제 데이터 보호는 서버가 토큰을 검증해야 한다. 또 오늘의 토큰은 메모리에만 있어서 앱을 재시작하면 로그인이 풀린다(Day 36 SecureStore에서 보관한다).
+`push` 두 번으로 스택은 [피드, 글1, 글2, 글3]이고, `replace('/post/4')`는 맨 위(글3)를 글4로 바꿔서 [피드, 글1, 글2, 글4]가 된다. 피드까지 back이 3번 필요하다. `replace`는 history를 추가하지 않는다.
 
 </details>
 
+**Q2 (Day 19).** 탭 화면에서 "탭이 보일 때마다" 데이터를 새로고침하려고 한다. `useEffect(() => {...}, [])` 대신 무엇을 쓰고, 그 콜백에 꼭 필요한 처리는 무엇인가?
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+`expo-router`의 `useFocusEffect`를 쓴다. 탭 화면은 탭을 옮겨도 언마운트되지 않아 `useEffect(..., [])`는 처음 한 번만 실행되기 때문이다. 콜백은 `React.useCallback`으로 감싸 안정시켜야 한다(감싸지 않으면 매 렌더마다 effect가 다시 실행될 수 있다). cleanup은 포커스를 잃을 때 실행된다.
+
+</details>
+
+**Q3 (Day 20).** `useProfile()`을 Provider 밖에서 불렀을 때 `throw new Error`로 막는 이유와, Context `value`가 바뀔 때 다시 렌더되는 컴포넌트를 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+`createContext(null)` 기본값을 그대로 돌려주면 `nickname`을 읽는 순간 원인과 멀리 떨어진 곳에서 TypeError가 난다. `throw`하면 "Provider를 감싸지 않았다"는 원인을 바로 알려 주고, 반환 타입에서 `null`을 제거할 수 있다. `value`가 바뀌면 그 context를 `useContext`로 읽는 컴포넌트만 다시 렌더된다.
+
+</details>
+
+**Q4 (Day 21).** reducer가 `state.push(action.log); return state;`를 하면 어떤 문제가 생기는가? 이유를 `Object.is`와 Strict Mode 두 가지로 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+React는 이전 state와 다음 state를 `Object.is`로 비교하는데, 같은 배열을 변경해 반환하면 참조가 같아 업데이트가 무시되어 화면이 안 바뀐다. 또 개발 환경 Strict Mode는 reducer를 두 번 호출하므로, 직접 변경하는 reducer는 항목이 두 번 들어간다. 해결은 `[...state, action.log]`처럼 새 배열을 반환하는 것이다.
+
+</details>
+
+**Q5 (Day 22).** 로그인 성공 후 `router.replace`를 호출하지 않아도 탭 화면으로 넘어가는 이유와, 로그아웃 후 뒤로가기로 이전 화면에 못 돌아가는 이유를 한 문장씩 설명하라.
+
+> 내 답:
+
+<details><summary>정답</summary>
+
+토큰이 바뀌면 `RootNavigator`의 `Stack.Protected guard` 값이 바뀌고, 라우터가 가드가 `false`가 된 화면을 제거하고 `true`가 된 화면을 열면서 anchor 또는 첫 사용 가능 화면으로 보내기 때문이다. 가드가 `true`에서 `false`로 바뀌면 그 화면들의 history 항목이 모두 제거되므로 뒤로가기로 돌아갈 화면이 없다.
+
+</details>
+
+## 구술 1주제(15분)
+
+주제: "앱을 켠 순간부터 로그인해서 탭 화면이 보이기까지, 상태와 라우터가 어떻게 연결되는지 소리 내어 설명한다."
+
+포함할 핵심어: `AuthProvider`, `token`, `Stack.Protected`, `guard`, history 제거
+
+설명 후 빠뜨린 핵심어를 적는다:
+
+## 질문 목록 처리(15분)
+
+`docs/questions.md`에 쌓인 질문을 위에서부터 처리한다. 에러 원문과 시도한 것을 다시 읽고, 공식 문서에서 해당 절을 찾아 답을 적는다. 답을 못 찾은 질문은 다음 주 금요일로 넘기고 표시한다.
+
+- [ ] 이번 주 질문 전부 읽었다
+- [ ] 해결한 질문에 답과 근거 문서 링크를 적었다
+- [ ] 못 푼 질문 개수:
+
+## 밀린 Day 흡수
+
+달력이 아니라 Day 번호 기준이다. 1~2일 밀렸으면 여기서 하나만 한다(한 번에 Day 둘 금지).
+
+- [ ] Day 19 router API·중첩 라우트·not-found·`useFocusEffect`
+- [ ] Day 20 Context
+- [ ] Day 21 reducer + Context
+- [ ] Day 22 인증 흐름과 보호된 라우트
+- [ ] 이전 주에서 밀린 Day:
+
 ## 기록(5분)
 
-배운 것 3줄:
+이번 주 가장 헷갈린 개념:
 
-막힌 점:
+틀린 퀴즈와 이유:
 
-## 커밋 단위 제안
-
-- `feat: AuthContext와 모의 로그인 화면 추가`
-- `feat: Stack.Protected로 로그인 전후 라우트 분리`
-- `feat: 설정 탭에 로그아웃 추가`
+다음 주(6주차 데이터 1) 전에 고칠 것:
